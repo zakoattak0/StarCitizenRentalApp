@@ -616,6 +616,12 @@ legend {
   gap: 12px;
 }
 
+.fleet-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
 .fleet-card,
 .result-card {
   padding: 14px;
@@ -661,6 +667,23 @@ legend {
   white-space: nowrap;
 }
 
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.danger-button {
+  color: #ffd8de;
+  border-color: rgba(255, 92, 115, 0.55);
+  background: rgba(255, 92, 115, 0.09);
+}
+
+.danger-button:hover {
+  border-color: var(--red);
+}
+
 .meta-list {
   display: grid;
   gap: 7px;
@@ -669,13 +692,6 @@ legend {
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
-}
-
-.option-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
 }
 
 .config-summary {
@@ -695,14 +711,6 @@ legend {
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.45;
-}
-
-.chip {
-  border: 1px solid var(--line-soft);
-  color: #b8c8d8;
-  background: #08131d;
-  padding: 5px 7px;
-  font-size: 0.72rem;
 }
 
 .hangar-summary {

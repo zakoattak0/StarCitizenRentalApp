@@ -36,6 +36,7 @@ const hangarServiceEligibleShips = new Set(
 
 let vehicleCatalog = [];
 let hangarMarketRows = [];
+let editingShipIndex = null;
 
 const fallbackVehicles = [
   {
@@ -134,7 +135,25 @@ const offerHangarServices = document.querySelector("#offer-hangar-services");
 const hangarServiceStatus = document.querySelector("#hangar-service-status");
 const hangarServicesPanel = document.querySelector("#hangar-services-panel");
 const hangarServiceRows = document.querySelector("#hangar-service-rows");
+const addFleetShipButton = document.querySelector("#add-fleet-ship");
+const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
+const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
+const ownerSubmitButton = ownerForm.querySelector("button[type='submit']");
+
+window.handleShipImageError = (image) => {
+  const fallback = image.dataset.fallbackSrc;
+  if (fallback) {
+    image.dataset.fallbackSrc = "";
+    image.src = fallback;
+    return;
+  }
+
+  const placeholder = document.createElement("div");
+  placeholder.className = "ship-image placeholder";
+  placeholder.textContent = "SSR";
+  image.replaceWith(placeholder);
+};
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
@@ -221,7 +240,6 @@ rentManufacturerSelect.addEventListener("change", () => {
 ownerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(ownerForm);
-  const options = data.getAll("options");
   const selectedVehicle = findVehicle(data.get("ship"));
   const hangarServices = collectHangarServices();
   const dates = String(data.get("dates"))
@@ -229,7 +247,7 @@ ownerForm.addEventListener("submit", (event) => {
     .map((date) => date.trim())
     .filter(Boolean);
 
-  ships.unshift({
+  const listing = {
     owner: data.get("owner"),
     ship: selectedVehicle?.name || data.get("ship"),
     role: selectedVehicle?.role || data.get("role"),
@@ -241,25 +259,56 @@ ownerForm.addEventListener("submit", (event) => {
     pilotIncluded: data.has("pilotIncluded"),
     pilotRate: Number(data.get("pilotRate") || 0),
     hangarLoadCost: Number(data.get("hangarLoadCost") || 0),
+    hangarLoadMode: data.get("hangarLoadMode") || "flat",
+    hangarLoadPercent: Number(data.get("hangarLoadPercent") || 0),
     notes: data.get("notes"),
     dates,
-    options,
     hangarServices,
     vehicle: selectedVehicle,
-  });
+  };
 
-  ownerForm.reset();
-  ownerForm.querySelector("[name='rate']").value = 15000;
-  ownerForm.querySelector("[name='configPrice']").value = 0;
-  ownerForm.querySelector("[name='pilotRate']").value = 0;
-  hangarLoadCostInput.value = 0;
-  resetHangarRows();
-  updateHangarEligibility();
+  if (editingShipIndex === null) {
+    ships.unshift(listing);
+  } else {
+    listing.unavailableDates = ships[editingShipIndex]?.unavailableDates || [];
+    ships[editingShipIndex] = listing;
+  }
+
+  resetOwnerForm();
   renderFleet();
   renderCalendar();
   renderRentalResults();
   renderOwnerSchedule();
   updateFilterSummary();
+});
+
+addFleetShipButton.addEventListener("click", () => {
+  resetOwnerForm();
+  ownerForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  ownerForm.querySelector("[name='owner']").focus();
+});
+
+fleetList.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-fleet-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  const index = Number(actionButton.dataset.shipIndex);
+  if (actionButton.dataset.fleetAction === "modify") {
+    populateOwnerForm(index);
+  }
+
+  if (actionButton.dataset.fleetAction === "remove") {
+    ships.splice(index, 1);
+    resetOwnerForm();
+    renderFleet();
+    renderCalendar();
+    renderRentalResults();
+    renderOwnerSchedule();
+    renderCalendarFilterOptions();
+    updateFilterSummary();
+  }
 });
 
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
@@ -268,6 +317,10 @@ ownerShipInput.addEventListener("input", () => syncOwnerShipFields(ownerShipInpu
 offerHangarServices.addEventListener("change", () => {
   updateHangarEligibility();
 });
+
+hangarLoadModeSelect.addEventListener("change", () => updateAllServicePrices());
+hangarLoadPercentInput.addEventListener("input", () => updateAllServicePrices());
+hangarLoadCostInput.addEventListener("input", () => updateAllServicePrices());
 
 hangarServiceRows.addEventListener("change", (event) => {
   const row = event.target.closest(".service-row");
@@ -481,7 +534,7 @@ function filterCalendarShips(sourceShips) {
   return sourceShips.filter((ship) => {
     const matchesOwner = !ownerFilter || normalizeFilterValue(ship.owner).includes(ownerFilter);
     const matchesShip = !shipFilter || normalizeFilterValue(ship.ship).includes(shipFilter);
-    const matchesConfig = configMode !== "custom" || Boolean(ship.configName || ship.configPrice || ship.options?.length);
+    const matchesConfig = configMode !== "custom" || Boolean(ship.configName || ship.configPrice || ship.hangarServices?.length);
     return matchesOwner && matchesShip && matchesConfig;
   });
 }
@@ -525,15 +578,16 @@ function renderFleet() {
                 ${vehicleFacts(ship)}
               </ul>
               ${configurationSummary(ship)}
-              <div class="option-line">
-                ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
+              <div class="card-actions">
+                <button class="secondary-button" type="button" data-fleet-action="modify" data-ship-index="${ships.indexOf(ship)}">Modify</button>
+                <button class="secondary-button danger-button" type="button" data-fleet-action="remove" data-ship-index="${ships.indexOf(ship)}">Remove</button>
               </div>
               ${hangarServicesSummary(ship)}
             </article>
           `,
         )
         .join("")
-    : `<div class="empty-state">No owner listings yet. Add a ship to start building test options.</div>`;
+    : `<div class="empty-state">No owner listings yet. Add a ship to start building the fleet.</div>`;
 }
 
 function renderRentalResults() {
@@ -547,7 +601,7 @@ function renderRentalResults() {
     const matchesDate = !neededDate || ship.dates.includes(neededDate);
     const matchesBudget = Number.isNaN(budget) || convertRate(ship.rate, ship.ratePeriod, budgetPeriod) <= budget;
     const matchesManufacturer = !manufacturer || ship.manufacturer === manufacturer || ship.vehicle?.company === manufacturer;
-    const haystack = `${ship.ship} ${ship.role} ${ship.owner} ${ship.manufacturer || ""} ${ship.options.join(" ")}`.toLowerCase();
+    const haystack = `${ship.ship} ${ship.role} ${ship.owner} ${ship.manufacturer || ""}`.toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
     return matchesDate && matchesBudget && matchesManufacturer && matchesQuery;
   });
@@ -570,9 +624,6 @@ function renderRentalResults() {
                 ${vehicleFacts(ship)}
               </ul>
               ${configurationSummary(ship)}
-              <div class="option-line">
-                ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
-              </div>
               ${hangarServicesSummary(ship)}
             </article>
           `,
@@ -740,12 +791,30 @@ function updateServicePrice(row) {
   const planet = row.querySelector(".service-planet").value;
   const terminal = row.querySelector(".service-terminal").value;
   const price = row.querySelector(".service-price");
-  const match = getServiceLocations(service).find(
-    (location) => location.system === system && location.planet === planet && location.terminal === terminal,
-  );
+  const matches = getServiceLocations(service)
+    .filter((location) => !system || location.system === system)
+    .filter((location) => !planet || location.planet === planet)
+    .filter((location) => !terminal || location.terminal === terminal)
+    .sort((first, second) => Number(first.price) - Number(second.price));
+  const match = matches[0];
+  const adjustedPrice = match ? applyHangarLoadMarkup(match.price) : 0;
 
-  price.value = match ? `${formatCredits(match.price)} UEC` : "-";
-  price.dataset.price = match ? String(match.price) : "";
+  price.value = match ? `${formatCredits(adjustedPrice)} UEC` : "-";
+  price.dataset.price = match ? String(adjustedPrice) : "";
+  price.dataset.basePrice = match ? String(match.price) : "";
+}
+
+function updateAllServicePrices() {
+  hangarServiceRows.querySelectorAll(".service-row").forEach((row) => updateServicePrice(row));
+}
+
+function applyHangarLoadMarkup(price) {
+  if (hangarLoadModeSelect.value !== "percent") {
+    return Number(price || 0);
+  }
+
+  const percent = Math.max(0, Number(hangarLoadPercentInput.value || 0));
+  return Math.round(Number(price || 0) * (1 + percent / 100));
 }
 
 function setSelectOptions(select, options, placeholder, selectedValue) {
@@ -785,6 +854,7 @@ function collectHangarServices() {
         label: row.dataset.service,
         quantity,
         price: Number(priceOutput.dataset.price || 0),
+        basePrice: Number(priceOutput.dataset.basePrice || 0),
         system: row.querySelector(".service-system").value,
         planet: row.querySelector(".service-planet").value,
         terminal: row.querySelector(".service-terminal").value,
@@ -800,6 +870,69 @@ function resetHangarRows() {
   });
 }
 
+function resetOwnerForm() {
+  editingShipIndex = null;
+  ownerForm.reset();
+  hangarLoadModeSelect.value = "flat";
+  hangarLoadCostInput.value = "0";
+  hangarLoadPercentInput.value = "0";
+  ownerSubmitButton.textContent = "Add ship";
+  resetHangarRows();
+  updateHangarEligibility();
+  updateAllServicePrices();
+}
+
+function populateOwnerForm(index) {
+  const ship = ships[index];
+  if (!ship) {
+    return;
+  }
+
+  editingShipIndex = index;
+  ownerForm.elements.owner.value = ship.owner || "";
+  ownerManufacturerSelect.value = ship.manufacturer || ship.vehicle?.company || "";
+  renderShipOptions();
+  ownerForm.elements.ship.value = ship.ship || "";
+  ownerRoleSelect.value = roleForSelect(ship.role || "Cargo");
+  ownerForm.elements.rate.value = ship.rate || "";
+  ownerForm.elements.ratePeriod.value = ship.ratePeriod || "hour";
+  ownerForm.elements.dates.value = (ship.dates || []).join(", ");
+  ownerForm.elements.configName.value = ship.configName || "";
+  ownerForm.elements.configPrice.value = ship.configPrice || 0;
+  ownerForm.elements.pilotRate.value = ship.pilotRate || 0;
+  ownerForm.elements.pilotIncluded.checked = Boolean(ship.pilotIncluded);
+  ownerForm.elements.notes.value = ship.notes || "";
+  offerHangarServices.checked = Boolean(ship.hangarServices?.length);
+  hangarLoadModeSelect.value = ship.hangarLoadMode || "flat";
+  hangarLoadCostInput.value = ship.hangarLoadCost || 0;
+  hangarLoadPercentInput.value = ship.hangarLoadPercent || 0;
+  ownerSubmitButton.textContent = "Update ship";
+  updateHangarEligibility(ship.vehicle || ship.ship);
+  resetHangarRows();
+  applySavedHangarServices(ship.hangarServices || []);
+  ownerForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function applySavedHangarServices(services) {
+  services.forEach((service) => {
+    const row = Array.from(hangarServiceRows.querySelectorAll(".service-row")).find(
+      (candidate) => candidate.dataset.service === service.label,
+    );
+    if (!row) {
+      return;
+    }
+
+    row.querySelector(".service-enabled").checked = true;
+    row.querySelector(".service-quantity").value = service.quantity || "";
+    row.querySelector(".service-system").value = service.system || "";
+    updateServicePlanetOptions(row);
+    row.querySelector(".service-planet").value = service.planet || "";
+    updateServiceTerminalOptions(row);
+    row.querySelector(".service-terminal").value = service.terminal || "";
+    updateServicePrice(row);
+  });
+}
+
 function hangarServicesSummary(ship) {
   if (!ship.hangarServices?.length) {
     return "";
@@ -807,7 +940,7 @@ function hangarServicesSummary(ship) {
 
   return `
     <div class="hangar-summary">
-      <strong>Hangar Services${ship.hangarLoadCost ? ` · Load time ${formatCredits(ship.hangarLoadCost)} UEC` : ""}</strong>
+      <strong>${hangarLoadSummary(ship)}</strong>
       ${ship.hangarServices
         .map(
           (service) => `
@@ -823,6 +956,14 @@ function hangarServicesSummary(ship) {
         .join("")}
     </div>
   `;
+}
+
+function hangarLoadSummary(ship) {
+  if (ship.hangarLoadMode === "percent" && ship.hangarLoadPercent) {
+    return `Hangar Services · ${Number(ship.hangarLoadPercent).toLocaleString()}% load markup included`;
+  }
+
+  return `Hangar Services${ship.hangarLoadCost ? ` · Load time ${formatCredits(ship.hangarLoadCost)} UEC` : ""}`;
 }
 
 function listingPriceFacts(ship) {
@@ -852,6 +993,7 @@ function normalizeVehicle(vehicle) {
     id: vehicle.id,
     name: modelName,
     nameFull: vehicle.name_full || vehicle.name || "",
+    slug: vehicle.slug || "",
     company: vehicle.company_name || "",
     role: inferVehicleRole(vehicle),
     scu: Number(vehicle.scu || 0),
@@ -898,13 +1040,13 @@ function renderShipOptions() {
   ownerShipOptions.innerHTML = filteredVehicles(ownerManufacturerSelect.value)
     .map(
       (vehicle) =>
-        `<option value="${escapeHtml(vehicle.name)}">${escapeHtml(vehicle.company)} ${escapeHtml(vehicle.role)}</option>`,
+        `<option value="${escapeHtml(vehicle.name)}"></option>`,
     )
     .join("");
   rentShipOptions.innerHTML = filteredVehicles(rentManufacturerSelect.value)
     .map(
       (vehicle) =>
-        `<option value="${escapeHtml(vehicle.name)}">${escapeHtml(vehicle.company)} ${escapeHtml(vehicle.role)}</option>`,
+        `<option value="${escapeHtml(vehicle.name)}"></option>`,
     )
     .join("");
 }
@@ -976,12 +1118,15 @@ function enrichSeedShips() {
 }
 
 function shipImage(ship) {
-  const photo = ship.vehicle?.photo;
+  const localPhoto = ship.vehicle?.slug ? `/ships/${ship.vehicle.slug}.webp` : "";
+  const fallbackPhoto = ship.vehicle?.photo || "";
+  const photo = localPhoto || fallbackPhoto;
   if (!photo) {
     return `<div class="ship-image placeholder">SSR</div>`;
   }
 
-  return `<img class="ship-image" src="${escapeHtml(photo)}" alt="${escapeHtml(ship.ship)}" loading="lazy" />`;
+  const fallbackAttr = localPhoto && fallbackPhoto ? ` data-fallback-src="${escapeHtml(fallbackPhoto)}"` : "";
+  return `<img class="ship-image" src="${escapeHtml(photo)}" alt="${escapeHtml(ship.ship)}" loading="lazy"${fallbackAttr} onerror="handleShipImageError(this)" />`;
 }
 
 function vehicleFacts(ship) {

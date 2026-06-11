@@ -190,14 +190,6 @@
                   <textarea name="notes" rows="4" placeholder="Loadout details, restrictions, crew expectations, insurance terms..."></textarea>
                 </label>
               </fieldset>
-              <fieldset>
-                <legend>Customization options</legend>
-                <label class="check"><input type="checkbox" name="options" value="Cargo pods" checked />Cargo pods</label>
-                <label class="check"><input type="checkbox" name="options" value="Upgraded quantum drive" />Upgraded quantum drive</label>
-                <label class="check"><input type="checkbox" name="options" value="Mining lasers" />Mining lasers</label>
-                <label class="check"><input type="checkbox" name="options" value="Crew included" />Crew included</label>
-                <label class="check"><input type="checkbox" name="options" value="Insurance verified" checked />Insurance verified</label>
-              </fieldset>
               <fieldset class="hangar-fieldset">
                 <legend>Hangar Services</legend>
                 <label class="check">
@@ -206,10 +198,23 @@
                 </label>
                 <p class="api-status" id="hangar-service-status">Loading UEX purchase locations...</p>
                 <div class="hangar-services-panel is-hidden" id="hangar-services-panel">
-                  <label>
-                    Owner load time cost
-                    <input name="hangarLoadCost" id="hangar-load-cost" type="number" min="0" value="0" />
-                  </label>
+                  <div class="form-grid">
+                    <label>
+                      Load time pricing
+                      <select name="hangarLoadMode" id="hangar-load-mode">
+                        <option value="flat">Flat rate</option>
+                        <option value="percent">Include in commodity price</option>
+                      </select>
+                    </label>
+                    <label>
+                      Flat load cost
+                      <input name="hangarLoadCost" id="hangar-load-cost" type="number" min="0" value="0" />
+                    </label>
+                    <label>
+                      Commodity markup %
+                      <input name="hangarLoadPercent" id="hangar-load-percent" type="number" min="0" value="0" />
+                    </label>
+                  </div>
                   <div class="service-row service-heading" aria-hidden="true">
                     <span>Offer</span>
                     <span>Quantity</span>
@@ -226,6 +231,9 @@
 
             <div class="owner-workspace">
               <section class="owner-view active" data-owner-panel="fleet">
+                <div class="fleet-toolbar">
+                  <button class="primary-button" id="add-fleet-ship" type="button">Add ship</button>
+                </div>
                 <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
               </section>
               <section class="owner-view" data-owner-panel="schedule">
