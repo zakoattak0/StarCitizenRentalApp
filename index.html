@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stanton Ship Rentals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#calendar" aria-label="Stanton Ship Rentals home">
+          <span class="brand-mark">SSR</span>
+          <span>
+            <strong>Stanton Ship Rentals</strong>
+            <small>UEC-ready fleet scheduling</small>
+          </span>
+        </a>
+
+        <div class="market-strip" aria-label="Fleet status ticker">
+          <span>FLEET IDX <b>742.18</b> +1.4%</span>
+          <span>CARGO <b>18</b></span>
+          <span>COMBAT <b>11</b></span>
+          <span>INDUSTRIAL <b>9</b></span>
+          <span>TOURING <b>7</b></span>
+        </div>
+
+        <nav class="tabs" aria-label="Primary">
+          <button class="tab active" data-tab="calendar">Calendar</button>
+          <button class="tab" data-tab="owners">Owners</button>
+          <button class="tab" data-tab="rent">Want to Rent</button>
+        </nav>
+      </header>
+
+      <main>
+        <section class="panel active" id="calendar-panel" data-panel="calendar">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Live availability board</p>
+              <h1>Ship rental calendar</h1>
+            </div>
+            <div class="calendar-controls">
+              <button class="icon-button" id="prev-month" aria-label="Previous month">‹</button>
+              <strong id="month-label"></strong>
+              <button class="icon-button" id="next-month" aria-label="Next month">›</button>
+            </div>
+          </div>
+
+          <div class="status-row" aria-label="Calendar legend">
+            <span><i class="dot available"></i>Available</span>
+            <span><i class="dot partial"></i>Limited</span>
+            <span><i class="dot booked"></i>Booked</span>
+            <span><i class="dot owner"></i>Owner pending</span>
+          </div>
+
+          <div class="calendar-grid" id="calendar-grid" aria-label="Ship availability calendar"></div>
+        </section>
+
+        <section class="panel" id="owners-panel" data-panel="owners">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Owner console</p>
+              <h1>Add a rentable ship</h1>
+            </div>
+          </div>
+
+          <div class="split-layout">
+            <form class="data-form" id="owner-form">
+              <label>
+                Owner handle
+                <input name="owner" required placeholder="Aegis_Hauler" />
+              </label>
+              <label>
+                Ship
+                <input name="ship" required placeholder="C2 Hercules Starlifter" />
+              </label>
+              <div class="form-grid">
+                <label>
+                  Role
+                  <select name="role">
+                    <option>Cargo</option>
+                    <option>Combat</option>
+                    <option>Industrial</option>
+                    <option>Medical</option>
+                    <option>Exploration</option>
+                    <option>Touring</option>
+                  </select>
+                </label>
+                <label>
+                  Rate / hour
+                  <input name="rate" type="number" min="0" value="15000" />
+                </label>
+              </div>
+              <label>
+                Available dates
+                <input name="dates" required placeholder="2026-06-14, 2026-06-15" />
+              </label>
+              <fieldset>
+                <legend>Customization options</legend>
+                <label class="check"><input type="checkbox" name="options" value="Cargo pods" checked />Cargo pods</label>
+                <label class="check"><input type="checkbox" name="options" value="Upgraded quantum drive" />Upgraded quantum drive</label>
+                <label class="check"><input type="checkbox" name="options" value="Mining lasers" />Mining lasers</label>
+                <label class="check"><input type="checkbox" name="options" value="Crew included" />Crew included</label>
+                <label class="check"><input type="checkbox" name="options" value="Insurance verified" checked />Insurance verified</label>
+              </fieldset>
+              <button class="primary-button" type="submit">Add ship</button>
+            </form>
+
+            <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="panel" id="rent-panel" data-panel="rent">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Rental search</p>
+              <h1>Find ships that match your run</h1>
+            </div>
+          </div>
+
+          <form class="search-bar" id="rent-form">
+            <label>
+              Needed date
+              <input name="date" type="date" value="2026-06-14" />
+            </label>
+            <label>
+              Ship or role
+              <input name="query" placeholder="Cargo, Carrack, mining..." />
+            </label>
+            <label>
+              Max UEC / hour
+              <input name="budget" type="number" min="0" value="25000" />
+            </label>
+            <button class="primary-button" type="submit">Search</button>
+          </form>
+
+          <div class="results-grid" id="rental-results" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
