@@ -354,7 +354,8 @@ label {
 }
 
 input,
-select {
+select,
+datalist {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--line);
@@ -404,6 +405,13 @@ legend {
   font-weight: 800;
 }
 
+.api-status {
+  margin: -6px 0 0;
+  color: var(--cyan);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .fleet-list,
 .results-grid {
   display: grid;
@@ -414,6 +422,23 @@ legend {
 .fleet-card,
 .result-card {
   padding: 14px;
+}
+
+.ship-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 8;
+  object-fit: cover;
+  border: 1px solid var(--line-soft);
+  background: #050b11;
+  margin-bottom: 12px;
+}
+
+.ship-image.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--cyan);
+  font-weight: 800;
 }
 
 .card-top {

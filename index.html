@@ -78,8 +78,10 @@
               </label>
               <label>
                 Ship
-                <input name="ship" required placeholder="C2 Hercules Starlifter" />
+                <input name="ship" required list="ship-options" placeholder="C2 Hercules Starlifter" />
+                <datalist id="ship-options"></datalist>
               </label>
+              <p class="api-status" id="ship-api-status">Loading UEX ship list...</p>
               <div class="form-grid">
                 <label>
                   Role
@@ -131,7 +133,7 @@
             </label>
             <label>
               Ship or role
-              <input name="query" placeholder="Cargo, Carrack, mining..." />
+              <input name="query" list="ship-options" placeholder="Cargo, Carrack, mining..." />
             </label>
             <label>
               Max UEC / hour
