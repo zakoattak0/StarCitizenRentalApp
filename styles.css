@@ -36,6 +36,7 @@ body {
 
 button,
 input,
+textarea,
 select {
   font: inherit;
 }
@@ -354,10 +355,10 @@ label {
 }
 
 input,
+textarea,
 select,
 datalist {
   width: 100%;
-  min-height: 42px;
   border: 1px solid var(--line);
   background: #050b11;
   color: var(--text);
@@ -365,7 +366,20 @@ datalist {
   outline: none;
 }
 
+input,
+select,
+datalist {
+  min-height: 42px;
+}
+
+textarea {
+  min-height: 92px;
+  padding-block: 10px;
+  resize: vertical;
+}
+
 input:focus,
+textarea:focus,
 select:focus {
   border-color: var(--cyan);
   box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
@@ -555,6 +569,25 @@ legend {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
+}
+
+.config-summary {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.config-summary strong {
+  color: #f8fbff;
+}
+
+.config-summary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 .chip {

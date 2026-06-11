@@ -95,7 +95,7 @@
                   </select>
                 </label>
                 <label>
-                  Rate / hour
+                  Ship rate / hour
                   <input name="rate" type="number" min="0" value="15000" />
                 </label>
               </div>
@@ -103,6 +103,28 @@
                 Available dates
                 <input name="dates" required placeholder="2026-06-14, 2026-06-15" />
               </label>
+              <fieldset>
+                <legend>Owner configuration</legend>
+                <label>
+                  Configuration name
+                  <input name="configName" placeholder="Cargo-ready, full ballistics, med evac..." />
+                </label>
+                <div class="form-grid">
+                  <label>
+                    Configuration price
+                    <input name="configPrice" type="number" min="0" value="0" />
+                  </label>
+                  <label>
+                    Pilot time / hour
+                    <input name="pilotRate" type="number" min="0" value="0" />
+                  </label>
+                </div>
+                <label class="check"><input type="checkbox" name="pilotIncluded" />Offer with pilot</label>
+                <label>
+                  Owner notes
+                  <textarea name="notes" rows="4" placeholder="Loadout details, restrictions, crew expectations, insurance terms..."></textarea>
+                </label>
+              </fieldset>
               <fieldset>
                 <legend>Customization options</legend>
                 <label class="check"><input type="checkbox" name="options" value="Cargo pods" checked />Cargo pods</label>
@@ -119,6 +141,10 @@
                 </label>
                 <p class="api-status" id="hangar-service-status">Loading UEX purchase locations...</p>
                 <div class="hangar-services-panel is-hidden" id="hangar-services-panel">
+                  <label>
+                    Owner load time cost
+                    <input name="hangarLoadCost" id="hangar-load-cost" type="number" min="0" value="0" />
+                  </label>
                   <div class="service-row service-heading" aria-hidden="true">
                     <span>Offer</span>
                     <span>Quantity</span>

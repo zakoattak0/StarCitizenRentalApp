@@ -96,6 +96,11 @@ const ships = [
     ship: "C2 Hercules Starlifter",
     role: "Cargo",
     rate: 18000,
+    configName: "Cargo-ready hauler",
+    configPrice: 5000,
+    pilotIncluded: true,
+    pilotRate: 12000,
+    notes: "Includes basic cargo pods and insured hauling support. Owner pilot available for high-value runs.",
     dates: ["2026-06-14", "2026-06-15", "2026-06-18", "2026-06-22"],
     options: ["Cargo pods", "Crew included", "Insurance verified"],
     vehicle: fallbackVehicles[0],
@@ -105,6 +110,11 @@ const ships = [
     ship: "MOLE Carbon Edition",
     role: "Industrial",
     rate: 22000,
+    configName: "Mining laser package",
+    configPrice: 8000,
+    pilotIncluded: false,
+    pilotRate: 0,
+    notes: "Configured for asteroid work. Renter provides crew.",
     dates: ["2026-06-13", "2026-06-14", "2026-06-21"],
     options: ["Mining lasers", "Upgraded quantum drive", "Insurance verified"],
     vehicle: fallbackVehicles[1],
@@ -114,6 +124,11 @@ const ships = [
     ship: "Aegis Redeemer",
     role: "Combat",
     rate: 26000,
+    configName: "Crewed turret gunship",
+    configPrice: 10000,
+    pilotIncluded: true,
+    pilotRate: 18000,
+    notes: "Pilot available. Turret crew can be negotiated before departure.",
     dates: ["2026-06-16", "2026-06-17", "2026-06-20"],
     options: ["Crew included", "Insurance verified"],
     vehicle: fallbackVehicles[2],
@@ -123,6 +138,12 @@ const ships = [
     ship: "Carrack Expedition",
     role: "Exploration",
     rate: 30000,
+    configName: "R/R/R expedition service",
+    configPrice: 15000,
+    pilotIncluded: true,
+    pilotRate: 20000,
+    hangarLoadCost: 7500,
+    notes: "Carrack offered as a mobile service platform. Load time cost applies when hangar services are requested.",
     dates: ["2026-06-19", "2026-06-20", "2026-06-23"],
     options: ["Medical bay", "Crew included", "Upgraded quantum drive"],
     hangarServices: [
@@ -142,6 +163,11 @@ const ships = [
     ship: "Origin 600i Touring",
     role: "Touring",
     rate: 12000,
+    configName: "VIP touring setup",
+    configPrice: 3000,
+    pilotIncluded: true,
+    pilotRate: 9000,
+    notes: "Touring configuration with pilot available for point-to-point service.",
     dates: ["2026-06-14", "2026-06-24", "2026-06-25"],
     options: ["Crew included", "Insurance verified"],
     vehicle: fallbackVehicles[4],
@@ -174,6 +200,7 @@ const offerHangarServices = document.querySelector("#offer-hangar-services");
 const hangarServiceStatus = document.querySelector("#hangar-service-status");
 const hangarServicesPanel = document.querySelector("#hangar-services-panel");
 const hangarServiceRows = document.querySelector("#hangar-service-rows");
+const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
@@ -205,6 +232,12 @@ ownerForm.addEventListener("submit", (event) => {
     ship: selectedVehicle?.nameFull || data.get("ship"),
     role: selectedVehicle?.role || data.get("role"),
     rate: Number(data.get("rate")),
+    configName: data.get("configName"),
+    configPrice: Number(data.get("configPrice") || 0),
+    pilotIncluded: data.has("pilotIncluded"),
+    pilotRate: Number(data.get("pilotRate") || 0),
+    hangarLoadCost: Number(data.get("hangarLoadCost") || 0),
+    notes: data.get("notes"),
     dates,
     options,
     hangarServices,
@@ -213,6 +246,9 @@ ownerForm.addEventListener("submit", (event) => {
 
   ownerForm.reset();
   ownerForm.querySelector("[name='rate']").value = 15000;
+  ownerForm.querySelector("[name='configPrice']").value = 0;
+  ownerForm.querySelector("[name='pilotRate']").value = 0;
+  hangarLoadCostInput.value = 0;
   resetHangarRows();
   updateHangarEligibility();
   renderFleet();
@@ -399,10 +435,12 @@ function renderFleet() {
           </div>
           <ul class="meta-list">
             <li>Owner: ${escapeHtml(ship.owner)}</li>
-            <li>Rate: ${ship.rate.toLocaleString()} UEC / hour</li>
+            <li>Ship rate: ${formatCredits(ship.rate)} UEC / hour</li>
+            ${listingPriceFacts(ship)}
             <li>Dates: ${ship.dates.map(formatShortDate).join(", ")}</li>
             ${vehicleFacts(ship)}
           </ul>
+          ${configurationSummary(ship)}
           <div class="option-line">
             ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
           </div>
@@ -439,9 +477,11 @@ function renderRentalResults() {
               <ul class="meta-list">
                 <li>Owner: ${escapeHtml(ship.owner)}</li>
                 <li>Role: ${escapeHtml(ship.role)}</li>
+                ${listingPriceFacts(ship)}
                 <li>Available: ${ship.dates.map(formatShortDate).join(", ")}</li>
                 ${vehicleFacts(ship)}
               </ul>
+              ${configurationSummary(ship)}
               <div class="option-line">
                 ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
               </div>
@@ -592,7 +632,7 @@ function hangarServicesSummary(ship) {
 
   return `
     <div class="hangar-summary">
-      <strong>Hangar Services</strong>
+      <strong>Hangar Services${ship.hangarLoadCost ? ` · Load time ${formatCredits(ship.hangarLoadCost)} UEC` : ""}</strong>
       ${ship.hangarServices
         .map(
           (service) => `
@@ -606,6 +646,27 @@ function hangarServicesSummary(ship) {
           `,
         )
         .join("")}
+    </div>
+  `;
+}
+
+function listingPriceFacts(ship) {
+  return [
+    ship.configPrice ? `<li>Config price: ${formatCredits(ship.configPrice)} UEC</li>` : "",
+    ship.pilotIncluded ? `<li>Pilot: offered${ship.pilotRate ? ` at ${formatCredits(ship.pilotRate)} UEC / hour` : ""}</li>` : "",
+  ].join("");
+}
+
+function configurationSummary(ship) {
+  const hasSummary = ship.configName || ship.notes;
+  if (!hasSummary) {
+    return "";
+  }
+
+  return `
+    <div class="config-summary">
+      ${ship.configName ? `<strong>${escapeHtml(ship.configName)}</strong>` : ""}
+      ${ship.notes ? `<p>${escapeHtml(ship.notes)}</p>` : ""}
     </div>
   `;
 }
