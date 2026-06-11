@@ -111,6 +111,25 @@
                 <label class="check"><input type="checkbox" name="options" value="Crew included" />Crew included</label>
                 <label class="check"><input type="checkbox" name="options" value="Insurance verified" checked />Insurance verified</label>
               </fieldset>
+              <fieldset class="hangar-fieldset">
+                <legend>Hangar Services</legend>
+                <label class="check">
+                  <input type="checkbox" name="offerHangarServices" id="offer-hangar-services" />
+                  Offer Hangar Services
+                </label>
+                <p class="api-status" id="hangar-service-status">Loading UEX purchase locations...</p>
+                <div class="hangar-services-panel is-hidden" id="hangar-services-panel">
+                  <div class="service-row service-heading" aria-hidden="true">
+                    <span>Offer</span>
+                    <span>Quantity</span>
+                    <span>Price</span>
+                    <span>System</span>
+                    <span>Planet</span>
+                    <span>Terminal</span>
+                  </div>
+                  <div id="hangar-service-rows"></div>
+                </div>
+              </fieldset>
               <button class="primary-button" type="submit">Add ship</button>
             </form>
 

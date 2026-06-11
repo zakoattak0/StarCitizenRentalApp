@@ -1,6 +1,25 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
+const HANGAR_SERVICES_URL = "/api/hangar-services";
+
+const hangarServiceOptions = [
+  { key: "size-1-ammo", label: "Size 1 Ammo", uexNames: [] },
+  { key: "size-2-ammo", label: "Size 2 Ammo", uexNames: [] },
+  { key: "size-3-ammo", label: "Size 3 Ammo", uexNames: [] },
+  { key: "size-4-ammo", label: "Size 4 Ammo", uexNames: [] },
+  { key: "size-5-ammo", label: "Size 5 Ammo", uexNames: [] },
+  { key: "hydrogen-fuel", label: "Hydrogen Fuel", uexNames: ["Hydrogen Fuel"] },
+  { key: "quantum-fuel", label: "Quantum Fuel", uexNames: ["Quantum Fuel"] },
+  {
+    key: "recycled-material-composite",
+    label: "Recycled Material Composite",
+    uexNames: ["Recycled Material Composite"],
+  },
+  { key: "noise", label: "Noise", uexNames: ["Ship Noise Countermeasures"] },
+  { key: "decoys", label: "Decoys", uexNames: ["Ship Decoy Countermeasures"] },
+];
 
 let vehicleCatalog = [];
+let hangarMarketRows = [];
 
 const fallbackVehicles = [
   {
@@ -63,6 +82,16 @@ const ships = [
     rate: 18000,
     dates: ["2026-06-14", "2026-06-15", "2026-06-18", "2026-06-22"],
     options: ["Cargo pods", "Crew included", "Insurance verified"],
+    hangarServices: [
+      {
+        label: "Hydrogen Fuel",
+        quantity: 6000,
+        price: 196,
+        system: "Stanton",
+        planet: "Hurston",
+        terminal: "Lorville L19",
+      },
+    ],
     vehicle: fallbackVehicles[0],
   },
   {
@@ -125,6 +154,10 @@ const shipOptions = document.querySelector("#ship-options");
 const shipApiStatus = document.querySelector("#ship-api-status");
 const ownerShipInput = ownerForm.querySelector("[name='ship']");
 const ownerRoleSelect = ownerForm.querySelector("[name='role']");
+const offerHangarServices = document.querySelector("#offer-hangar-services");
+const hangarServiceStatus = document.querySelector("#hangar-service-status");
+const hangarServicesPanel = document.querySelector("#hangar-services-panel");
+const hangarServiceRows = document.querySelector("#hangar-service-rows");
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
@@ -145,6 +178,7 @@ ownerForm.addEventListener("submit", (event) => {
   const data = new FormData(ownerForm);
   const options = data.getAll("options");
   const selectedVehicle = findVehicle(data.get("ship"));
+  const hangarServices = collectHangarServices();
   const dates = String(data.get("dates"))
     .split(",")
     .map((date) => date.trim())
@@ -157,11 +191,14 @@ ownerForm.addEventListener("submit", (event) => {
     rate: Number(data.get("rate")),
     dates,
     options,
+    hangarServices,
     vehicle: selectedVehicle,
   });
 
   ownerForm.reset();
   ownerForm.querySelector("[name='rate']").value = 15000;
+  hangarServicesPanel.classList.add("is-hidden");
+  resetHangarRows();
   renderFleet();
   renderCalendar();
   renderRentalResults();
@@ -169,6 +206,32 @@ ownerForm.addEventListener("submit", (event) => {
 
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
 ownerShipInput.addEventListener("input", () => syncOwnerShipFields(ownerShipInput.value));
+
+offerHangarServices.addEventListener("change", () => {
+  hangarServicesPanel.classList.toggle("is-hidden", !offerHangarServices.checked);
+});
+
+hangarServiceRows.addEventListener("change", (event) => {
+  const row = event.target.closest(".service-row");
+  if (!row) {
+    return;
+  }
+
+  if (event.target.matches(".service-system")) {
+    updateServicePlanetOptions(row);
+    updateServiceTerminalOptions(row);
+    updateServicePrice(row);
+  }
+
+  if (event.target.matches(".service-planet")) {
+    updateServiceTerminalOptions(row);
+    updateServicePrice(row);
+  }
+
+  if (event.target.matches(".service-terminal")) {
+    updateServicePrice(row);
+  }
+});
 
 rentForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -208,6 +271,27 @@ async function loadVehicles() {
   renderFleet();
   renderCalendar();
   renderRentalResults();
+}
+
+async function loadHangarServices() {
+  renderHangarServiceRows();
+  hangarServiceStatus.textContent = "Loading UEX purchase locations...";
+
+  try {
+    const response = await fetch(HANGAR_SERVICES_URL);
+    if (!response.ok) {
+      throw new Error(`Hangar services returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    hangarMarketRows = Array.isArray(payload.rows) ? payload.rows : [];
+    hangarServiceStatus.textContent = `${hangarMarketRows.length.toLocaleString()} UEX purchase locations loaded`;
+  } catch (error) {
+    hangarMarketRows = [];
+    hangarServiceStatus.textContent = "UEX purchase locations unavailable; selections will still be saved";
+  }
+
+  renderHangarServiceRows();
 }
 
 function setActiveTab(tabName) {
@@ -307,6 +391,7 @@ function renderFleet() {
           <div class="option-line">
             ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
           </div>
+          ${hangarServicesSummary(ship)}
         </article>
       `,
     )
@@ -345,11 +430,168 @@ function renderRentalResults() {
               <div class="option-line">
                 ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
               </div>
+              ${hangarServicesSummary(ship)}
             </article>
           `,
         )
         .join("")
     : `<div class="empty-state">No ships match that request yet. Try a wider budget or another date.</div>`;
+}
+
+function renderHangarServiceRows() {
+  hangarServiceRows.innerHTML = hangarServiceOptions.map((service) => renderHangarServiceRow(service)).join("");
+  hangarServiceRows.querySelectorAll(".service-row").forEach((row) => {
+    updateServiceSystemOptions(row);
+    updateServicePlanetOptions(row);
+    updateServiceTerminalOptions(row);
+    updateServicePrice(row);
+  });
+}
+
+function renderHangarServiceRow(service) {
+  const hasLocations = getServiceLocations(service.label).length > 0;
+  const locationNote = hasLocations ? "" : `<small class="service-note">No UEX purchase rows yet</small>`;
+
+  return `
+    <div class="service-row" data-service="${escapeHtml(service.label)}">
+      <label class="check service-offer">
+        <input type="checkbox" class="service-enabled" />
+        <span>${escapeHtml(service.label)}</span>
+        ${locationNote}
+      </label>
+      <label class="visually-hidden" for="${service.key}-quantity">${escapeHtml(service.label)} quantity</label>
+      <input id="${service.key}-quantity" class="service-quantity" type="number" min="0" step="1" placeholder="Quantity" />
+      <output class="service-price">-</output>
+      <select class="service-system" aria-label="${escapeHtml(service.label)} system"></select>
+      <select class="service-planet" aria-label="${escapeHtml(service.label)} planet"></select>
+      <select class="service-terminal" aria-label="${escapeHtml(service.label)} terminal"></select>
+    </div>
+  `;
+}
+
+function updateServiceSystemOptions(row) {
+  const service = row.dataset.service;
+  const select = row.querySelector(".service-system");
+  const selected = select.value;
+  const systems = uniqueSorted(getServiceLocations(service).map((location) => location.system));
+  setSelectOptions(select, systems, "System", selected);
+}
+
+function updateServicePlanetOptions(row) {
+  const service = row.dataset.service;
+  const system = row.querySelector(".service-system").value;
+  const select = row.querySelector(".service-planet");
+  const selected = select.value;
+  const planets = uniqueSorted(
+    getServiceLocations(service)
+      .filter((location) => !system || location.system === system)
+      .map((location) => location.planet),
+  );
+  setSelectOptions(select, planets, "Planet", selected);
+}
+
+function updateServiceTerminalOptions(row) {
+  const service = row.dataset.service;
+  const system = row.querySelector(".service-system").value;
+  const planet = row.querySelector(".service-planet").value;
+  const select = row.querySelector(".service-terminal");
+  const selected = select.value;
+  const terminals = getServiceLocations(service)
+    .filter((location) => !system || location.system === system)
+    .filter((location) => !planet || location.planet === planet)
+    .map((location) => location.terminal);
+
+  setSelectOptions(select, uniqueSorted(terminals), "Terminal", selected);
+}
+
+function updateServicePrice(row) {
+  const service = row.dataset.service;
+  const system = row.querySelector(".service-system").value;
+  const planet = row.querySelector(".service-planet").value;
+  const terminal = row.querySelector(".service-terminal").value;
+  const price = row.querySelector(".service-price");
+  const match = getServiceLocations(service).find(
+    (location) => location.system === system && location.planet === planet && location.terminal === terminal,
+  );
+
+  price.value = match ? `${formatCredits(match.price)} UEC` : "-";
+  price.dataset.price = match ? String(match.price) : "";
+}
+
+function setSelectOptions(select, options, placeholder, selectedValue) {
+  select.innerHTML = [
+    `<option value="">${placeholder}</option>`,
+    ...options.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`),
+  ].join("");
+
+  if (selectedValue && options.includes(selectedValue)) {
+    select.value = selectedValue;
+  } else if (options.length === 1) {
+    select.value = options[0];
+  }
+}
+
+function getServiceLocations(serviceLabel) {
+  return hangarMarketRows.filter((row) => row.label === serviceLabel);
+}
+
+function collectHangarServices() {
+  if (!offerHangarServices.checked) {
+    return [];
+  }
+
+  return Array.from(hangarServiceRows.querySelectorAll(".service-row"))
+    .map((row) => {
+      const enabled = row.querySelector(".service-enabled").checked;
+      const quantity = Number(row.querySelector(".service-quantity").value || 0);
+      const priceOutput = row.querySelector(".service-price");
+
+      if (!enabled) {
+        return null;
+      }
+
+      return {
+        label: row.dataset.service,
+        quantity,
+        price: Number(priceOutput.dataset.price || 0),
+        system: row.querySelector(".service-system").value,
+        planet: row.querySelector(".service-planet").value,
+        terminal: row.querySelector(".service-terminal").value,
+      };
+    })
+    .filter(Boolean);
+}
+
+function resetHangarRows() {
+  hangarServiceRows.querySelectorAll(".service-row").forEach((row) => {
+    row.querySelector(".service-enabled").checked = false;
+    row.querySelector(".service-quantity").value = "";
+  });
+}
+
+function hangarServicesSummary(ship) {
+  if (!ship.hangarServices?.length) {
+    return "";
+  }
+
+  return `
+    <div class="hangar-summary">
+      <strong>Hangar Services</strong>
+      ${ship.hangarServices
+        .map(
+          (service) => `
+            <div class="hangar-summary-line">
+              <span>${escapeHtml(service.label)}</span>
+              <small>${service.quantity ? `${Number(service.quantity).toLocaleString()} qty` : "Qty open"} ${
+                service.price ? `@ ${formatCredits(service.price)} UEC` : ""
+              }</small>
+              <small>${[service.system, service.planet, service.terminal].filter(Boolean).map(escapeHtml).join(" / ")}</small>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function normalizeVehicle(vehicle) {
@@ -470,6 +712,16 @@ function vehicleFacts(ship) {
   return facts.map((fact) => `<li>${fact}</li>`).join("");
 }
 
+function uniqueSorted(values) {
+  return Array.from(new Set(values.filter(Boolean))).sort((first, second) => first.localeCompare(second));
+}
+
+function formatCredits(value) {
+  return Number(value || 0).toLocaleString("en-US", {
+    maximumFractionDigits: 0,
+  });
+}
+
 function toDateKey(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -495,3 +747,4 @@ renderCalendar();
 renderFleet();
 renderRentalResults();
 loadVehicles();
+loadHangarServices();
