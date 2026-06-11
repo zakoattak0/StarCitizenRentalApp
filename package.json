@@ -1,0 +1,12 @@
+{
+  "name": "star-citizen-rental-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "sync:ships": "node scripts/sync-ship-images.mjs"
+  },
+  "dependencies": {
+    "p-limit": "^6.2.0",
+    "sharp": "^0.33.5"
+  }
+}
