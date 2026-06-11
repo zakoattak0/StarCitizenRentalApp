@@ -90,97 +90,9 @@ const fallbackVehicles = [
   },
 ];
 
-const ships = [
-  {
-    owner: "Voss-Actual",
-    ship: "C2 Hercules Starlifter",
-    role: "Cargo",
-    rate: 18000,
-    configName: "Cargo-ready hauler",
-    configPrice: 5000,
-    pilotIncluded: true,
-    pilotRate: 12000,
-    notes: "Includes basic cargo pods and insured hauling support. Owner pilot available for high-value runs.",
-    dates: ["2026-06-14", "2026-06-15", "2026-06-18", "2026-06-22"],
-    options: ["Cargo pods", "Crew included", "Insurance verified"],
-    vehicle: fallbackVehicles[0],
-  },
-  {
-    owner: "ArcMiner",
-    ship: "MOLE Carbon Edition",
-    role: "Industrial",
-    rate: 22000,
-    configName: "Mining laser package",
-    configPrice: 8000,
-    pilotIncluded: false,
-    pilotRate: 0,
-    notes: "Configured for asteroid work. Renter provides crew.",
-    dates: ["2026-06-13", "2026-06-14", "2026-06-21"],
-    options: ["Mining lasers", "Upgraded quantum drive", "Insurance verified"],
-    vehicle: fallbackVehicles[1],
-  },
-  {
-    owner: "NineTailsNope",
-    ship: "Aegis Redeemer",
-    role: "Combat",
-    rate: 26000,
-    configName: "Crewed turret gunship",
-    configPrice: 10000,
-    pilotIncluded: true,
-    pilotRate: 18000,
-    notes: "Pilot available. Turret crew can be negotiated before departure.",
-    dates: ["2026-06-16", "2026-06-17", "2026-06-20"],
-    options: ["Crew included", "Insurance verified"],
-    vehicle: fallbackVehicles[2],
-  },
-  {
-    owner: "Wayfinder_June",
-    ship: "Carrack Expedition",
-    role: "Exploration",
-    rate: 30000,
-    configName: "R/R/R expedition service",
-    configPrice: 15000,
-    pilotIncluded: true,
-    pilotRate: 20000,
-    hangarLoadCost: 7500,
-    notes: "Carrack offered as a mobile service platform. Load time cost applies when hangar services are requested.",
-    dates: ["2026-06-19", "2026-06-20", "2026-06-23"],
-    options: ["Medical bay", "Crew included", "Upgraded quantum drive"],
-    hangarServices: [
-      {
-        label: "Hydrogen Fuel",
-        quantity: 6000,
-        price: 196,
-        system: "Stanton",
-        planet: "Hurston",
-        terminal: "Lorville L19",
-      },
-    ],
-    vehicle: fallbackVehicles[3],
-  },
-  {
-    owner: "PortTressler_Taxi",
-    ship: "Origin 600i Touring",
-    role: "Touring",
-    rate: 12000,
-    configName: "VIP touring setup",
-    configPrice: 3000,
-    pilotIncluded: true,
-    pilotRate: 9000,
-    notes: "Touring configuration with pilot available for point-to-point service.",
-    dates: ["2026-06-14", "2026-06-24", "2026-06-25"],
-    options: ["Crew included", "Insurance verified"],
-    vehicle: fallbackVehicles[4],
-  },
-];
+const ships = [];
 
-const bookings = [
-  { date: "2026-06-12", ship: "Cutlass Black", owner: "KlescherSkip", status: "booked" },
-  { date: "2026-06-14", ship: "C2 Hercules", owner: "Voss-Actual", status: "partial" },
-  { date: "2026-06-16", ship: "Redeemer", owner: "NineTailsNope", status: "partial" },
-  { date: "2026-06-19", ship: "Carrack", owner: "Wayfinder_June", status: "owner" },
-  { date: "2026-06-27", ship: "Vulture", owner: "SalvageSam", status: "booked" },
-];
+const bookings = [];
 
 const state = {
   activeDate: new Date(2026, 5, 1),
@@ -424,31 +336,33 @@ function availabilityPill(title, subtitle, status) {
 }
 
 function renderFleet() {
-  fleetList.innerHTML = ships
-    .map(
-      (ship) => `
-        <article class="fleet-card">
-          ${shipImage(ship)}
-          <div class="card-top">
-            <h2>${escapeHtml(ship.ship)}</h2>
-            <span class="tag">${escapeHtml(ship.role)}</span>
-          </div>
-          <ul class="meta-list">
-            <li>Owner: ${escapeHtml(ship.owner)}</li>
-            <li>Ship rate: ${formatCredits(ship.rate)} UEC / hour</li>
-            ${listingPriceFacts(ship)}
-            <li>Dates: ${ship.dates.map(formatShortDate).join(", ")}</li>
-            ${vehicleFacts(ship)}
-          </ul>
-          ${configurationSummary(ship)}
-          <div class="option-line">
-            ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
-          </div>
-          ${hangarServicesSummary(ship)}
-        </article>
-      `,
-    )
-    .join("");
+  fleetList.innerHTML = ships.length
+    ? ships
+        .map(
+          (ship) => `
+            <article class="fleet-card">
+              ${shipImage(ship)}
+              <div class="card-top">
+                <h2>${escapeHtml(ship.ship)}</h2>
+                <span class="tag">${escapeHtml(ship.role)}</span>
+              </div>
+              <ul class="meta-list">
+                <li>Owner: ${escapeHtml(ship.owner)}</li>
+                <li>Ship rate: ${formatCredits(ship.rate)} UEC / hour</li>
+                ${listingPriceFacts(ship)}
+                <li>Dates: ${ship.dates.map(formatShortDate).join(", ")}</li>
+                ${vehicleFacts(ship)}
+              </ul>
+              ${configurationSummary(ship)}
+              <div class="option-line">
+                ${ship.options.map((option) => `<span class="chip">${escapeHtml(option)}</span>`).join("")}
+              </div>
+              ${hangarServicesSummary(ship)}
+            </article>
+          `,
+        )
+        .join("")
+    : `<div class="empty-state">No owner listings yet. Add a ship to start building test options.</div>`;
 }
 
 function renderRentalResults() {
