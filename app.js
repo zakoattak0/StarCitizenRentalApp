@@ -2,11 +2,11 @@ const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
 const HANGAR_SERVICES_URL = "/api/hangar-services";
 
 const hangarServiceOptions = [
-  { key: "size-1-ammo", label: "Size 1 Ammo", uexNames: [] },
-  { key: "size-2-ammo", label: "Size 2 Ammo", uexNames: [] },
-  { key: "size-3-ammo", label: "Size 3 Ammo", uexNames: [] },
-  { key: "size-4-ammo", label: "Size 4 Ammo", uexNames: [] },
-  { key: "size-5-ammo", label: "Size 5 Ammo", uexNames: [] },
+  { key: "size-1-ammo", label: "Size 1 Ammo", uexNames: ["Ship Ammunition - Size 1"] },
+  { key: "size-2-ammo", label: "Size 2 Ammo", uexNames: ["Ship Ammunition - Size 2"] },
+  { key: "size-3-ammo", label: "Size 3 Ammo", uexNames: ["Ship Ammunition - Size 3"] },
+  { key: "size-4-ammo", label: "Size 4 Ammo", uexNames: ["Ship Ammunition - Size 4"] },
+  { key: "size-5-ammo", label: "Size 5 Ammo", uexNames: ["Ship Ammunition - Size 5"] },
   { key: "hydrogen-fuel", label: "Hydrogen Fuel", uexNames: ["Hydrogen Fuel"] },
   { key: "quantum-fuel", label: "Quantum Fuel", uexNames: ["Quantum Fuel"] },
   {
@@ -17,6 +17,22 @@ const hangarServiceOptions = [
   { key: "noise", label: "Noise", uexNames: ["Ship Noise Countermeasures"] },
   { key: "decoys", label: "Decoys", uexNames: ["Ship Decoy Countermeasures"] },
 ];
+
+const hangarServiceEligibleShips = new Set(
+  [
+    "Origin 600i Explorer",
+    "Origin 600i Touring",
+    "Origin 600i Executive Edition",
+    "Origin 890 Jump",
+    "Anvil Carrack",
+    "Anvil Carrack Expedition",
+    "RSI Polaris",
+    "Aegis Idris-M",
+    "Aegis Idris-P",
+    "MISC Starlancer TAC",
+    "Drake Ironclad Assault",
+  ].map(normalizeShipName),
+);
 
 let vehicleCatalog = [];
 let hangarMarketRows = [];
@@ -82,16 +98,6 @@ const ships = [
     rate: 18000,
     dates: ["2026-06-14", "2026-06-15", "2026-06-18", "2026-06-22"],
     options: ["Cargo pods", "Crew included", "Insurance verified"],
-    hangarServices: [
-      {
-        label: "Hydrogen Fuel",
-        quantity: 6000,
-        price: 196,
-        system: "Stanton",
-        planet: "Hurston",
-        terminal: "Lorville L19",
-      },
-    ],
     vehicle: fallbackVehicles[0],
   },
   {
@@ -119,6 +125,16 @@ const ships = [
     rate: 30000,
     dates: ["2026-06-19", "2026-06-20", "2026-06-23"],
     options: ["Medical bay", "Crew included", "Upgraded quantum drive"],
+    hangarServices: [
+      {
+        label: "Hydrogen Fuel",
+        quantity: 6000,
+        price: 196,
+        system: "Stanton",
+        planet: "Hurston",
+        terminal: "Lorville L19",
+      },
+    ],
     vehicle: fallbackVehicles[3],
   },
   {
@@ -197,8 +213,8 @@ ownerForm.addEventListener("submit", (event) => {
 
   ownerForm.reset();
   ownerForm.querySelector("[name='rate']").value = 15000;
-  hangarServicesPanel.classList.add("is-hidden");
   resetHangarRows();
+  updateHangarEligibility();
   renderFleet();
   renderCalendar();
   renderRentalResults();
@@ -208,7 +224,7 @@ ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInp
 ownerShipInput.addEventListener("input", () => syncOwnerShipFields(ownerShipInput.value));
 
 offerHangarServices.addEventListener("change", () => {
-  hangarServicesPanel.classList.toggle("is-hidden", !offerHangarServices.checked);
+  updateHangarEligibility();
 });
 
 hangarServiceRows.addEventListener("change", (event) => {
@@ -285,13 +301,12 @@ async function loadHangarServices() {
 
     const payload = await response.json();
     hangarMarketRows = Array.isArray(payload.rows) ? payload.rows : [];
-    hangarServiceStatus.textContent = `${hangarMarketRows.length.toLocaleString()} UEX purchase locations loaded`;
   } catch (error) {
     hangarMarketRows = [];
-    hangarServiceStatus.textContent = "UEX purchase locations unavailable; selections will still be saved";
   }
 
   renderHangarServiceRows();
+  updateHangarEligibility();
 }
 
 function setActiveTab(tabName) {
@@ -536,7 +551,8 @@ function getServiceLocations(serviceLabel) {
 }
 
 function collectHangarServices() {
-  if (!offerHangarServices.checked) {
+  const selectedVehicle = findVehicle(ownerShipInput.value);
+  if (!offerHangarServices.checked || !isHangarServiceEligible(selectedVehicle || ownerShipInput.value)) {
     return [];
   }
 
@@ -666,10 +682,12 @@ function findVehicle(value) {
 function syncOwnerShipFields(value) {
   const vehicle = findVehicle(value);
   if (!vehicle) {
+    updateHangarEligibility();
     return;
   }
 
   ownerRoleSelect.value = roleForSelect(vehicle.role);
+  updateHangarEligibility(vehicle);
 }
 
 function roleForSelect(role) {
@@ -685,7 +703,13 @@ function enrichSeedShips() {
       ship.role = vehicle.role;
       ship.vehicle = vehicle;
     }
+
+    if (!isHangarServiceEligible(vehicle || ship.ship)) {
+      ship.hangarServices = [];
+    }
   });
+
+  updateHangarEligibility();
 }
 
 function shipImage(ship) {
@@ -714,6 +738,43 @@ function vehicleFacts(ship) {
 
 function uniqueSorted(values) {
   return Array.from(new Set(values.filter(Boolean))).sort((first, second) => first.localeCompare(second));
+}
+
+function normalizeShipName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\b(rsi|roberts space industries)\b/g, "rsi")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isHangarServiceEligible(vehicleOrName) {
+  const names =
+    typeof vehicleOrName === "string"
+      ? [vehicleOrName]
+      : [vehicleOrName?.nameFull, vehicleOrName?.name].filter(Boolean);
+
+  return names.some((name) => hangarServiceEligibleShips.has(normalizeShipName(name)));
+}
+
+function updateHangarEligibility(vehicle = findVehicle(ownerShipInput.value)) {
+  const eligible = isHangarServiceEligible(vehicle || ownerShipInput.value);
+  offerHangarServices.disabled = !eligible;
+
+  if (!eligible) {
+    offerHangarServices.checked = false;
+    hangarServicesPanel.classList.add("is-hidden");
+    hangarServiceStatus.textContent = ownerShipInput.value
+      ? "Hangar Services are only available for R/R/R capable flight-ready ships"
+      : "Select an R/R/R capable ship to offer Hangar Services";
+    return;
+  }
+
+  hangarServiceStatus.textContent = hangarMarketRows.length
+    ? `${hangarMarketRows.length.toLocaleString()} UEX purchase locations loaded`
+    : "Loading UEX purchase locations...";
+  hangarServicesPanel.classList.toggle("is-hidden", !offerHangarServices.checked);
 }
 
 function formatCredits(value) {

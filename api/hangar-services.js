@@ -2,6 +2,11 @@ const pricesUrl = "https://api.uexcorp.space/2.0/commodities_prices_all";
 const terminalsUrl = "https://api.uexcorp.space/2.0/terminals";
 
 const serviceCommodities = new Map([
+  ["Size 1 Ammo", ["Ship Ammunition - Size 1"]],
+  ["Size 2 Ammo", ["Ship Ammunition - Size 2"]],
+  ["Size 3 Ammo", ["Ship Ammunition - Size 3"]],
+  ["Size 4 Ammo", ["Ship Ammunition - Size 4"]],
+  ["Size 5 Ammo", ["Ship Ammunition - Size 5"]],
   ["Hydrogen Fuel", ["Hydrogen Fuel"]],
   ["Quantum Fuel", ["Quantum Fuel"]],
   ["Recycled Material Composite", ["Recycled Material Composite"]],

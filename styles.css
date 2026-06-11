@@ -467,6 +467,15 @@ legend {
   font-weight: 800;
 }
 
+.hangar-fieldset input:disabled + span,
+#offer-hangar-services:disabled {
+  cursor: not-allowed;
+}
+
+#offer-hangar-services:disabled {
+  opacity: 0.48;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
