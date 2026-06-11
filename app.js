@@ -59,7 +59,7 @@ const fallbackVehicles = [
     photo: "",
   },
   {
-    name: "Aegis Redeemer",
+    name: "Redeemer",
     nameFull: "Aegis Redeemer",
     company: "Aegis Dynamics",
     role: "Combat",
@@ -79,7 +79,7 @@ const fallbackVehicles = [
     photo: "",
   },
   {
-    name: "Origin 600i Touring",
+    name: "600i Touring",
     nameFull: "Origin 600i Touring",
     company: "Origin Jumpworks",
     role: "Touring",
@@ -104,10 +104,16 @@ const fleetList = document.querySelector("#fleet-list");
 const rentalResults = document.querySelector("#rental-results");
 const ownerForm = document.querySelector("#owner-form");
 const rentForm = document.querySelector("#rent-form");
-const shipOptions = document.querySelector("#ship-options");
+const ownerShipOptions = document.querySelector("#owner-ship-options");
+const rentShipOptions = document.querySelector("#rent-ship-options");
 const shipApiStatus = document.querySelector("#ship-api-status");
 const ownerShipInput = ownerForm.querySelector("[name='ship']");
 const ownerRoleSelect = ownerForm.querySelector("[name='role']");
+const ownerManufacturerSelect = document.querySelector("#owner-manufacturer");
+const rentManufacturerSelect = document.querySelector("#rent-manufacturer");
+const availabilityForm = document.querySelector("#availability-form");
+const availabilityShipSelect = document.querySelector("#availability-ship");
+const ownerCalendar = document.querySelector("#owner-calendar");
 const offerHangarServices = document.querySelector("#offer-hangar-services");
 const hangarServiceStatus = document.querySelector("#hangar-service-status");
 const hangarServicesPanel = document.querySelector("#hangar-services-panel");
@@ -118,14 +124,31 @@ document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
 });
 
+document.querySelectorAll(".sub-tab").forEach((tab) => {
+  tab.addEventListener("click", () => setOwnerView(tab.dataset.ownerView));
+});
+
 document.querySelector("#prev-month").addEventListener("click", () => {
   state.activeDate.setMonth(state.activeDate.getMonth() - 1);
   renderCalendar();
+  renderOwnerSchedule();
 });
 
 document.querySelector("#next-month").addEventListener("click", () => {
   state.activeDate.setMonth(state.activeDate.getMonth() + 1);
   renderCalendar();
+  renderOwnerSchedule();
+});
+
+ownerManufacturerSelect.addEventListener("change", () => {
+  ownerShipInput.value = "";
+  renderShipOptions();
+  updateHangarEligibility();
+});
+
+rentManufacturerSelect.addEventListener("change", () => {
+  renderShipOptions();
+  renderRentalResults();
 });
 
 ownerForm.addEventListener("submit", (event) => {
@@ -141,9 +164,11 @@ ownerForm.addEventListener("submit", (event) => {
 
   ships.unshift({
     owner: data.get("owner"),
-    ship: selectedVehicle?.nameFull || data.get("ship"),
+    ship: selectedVehicle?.name || data.get("ship"),
     role: selectedVehicle?.role || data.get("role"),
     rate: Number(data.get("rate")),
+    ratePeriod: data.get("ratePeriod"),
+    manufacturer: selectedVehicle?.company || data.get("manufacturer"),
     configName: data.get("configName"),
     configPrice: Number(data.get("configPrice") || 0),
     pilotIncluded: data.has("pilotIncluded"),
@@ -166,6 +191,7 @@ ownerForm.addEventListener("submit", (event) => {
   renderFleet();
   renderCalendar();
   renderRentalResults();
+  renderOwnerSchedule();
 });
 
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
@@ -202,6 +228,32 @@ rentForm.addEventListener("submit", (event) => {
   renderRentalResults();
 });
 
+availabilityForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(availabilityForm);
+  const ship = ships[Number(data.get("shipIndex"))];
+  const dates = parseDateList(data.get("dates"));
+  const status = data.get("status");
+
+  if (!ship || dates.length === 0) {
+    return;
+  }
+
+  if (status === "available") {
+    ship.dates = uniqueSorted([...ship.dates, ...dates]);
+    ship.unavailableDates = (ship.unavailableDates || []).filter((date) => !dates.includes(date));
+  } else {
+    ship.dates = ship.dates.filter((date) => !dates.includes(date));
+    ship.unavailableDates = uniqueSorted([...(ship.unavailableDates || []), ...dates]);
+  }
+
+  availabilityForm.reset();
+  renderFleet();
+  renderCalendar();
+  renderRentalResults();
+  renderOwnerSchedule();
+});
+
 async function loadVehicles() {
   shipApiStatus.textContent = "Loading UEX ship list...";
 
@@ -215,19 +267,22 @@ async function loadVehicles() {
     vehicleCatalog = payload.data
       .map(normalizeVehicle)
       .filter((vehicle) => vehicle.nameFull && !vehicle.isAddon)
-      .sort((a, b) => a.nameFull.localeCompare(b.nameFull));
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     enrichSeedShips();
+    renderManufacturerOptions();
     renderShipOptions();
     shipApiStatus.textContent = `${vehicleCatalog.length.toLocaleString()} ships loaded from UEX`;
   } catch (error) {
     vehicleCatalog = fallbackVehicles.map((vehicle) => ({
       ...vehicle,
+      name: stripManufacturer(vehicle.name, vehicle.company),
       searchText: [vehicle.name, vehicle.nameFull, vehicle.company, vehicle.role, vehicle.padType]
         .filter(Boolean)
         .join(" ")
         .toLowerCase(),
     }));
+    renderManufacturerOptions();
     renderShipOptions();
     shipApiStatus.textContent = "Using fallback ship list; UEX is not reachable from this browser";
   }
@@ -235,6 +290,7 @@ async function loadVehicles() {
   renderFleet();
   renderCalendar();
   renderRentalResults();
+  renderOwnerSchedule();
 }
 
 async function loadHangarServices() {
@@ -265,6 +321,20 @@ function setActiveTab(tabName) {
   document.querySelectorAll(".panel").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.panel === tabName);
   });
+}
+
+function setOwnerView(viewName) {
+  document.querySelectorAll(".sub-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.ownerView === viewName);
+  });
+
+  document.querySelectorAll(".owner-view").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.ownerPanel === viewName);
+  });
+
+  if (viewName === "schedule") {
+    renderOwnerSchedule();
+  }
 }
 
 function renderCalendar() {
@@ -348,7 +418,7 @@ function renderFleet() {
               </div>
               <ul class="meta-list">
                 <li>Owner: ${escapeHtml(ship.owner)}</li>
-                <li>Ship rate: ${formatCredits(ship.rate)} UEC / hour</li>
+                <li>Ship rate: ${formatCredits(ship.rate)} UEC / ${ratePeriodLabel(ship.ratePeriod)}</li>
                 ${listingPriceFacts(ship)}
                 <li>Dates: ${ship.dates.map(formatShortDate).join(", ")}</li>
                 ${vehicleFacts(ship)}
@@ -370,12 +440,15 @@ function renderRentalResults() {
   const neededDate = form.get("date");
   const query = String(form.get("query") || "").trim().toLowerCase();
   const budget = Number(form.get("budget") || Infinity);
+  const budgetPeriod = form.get("budgetPeriod") || "hour";
+  const manufacturer = String(form.get("manufacturer") || "");
   const results = ships.filter((ship) => {
     const matchesDate = !neededDate || ship.dates.includes(neededDate);
-    const matchesBudget = Number.isNaN(budget) || ship.rate <= budget;
-    const haystack = `${ship.ship} ${ship.role} ${ship.owner} ${ship.options.join(" ")}`.toLowerCase();
+    const matchesBudget = Number.isNaN(budget) || convertRate(ship.rate, ship.ratePeriod, budgetPeriod) <= budget;
+    const matchesManufacturer = !manufacturer || ship.manufacturer === manufacturer || ship.vehicle?.company === manufacturer;
+    const haystack = `${ship.ship} ${ship.role} ${ship.owner} ${ship.manufacturer || ""} ${ship.options.join(" ")}`.toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
-    return matchesDate && matchesBudget && matchesQuery;
+    return matchesDate && matchesBudget && matchesManufacturer && matchesQuery;
   });
 
   rentalResults.innerHTML = results.length
@@ -386,7 +459,7 @@ function renderRentalResults() {
               ${shipImage(ship)}
               <div class="card-top">
                 <h2>${escapeHtml(ship.ship)}</h2>
-                <span class="tag">${ship.rate.toLocaleString()} UEC/hr</span>
+                <span class="tag">${formatCredits(ship.rate)} UEC/${ratePeriodLabel(ship.ratePeriod)}</span>
               </div>
               <ul class="meta-list">
                 <li>Owner: ${escapeHtml(ship.owner)}</li>
@@ -405,6 +478,58 @@ function renderRentalResults() {
         )
         .join("")
     : `<div class="empty-state">No ships match that request yet. Try a wider budget or another date.</div>`;
+}
+
+function renderOwnerSchedule() {
+  availabilityShipSelect.innerHTML = ships.length
+    ? ships
+        .map((ship, index) => `<option value="${index}">${escapeHtml(ship.ship)} - ${escapeHtml(ship.owner)}</option>`)
+        .join("")
+    : `<option value="">No fleet ships yet</option>`;
+
+  availabilityForm.querySelectorAll("input, select, button").forEach((control) => {
+    control.disabled = ships.length === 0;
+  });
+
+  if (!ships.length) {
+    ownerCalendar.innerHTML = `<div class="empty-state">Add ships to your fleet, then use this schedule view to set availability.</div>`;
+    return;
+  }
+
+  const year = state.activeDate.getFullYear();
+  const month = state.activeDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startOffset = firstDay.getDay();
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  let markup = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    .map((day) => `<div class="weekday">${day}</div>`)
+    .join("");
+
+  for (let index = 0; index < totalCells; index += 1) {
+    const dayNumber = index - startOffset + 1;
+    const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+    const dateKey = isCurrentMonth ? toDateKey(year, month, dayNumber) : "";
+    const availableShips = ships.filter((ship) => ship.dates.includes(dateKey));
+    const unavailableShips = ships.filter((ship) => ship.unavailableDates?.includes(dateKey));
+    const pills = [
+      ...availableShips.map((ship) => availabilityPill(ship.ship, "Available", "available")),
+      ...unavailableShips.map((ship) => availabilityPill(ship.ship, "Unavailable", "booked")),
+    ].join("");
+
+    markup += `
+      <article class="day-cell${isCurrentMonth ? "" : " is-muted"}">
+        <div class="day-number">
+          <span>${isCurrentMonth ? dayNumber : ""}</span>
+          ${isCurrentMonth ? `<small>${availableShips.length} available</small>` : ""}
+        </div>
+        ${isCurrentMonth ? pills || availabilityPill("No fleet availability", "Set dates above", "owner") : ""}
+      </article>
+    `;
+  }
+
+  ownerCalendar.innerHTML = markup;
 }
 
 function renderHangarServiceRows() {
@@ -586,9 +711,10 @@ function configurationSummary(ship) {
 }
 
 function normalizeVehicle(vehicle) {
+  const modelName = stripManufacturer(vehicle.name || "", vehicle.company_name || "");
   return {
     id: vehicle.id,
-    name: vehicle.name || "",
+    name: modelName,
     nameFull: vehicle.name_full || vehicle.name || "",
     company: vehicle.company_name || "",
     role: inferVehicleRole(vehicle),
@@ -598,7 +724,7 @@ function normalizeVehicle(vehicle) {
     photo: vehicle.url_photo || "",
     isAddon: Boolean(Number(vehicle.is_addon || 0)),
     searchText: [
-      vehicle.name,
+      modelName,
       vehicle.name_full,
       vehicle.company_name,
       inferVehicleRole(vehicle),
@@ -633,10 +759,16 @@ function inferVehicleRole(vehicle) {
 }
 
 function renderShipOptions() {
-  shipOptions.innerHTML = vehicleCatalog
+  ownerShipOptions.innerHTML = filteredVehicles(ownerManufacturerSelect.value)
     .map(
       (vehicle) =>
-        `<option value="${escapeHtml(vehicle.nameFull)}">${escapeHtml(vehicle.company)} ${escapeHtml(vehicle.role)}</option>`,
+        `<option value="${escapeHtml(vehicle.name)}">${escapeHtml(vehicle.company)} ${escapeHtml(vehicle.role)}</option>`,
+    )
+    .join("");
+  rentShipOptions.innerHTML = filteredVehicles(rentManufacturerSelect.value)
+    .map(
+      (vehicle) =>
+        `<option value="${escapeHtml(vehicle.name)}">${escapeHtml(vehicle.company)} ${escapeHtml(vehicle.role)}</option>`,
     )
     .join("");
 }
@@ -648,10 +780,29 @@ function findVehicle(value) {
   }
 
   return (
+    vehicleCatalog.find(
+      (vehicle) =>
+        vehicle.name.toLowerCase() === query &&
+        (!ownerManufacturerSelect.value || vehicle.company === ownerManufacturerSelect.value),
+    ) ||
     vehicleCatalog.find((vehicle) => vehicle.nameFull.toLowerCase() === query) ||
     vehicleCatalog.find((vehicle) => vehicle.name.toLowerCase() === query) ||
     vehicleCatalog.find((vehicle) => vehicle.searchText.includes(query))
   );
+}
+
+function renderManufacturerOptions() {
+  const manufacturers = uniqueSorted(vehicleCatalog.map((vehicle) => vehicle.company));
+  const options = [`<option value="">All manufacturers</option>`]
+    .concat(manufacturers.map((manufacturer) => `<option value="${escapeHtml(manufacturer)}">${escapeHtml(manufacturer)}</option>`))
+    .join("");
+
+  ownerManufacturerSelect.innerHTML = options;
+  rentManufacturerSelect.innerHTML = options;
+}
+
+function filteredVehicles(manufacturer) {
+  return manufacturer ? vehicleCatalog.filter((vehicle) => vehicle.company === manufacturer) : vehicleCatalog;
 }
 
 function syncOwnerShipFields(value) {
@@ -674,8 +825,9 @@ function enrichSeedShips() {
   ships.forEach((ship) => {
     const vehicle = findVehicle(ship.ship);
     if (vehicle) {
-      ship.ship = vehicle.nameFull;
+      ship.ship = vehicle.name;
       ship.role = vehicle.role;
+      ship.manufacturer = vehicle.company;
       ship.vehicle = vehicle;
     }
 
@@ -715,6 +867,20 @@ function uniqueSorted(values) {
   return Array.from(new Set(values.filter(Boolean))).sort((first, second) => first.localeCompare(second));
 }
 
+function ratePeriodLabel(period = "hour") {
+  return period === "day" ? "day" : period === "week" ? "week" : "hour";
+}
+
+function convertRate(rate, fromPeriod = "hour", toPeriod = "hour") {
+  const periodHours = {
+    hour: 1,
+    day: 24,
+    week: 168,
+  };
+  const hourlyRate = Number(rate || 0) / (periodHours[fromPeriod] || 1);
+  return hourlyRate * (periodHours[toPeriod] || 1);
+}
+
 function normalizeShipName(value) {
   return String(value || "")
     .toLowerCase()
@@ -722,6 +888,20 @@ function normalizeShipName(value) {
     .replace(/\b(rsi|roberts space industries)\b/g, "rsi")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function stripManufacturer(name, manufacturer) {
+  const cleanName = String(name || "").trim();
+  const cleanManufacturer = String(manufacturer || "").trim();
+  if (!cleanManufacturer) {
+    return cleanName;
+  }
+
+  return cleanName.replace(new RegExp(`^${escapeRegExp(cleanManufacturer)}\\s+`, "i"), "").trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isHangarServiceEligible(vehicleOrName) {
@@ -770,6 +950,13 @@ function formatShortDate(value) {
   });
 }
 
+function parseDateList(value) {
+  return String(value || "")
+    .split(",")
+    .map((date) => date.trim())
+    .filter(Boolean);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -782,5 +969,6 @@ function escapeHtml(value) {
 renderCalendar();
 renderFleet();
 renderRentalResults();
+renderOwnerSchedule();
 loadVehicles();
 loadHangarServices();

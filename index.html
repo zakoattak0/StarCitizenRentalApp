@@ -66,8 +66,13 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Owner console</p>
-              <h1>Add a rentable ship</h1>
+              <h1>Manage your fleet</h1>
             </div>
+          </div>
+
+          <div class="sub-tabs" aria-label="Owner views">
+            <button class="sub-tab active" data-owner-view="fleet">Fleet</button>
+            <button class="sub-tab" data-owner-view="schedule">Schedule</button>
           </div>
 
           <div class="split-layout">
@@ -77,9 +82,15 @@
                 <input name="owner" required placeholder="Aegis_Hauler" />
               </label>
               <label>
+                Manufacturer
+                <select name="manufacturer" id="owner-manufacturer">
+                  <option value="">All manufacturers</option>
+                </select>
+              </label>
+              <label>
                 Ship
-                <input name="ship" required list="ship-options" placeholder="C2 Hercules Starlifter" />
-                <datalist id="ship-options"></datalist>
+                <input name="ship" required list="owner-ship-options" placeholder="600i Touring" />
+                <datalist id="owner-ship-options"></datalist>
               </label>
               <p class="api-status" id="ship-api-status">Loading UEX ship list...</p>
               <div class="form-grid">
@@ -95,8 +106,16 @@
                   </select>
                 </label>
                 <label>
-                  Ship rate / hour
+                  Ship rate
                   <input name="rate" type="number" min="0" value="15000" />
+                </label>
+                <label>
+                  Rate period
+                  <select name="ratePeriod">
+                    <option value="hour">Per hour</option>
+                    <option value="day">Per day</option>
+                    <option value="week">Per week</option>
+                  </select>
                 </label>
               </div>
               <label>
@@ -159,7 +178,32 @@
               <button class="primary-button" type="submit">Add ship</button>
             </form>
 
-            <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
+            <div class="owner-workspace">
+              <section class="owner-view active" data-owner-panel="fleet">
+                <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
+              </section>
+              <section class="owner-view" data-owner-panel="schedule">
+                <form class="schedule-form" id="availability-form">
+                  <label>
+                    Fleet ship
+                    <select name="shipIndex" id="availability-ship"></select>
+                  </label>
+                  <label>
+                    Dates
+                    <input name="dates" placeholder="2026-06-14, 2026-06-15" />
+                  </label>
+                  <label>
+                    Availability
+                    <select name="status">
+                      <option value="available">Available</option>
+                      <option value="unavailable">Unavailable</option>
+                    </select>
+                  </label>
+                  <button class="primary-button" type="submit">Update availability</button>
+                </form>
+                <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>
+              </section>
+            </div>
           </div>
         </section>
 
@@ -177,12 +221,27 @@
               <input name="date" type="date" value="2026-06-14" />
             </label>
             <label>
-              Ship or role
-              <input name="query" list="ship-options" placeholder="Cargo, Carrack, mining..." />
+              Manufacturer
+              <select name="manufacturer" id="rent-manufacturer">
+                <option value="">All manufacturers</option>
+              </select>
             </label>
             <label>
-              Max UEC / hour
+              Ship or role
+              <input name="query" list="rent-ship-options" placeholder="Cargo, Carrack, mining..." />
+              <datalist id="rent-ship-options"></datalist>
+            </label>
+            <label>
+              Max UEC
               <input name="budget" type="number" min="0" value="25000" />
+            </label>
+            <label>
+              Rate period
+              <select name="budgetPeriod">
+                <option value="hour">Per hour</option>
+                <option value="day">Per day</option>
+                <option value="week">Per week</option>
+              </select>
             </label>
             <button class="primary-button" type="submit">Search</button>
           </form>

@@ -116,6 +116,7 @@ legend {
 }
 
 .tabs,
+.sub-tabs,
 .status-row {
   display: flex;
   gap: 8px;
@@ -123,6 +124,7 @@ legend {
 }
 
 .tab,
+.sub-tab,
 .icon-button,
 .primary-button {
   border: 1px solid var(--line);
@@ -138,16 +140,29 @@ legend {
 }
 
 .tab:hover,
+.sub-tab:hover,
 .icon-button:hover,
 .primary-button:hover {
   border-color: var(--cyan);
 }
 
 .tab.active,
+.sub-tab.active,
 .primary-button {
   background: linear-gradient(180deg, rgba(34, 211, 238, 0.2), rgba(47, 129, 247, 0.16));
   border-color: var(--cyan);
   color: #f2fbff;
+}
+
+.sub-tabs {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 10px;
+}
+
+.sub-tab {
+  min-height: 38px;
+  padding: 0 14px;
 }
 
 main {
@@ -250,6 +265,14 @@ h1 {
   min-height: 72vh;
 }
 
+.owner-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
 .weekday,
 .day-cell {
   background: #071018;
@@ -320,8 +343,21 @@ h1 {
   gap: 18px;
 }
 
+.owner-workspace {
+  min-width: 0;
+}
+
+.owner-view {
+  display: none;
+}
+
+.owner-view.active {
+  display: block;
+}
+
 .data-form,
 .search-bar,
+.schedule-form,
 .fleet-card,
 .result-card {
   border: 1px solid var(--line);
@@ -329,7 +365,8 @@ h1 {
 }
 
 .data-form,
-.search-bar {
+.search-bar,
+.schedule-form {
   display: grid;
   gap: 14px;
   padding: 16px;
@@ -342,9 +379,15 @@ h1 {
 }
 
 .search-bar {
-  grid-template-columns: 190px 1fr 190px auto;
+  grid-template-columns: 160px 180px minmax(170px, 1fr) 150px 150px auto;
   align-items: end;
   margin-bottom: 18px;
+}
+
+.schedule-form {
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) 160px auto;
+  align-items: end;
+  margin-bottom: 14px;
 }
 
 label {
@@ -648,7 +691,8 @@ legend {
   .split-layout,
   .fleet-list,
   .results-grid,
-  .search-bar {
+  .search-bar,
+  .schedule-form {
     grid-template-columns: 1fr;
   }
 
@@ -674,7 +718,8 @@ legend {
     font-size: 2.35rem;
   }
 
-  .calendar-grid {
+  .calendar-grid,
+  .owner-calendar {
     display: block;
     background: transparent;
     border: 0;
