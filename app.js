@@ -96,10 +96,26 @@ const bookings = [];
 
 const state = {
   activeDate: new Date(2026, 5, 1),
+  calendarMode: "availability",
+  calendarFilters: {
+    owner: "",
+    ship: "",
+    configMode: "any",
+  },
 };
 
 const monthLabel = document.querySelector("#month-label");
 const calendarGrid = document.querySelector("#calendar-grid");
+const calendarModeSelect = document.querySelector("#calendar-mode");
+const calendarFilterButton = document.querySelector("#calendar-filter-button");
+const calendarFilterModal = document.querySelector("#calendar-filter-modal");
+const calendarFilterForm = document.querySelector("#calendar-filter-form");
+const calendarFilterClose = document.querySelector("#calendar-filter-close");
+const calendarFilterClear = document.querySelector("#calendar-filter-clear");
+const calendarOwnerOptions = document.querySelector("#calendar-owner-options");
+const calendarShipOptions = document.querySelector("#calendar-ship-options");
+const filterSummary = document.querySelector("#filter-summary");
+const generateRequestButton = document.querySelector("#generate-request-button");
 const fleetList = document.querySelector("#fleet-list");
 const rentalResults = document.querySelector("#rental-results");
 const ownerForm = document.querySelector("#owner-form");
@@ -138,6 +154,57 @@ document.querySelector("#next-month").addEventListener("click", () => {
   state.activeDate.setMonth(state.activeDate.getMonth() + 1);
   renderCalendar();
   renderOwnerSchedule();
+});
+
+calendarModeSelect.addEventListener("change", () => {
+  state.calendarMode = calendarModeSelect.value;
+  renderCalendar();
+});
+
+calendarFilterButton.addEventListener("click", () => {
+  renderCalendarFilterOptions();
+  calendarFilterModal.classList.remove("is-hidden");
+});
+
+calendarFilterClose.addEventListener("click", () => {
+  calendarFilterModal.classList.add("is-hidden");
+});
+
+calendarFilterModal.addEventListener("click", (event) => {
+  if (event.target === calendarFilterModal) {
+    calendarFilterModal.classList.add("is-hidden");
+  }
+});
+
+calendarFilterClear.addEventListener("click", () => {
+  state.calendarFilters = {
+    owner: "",
+    ship: "",
+    configMode: "any",
+  };
+  calendarFilterForm.reset();
+  updateFilterSummary();
+  renderCalendar();
+});
+
+calendarFilterForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(calendarFilterForm);
+  state.calendarFilters = {
+    owner: String(data.get("owner") || "").trim(),
+    ship: String(data.get("ship") || "").trim(),
+    configMode: data.get("configMode") || "any",
+  };
+  calendarFilterModal.classList.add("is-hidden");
+  updateFilterSummary();
+  renderCalendar();
+});
+
+generateRequestButton.addEventListener("click", () => {
+  generateRequestButton.textContent = "Request builder coming soon";
+  window.setTimeout(() => {
+    generateRequestButton.textContent = "Generate Request";
+  }, 1800);
 });
 
 ownerManufacturerSelect.addEventListener("change", () => {
@@ -192,6 +259,7 @@ ownerForm.addEventListener("submit", (event) => {
   renderCalendar();
   renderRentalResults();
   renderOwnerSchedule();
+  updateFilterSummary();
 });
 
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
@@ -291,6 +359,8 @@ async function loadVehicles() {
   renderCalendar();
   renderRentalResults();
   renderOwnerSchedule();
+  renderCalendarFilterOptions();
+  updateFilterSummary();
 }
 
 async function loadHangarServices() {
@@ -364,9 +434,10 @@ function renderCalendar() {
         ? previousMonthDays + dayNumber
         : dayNumber - daysInMonth;
     const dateKey = isCurrentMonth ? toDateKey(year, month, dayNumber) : "";
-    const dayShips = ships.filter((ship) => ship.dates.includes(dateKey));
-    const dayBookings = bookings.filter((booking) => booking.date === dateKey);
-    const countLabel = dayShips.length ? `${dayShips.length} ships` : "Open call";
+    const dayShips = filterCalendarShips(ships).filter((ship) => ship.dates.includes(dateKey));
+    const dayBookings = filterCalendarBookings(bookings).filter((booking) => booking.date === dateKey);
+    const activeCount = state.calendarMode === "rentals" ? dayBookings.length : dayShips.length;
+    const countLabel = activeCount ? `${activeCount} ${state.calendarMode === "rentals" ? "rentals" : "ships"}` : "Open";
 
     const cell = document.createElement("article");
     cell.className = `day-cell${isCurrentMonth ? "" : " is-muted"}`;
@@ -378,22 +449,52 @@ function renderCalendar() {
     `;
 
     if (isCurrentMonth) {
-      const visibleShips = dayShips.slice(0, 3);
-      visibleShips.forEach((ship) => {
-        cell.insertAdjacentHTML("beforeend", availabilityPill(ship.ship, ship.owner, "available"));
-      });
+      if (state.calendarMode === "rentals") {
+        dayBookings.forEach((booking) => {
+          cell.insertAdjacentHTML("beforeend", availabilityPill(booking.ship, booking.owner, booking.status));
+        });
 
-      dayBookings.forEach((booking) => {
-        cell.insertAdjacentHTML("beforeend", availabilityPill(booking.ship, booking.owner, booking.status));
-      });
+        if (!dayBookings.length) {
+          cell.insertAdjacentHTML("beforeend", availabilityPill("No rentals scheduled", "Requests will appear here", "owner"));
+        }
+      } else {
+        const visibleShips = dayShips.slice(0, 3);
+        visibleShips.forEach((ship) => {
+          cell.insertAdjacentHTML("beforeend", availabilityPill(ship.ship, ship.owner, "available"));
+        });
 
-      if (!visibleShips.length && !dayBookings.length) {
-        cell.insertAdjacentHTML("beforeend", availabilityPill("No listings yet", "Owners can claim this day", "owner"));
+        if (!visibleShips.length) {
+          cell.insertAdjacentHTML("beforeend", availabilityPill("No listings yet", "Owners can claim this day", "owner"));
+        }
       }
     }
 
     calendarGrid.appendChild(cell);
   }
+}
+
+function filterCalendarShips(sourceShips) {
+  const ownerFilter = normalizeFilterValue(state.calendarFilters.owner);
+  const shipFilter = normalizeFilterValue(state.calendarFilters.ship);
+  const configMode = state.calendarFilters.configMode;
+
+  return sourceShips.filter((ship) => {
+    const matchesOwner = !ownerFilter || normalizeFilterValue(ship.owner).includes(ownerFilter);
+    const matchesShip = !shipFilter || normalizeFilterValue(ship.ship).includes(shipFilter);
+    const matchesConfig = configMode !== "custom" || Boolean(ship.configName || ship.configPrice || ship.options?.length);
+    return matchesOwner && matchesShip && matchesConfig;
+  });
+}
+
+function filterCalendarBookings(sourceBookings) {
+  const ownerFilter = normalizeFilterValue(state.calendarFilters.owner);
+  const shipFilter = normalizeFilterValue(state.calendarFilters.ship);
+
+  return sourceBookings.filter((booking) => {
+    const matchesOwner = !ownerFilter || normalizeFilterValue(booking.owner).includes(ownerFilter);
+    const matchesShip = !shipFilter || normalizeFilterValue(booking.ship).includes(shipFilter);
+    return matchesOwner && matchesShip;
+  });
 }
 
 function availabilityPill(title, subtitle, status) {
@@ -530,6 +631,41 @@ function renderOwnerSchedule() {
   }
 
   ownerCalendar.innerHTML = markup;
+}
+
+function renderCalendarFilterOptions() {
+  calendarOwnerOptions.innerHTML = uniqueSorted([
+    ...ships.map((ship) => ship.owner),
+    ...bookings.map((booking) => booking.owner),
+  ])
+    .map((owner) => `<option value="${escapeHtml(owner)}"></option>`)
+    .join("");
+  calendarShipOptions.innerHTML = uniqueSorted([
+    ...ships.map((ship) => ship.ship),
+    ...bookings.map((booking) => booking.ship),
+  ])
+    .map((ship) => `<option value="${escapeHtml(ship)}"></option>`)
+    .join("");
+
+  calendarFilterForm.elements.owner.value = state.calendarFilters.owner;
+  calendarFilterForm.elements.ship.value = state.calendarFilters.ship;
+  calendarFilterForm.elements.configMode.value = state.calendarFilters.configMode;
+}
+
+function updateFilterSummary() {
+  const filters = [];
+  if (state.calendarFilters.owner) {
+    filters.push(`Owner: ${state.calendarFilters.owner}`);
+  }
+  if (state.calendarFilters.ship) {
+    filters.push(`Ship: ${state.calendarFilters.ship}`);
+  }
+  if (state.calendarFilters.configMode === "custom") {
+    filters.push("Config: Custom");
+  }
+
+  filterSummary.textContent = filters.length ? filters.join(" · ") : "No filters applied";
+  generateRequestButton.classList.toggle("is-hidden", filters.length === 0);
 }
 
 function renderHangarServiceRows() {
@@ -867,6 +1003,10 @@ function uniqueSorted(values) {
   return Array.from(new Set(values.filter(Boolean))).sort((first, second) => first.localeCompare(second));
 }
 
+function normalizeFilterValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function ratePeriodLabel(period = "hour") {
   return period === "day" ? "day" : period === "week" ? "week" : "hour";
 }
@@ -970,5 +1110,7 @@ renderCalendar();
 renderFleet();
 renderRentalResults();
 renderOwnerSchedule();
+renderCalendarFilterOptions();
+updateFilterSummary();
 loadVehicles();
 loadHangarServices();

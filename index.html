@@ -52,6 +52,19 @@
             </div>
           </div>
 
+          <div class="calendar-toolbar">
+            <label>
+              Calendar view
+              <select id="calendar-mode">
+                <option value="availability">Availability</option>
+                <option value="rentals">Rentals</option>
+              </select>
+            </label>
+            <button class="secondary-button" id="calendar-filter-button" type="button">Filter</button>
+            <button class="primary-button is-hidden" id="generate-request-button" type="button">Generate Request</button>
+            <span class="filter-summary" id="filter-summary">No filters applied</span>
+          </div>
+
           <div class="status-row" aria-label="Calendar legend">
             <span><i class="dot available"></i>Available</span>
             <span><i class="dot partial"></i>Limited</span>
@@ -61,6 +74,39 @@
 
           <div class="calendar-grid" id="calendar-grid" aria-label="Ship availability calendar"></div>
         </section>
+
+        <div class="modal-backdrop is-hidden" id="calendar-filter-modal" role="dialog" aria-modal="true" aria-labelledby="calendar-filter-title">
+          <form class="filter-modal" id="calendar-filter-form">
+            <div class="modal-heading">
+              <div>
+                <p class="eyebrow">Calendar filters</p>
+                <h2 id="calendar-filter-title">Filter calendar</h2>
+              </div>
+              <button class="icon-button" id="calendar-filter-close" type="button" aria-label="Close filter">×</button>
+            </div>
+            <label>
+              Owner
+              <input name="owner" list="calendar-owner-options" placeholder="Any owner" />
+              <datalist id="calendar-owner-options"></datalist>
+            </label>
+            <label>
+              Ship
+              <input name="ship" list="calendar-ship-options" placeholder="Any ship" />
+              <datalist id="calendar-ship-options"></datalist>
+            </label>
+            <label>
+              Config
+              <select name="configMode">
+                <option value="any">Any</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+            <div class="modal-actions">
+              <button class="secondary-button" id="calendar-filter-clear" type="button">Clear</button>
+              <button class="primary-button" type="submit">Apply filter</button>
+            </div>
+          </form>
+        </div>
 
         <section class="panel" id="owners-panel" data-panel="owners">
           <div class="section-heading">

@@ -126,6 +126,7 @@ legend {
 .tab,
 .sub-tab,
 .icon-button,
+.secondary-button,
 .primary-button {
   border: 1px solid var(--line);
   background: #0a131c;
@@ -142,6 +143,7 @@ legend {
 .tab:hover,
 .sub-tab:hover,
 .icon-button:hover,
+.secondary-button:hover,
 .primary-button:hover {
   border-color: var(--cyan);
 }
@@ -152,6 +154,16 @@ legend {
   background: linear-gradient(180deg, rgba(34, 211, 238, 0.2), rgba(47, 129, 247, 0.16));
   border-color: var(--cyan);
   color: #f2fbff;
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  font-weight: 800;
+}
+
+.is-hidden {
+  display: none !important;
 }
 
 .sub-tabs {
@@ -209,6 +221,58 @@ h1 {
   align-items: center;
   gap: 12px;
   min-width: 280px;
+  justify-content: end;
+}
+
+.calendar-toolbar {
+  display: grid;
+  grid-template-columns: 180px auto auto 1fr;
+  gap: 10px;
+  align-items: end;
+  border-block: 1px solid var(--line-soft);
+  padding: 12px 0;
+  margin-bottom: 12px;
+}
+
+.filter-summary {
+  color: var(--muted);
+  align-self: center;
+  font-size: 0.84rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.64);
+  padding: 18px;
+}
+
+.filter-modal {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.modal-heading,
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-heading h2 {
+  margin: 0;
+}
+
+.modal-actions {
   justify-content: end;
 }
 
@@ -684,6 +748,7 @@ legend {
   }
 
   .tabs,
+  .sub-tabs,
   .calendar-controls {
     justify-content: start;
   }
@@ -691,6 +756,7 @@ legend {
   .split-layout,
   .fleet-list,
   .results-grid,
+  .calendar-toolbar,
   .search-bar,
   .schedule-form {
     grid-template-columns: 1fr;
