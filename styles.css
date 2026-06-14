@@ -491,10 +491,6 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.role-grid {
-  grid-template-columns: minmax(180px, 1fr);
-}
-
 .rate-grid {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(190px, 1fr);

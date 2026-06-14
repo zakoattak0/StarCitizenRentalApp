@@ -1,5 +1,5 @@
-const pricesUrl = "https://api.uexcorp.space/2.0/commodities_prices_all";
-const terminalsUrl = "https://api.uexcorp.space/2.0/terminals";
+const pricesUrl = "https://api.uexcorp.uk/2.0/commodities_prices_all";
+const terminalsUrl = "https://api.uexcorp.uk/2.0/terminals";
 
 const serviceCommodities = new Map([
   ["Size 1 Ammo", ["Ship Ammunition - Size 1"]],

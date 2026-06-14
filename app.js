@@ -36,6 +36,7 @@ const hangarServiceEligibleShips = new Set(
 
 let vehicleCatalog = [];
 let hangarMarketRows = [];
+let hangarMarketError = "";
 let editingShipIndex = null;
 let pendingRemoveShipIndex = null;
 
@@ -126,7 +127,6 @@ const ownerShipOptions = document.querySelector("#owner-ship-options");
 const rentShipOptions = document.querySelector("#rent-ship-options");
 const shipApiStatus = document.querySelector("#ship-api-status");
 const ownerShipInput = ownerForm.querySelector("[name='ship']");
-const ownerRoleSelect = ownerForm.querySelector("[name='role']");
 const ownerManufacturerSelect = document.querySelector("#owner-manufacturer");
 const rentManufacturerSelect = document.querySelector("#rent-manufacturer");
 const availabilityForm = document.querySelector("#availability-form");
@@ -289,7 +289,7 @@ ownerForm.addEventListener("submit", (event) => {
   const listing = {
     owner: data.get("owner"),
     ship: selectedVehicle?.name || data.get("ship"),
-    role: selectedVehicle?.role || data.get("role"),
+    role: selectedVehicle?.role || existingShip?.role || "General",
     rates,
     manufacturer: selectedVehicle?.company || data.get("manufacturer"),
     pilotIncluded: data.has("pilotIncluded"),
@@ -493,17 +493,19 @@ async function loadVehicles() {
 async function loadHangarServices() {
   renderHangarServiceRows();
   hangarServiceStatus.textContent = "Loading UEX purchase locations...";
+  hangarMarketError = "";
 
   try {
     const response = await fetch(HANGAR_SERVICES_URL);
+    const payload = await response.json();
     if (!response.ok) {
-      throw new Error(`Hangar services returned ${response.status}`);
+      throw new Error(payload.error || `Hangar services returned ${response.status}`);
     }
 
-    const payload = await response.json();
     hangarMarketRows = Array.isArray(payload.rows) ? payload.rows : [];
   } catch (error) {
     hangarMarketRows = [];
+    hangarMarketError = error instanceof Error ? error.message : "Unable to load UEX purchase locations";
   }
 
   renderHangarServiceRows();
@@ -1006,7 +1008,6 @@ function populateOwnerForm(index) {
   ownerForm.elements.owner.value = ship.owner || "";
   ownerManufacturerSelect.value = ship.manufacturer || ship.vehicle?.company || "";
   renderShipOptions();
-  ownerRoleSelect.value = roleForSelect(ship.role || "Cargo");
   ownerForm.elements.ship.value = ship.vehicle?.id || findVehicle(ship.ship, ship.manufacturer)?.id || "";
   rateInputs.hour.value = ship.rates?.hour || (ship.ratePeriod === "hour" ? ship.rate : "") || "";
   rateInputs.day.value = ship.rates?.day || (ship.ratePeriod === "day" ? ship.rate : "") || "";
@@ -1210,13 +1211,7 @@ function syncOwnerShipFields(value) {
     return;
   }
 
-  ownerRoleSelect.value = roleForSelect(vehicle.role);
   updateHangarEligibility(vehicle);
-}
-
-function roleForSelect(role) {
-  const knownRoles = Array.from(ownerRoleSelect.options).map((option) => option.value);
-  return knownRoles.includes(role) ? role : role === "Mining" || role === "Salvage" ? "Industrial" : "Cargo";
 }
 
 function enrichSeedShips() {
@@ -1399,7 +1394,7 @@ function updateHangarEligibility(vehicle = findVehicle(ownerShipInput.value)) {
 
   hangarServiceStatus.textContent = hangarMarketRows.length
     ? `${hangarMarketRows.length.toLocaleString()} UEX purchase locations loaded`
-    : "Loading UEX purchase locations...";
+    : hangarMarketError || "No UEX purchase locations available";
   hangarServicesPanel.classList.toggle("is-hidden", !offerHangarServices.checked);
 }
 
