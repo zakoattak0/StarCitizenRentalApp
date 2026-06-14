@@ -250,10 +250,7 @@ ownerForm.addEventListener("submit", (event) => {
   const data = new FormData(ownerForm);
   const selectedVehicle = findVehicle(data.get("ship"));
   const hangarServices = collectHangarServices();
-  const dates = String(data.get("dates"))
-    .split(",")
-    .map((date) => date.trim())
-    .filter(Boolean);
+  const existingShip = editingShipIndex === null ? null : ships[editingShipIndex];
 
   const listing = {
     owner: data.get("owner"),
@@ -270,7 +267,8 @@ ownerForm.addEventListener("submit", (event) => {
     hangarLoadMode: data.get("hangarLoadMode") || "flat",
     hangarLoadPercent: Number(data.get("hangarLoadPercent") || 0),
     notes: data.get("notes"),
-    dates,
+    dates: existingShip?.dates || [],
+    unavailableDates: existingShip?.unavailableDates || [],
     hangarServices,
     vehicle: selectedVehicle,
   };
@@ -278,7 +276,6 @@ ownerForm.addEventListener("submit", (event) => {
   if (editingShipIndex === null) {
     ships.unshift(listing);
   } else {
-    listing.unavailableDates = ships[editingShipIndex]?.unavailableDates || [];
     ships[editingShipIndex] = listing;
   }
 
@@ -621,7 +618,6 @@ function renderFleet() {
                 <li>Owner: ${escapeHtml(ship.owner)}</li>
                 <li>Ship rate: ${formatCredits(ship.rate)} UEC / ${ratePeriodLabel(ship.ratePeriod)}</li>
                 ${listingPriceFacts(ship)}
-                <li>Dates: ${ship.dates.map(formatShortDate).join(", ")}</li>
                 ${vehicleFacts(ship)}
               </ul>
               ${configurationSummary(ship)}
@@ -980,7 +976,6 @@ function populateOwnerForm(index) {
   ownerRoleSelect.value = roleForSelect(ship.role || "Cargo");
   ownerForm.elements.rate.value = ship.rate || "";
   ownerForm.elements.ratePeriod.value = ship.ratePeriod || "hour";
-  ownerForm.elements.dates.value = (ship.dates || []).join(", ");
   ownerForm.elements.configName.value = ship.configName || "";
   ownerForm.elements.configPrice.value = ship.configPrice || 0;
   ownerForm.elements.pilotRate.value = ship.pilotRate || 0;
