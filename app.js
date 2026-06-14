@@ -147,6 +147,10 @@ const removeShipConfirm = document.querySelector("#remove-ship-confirm");
 const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
+const hangarLoadPercentPreset = document.querySelector("#hangar-load-percent-preset");
+const hangarFlatPriceField = document.querySelector("#hangar-flat-price-field");
+const hangarMarkupField = document.querySelector("#hangar-markup-field");
+const hangarCustomMarkupField = document.querySelector("#hangar-custom-markup-field");
 const ownerSubmitButton = ownerForm.querySelector("button[type='submit']");
 const rateBasePeriodSelect = document.querySelector("#rate-base-period");
 const rateBaseInput = document.querySelector("#rate-base");
@@ -268,7 +272,10 @@ rentManufacturerSelect.addEventListener("change", () => {
 });
 
 rateBasePeriodSelect.addEventListener("change", updateRateCalculator);
-rateBaseInput.addEventListener("input", updateRateCalculator);
+rateBaseInput.addEventListener("input", () => {
+  formatCreditInput(rateBaseInput);
+  updateRateCalculator();
+});
 Object.values(rateOfferInputs).forEach((input) => {
   input.addEventListener("change", updateRateCalculator);
 });
@@ -277,6 +284,8 @@ Object.values(rateAdjustmentInputs).forEach((input) => {
 });
 
 pilotIncludedInput.addEventListener("change", updatePilotRateVisibility);
+ownerForm.elements.pilotRate.addEventListener("input", () => formatCreditInput(ownerForm.elements.pilotRate));
+hangarLoadCostInput.addEventListener("input", () => formatCreditInput(hangarLoadCostInput));
 
 ownerForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -287,7 +296,7 @@ ownerForm.addEventListener("submit", (event) => {
   const offeredRates = getOfferedRatePeriods();
   const rates = calculateRates();
 
-  if (Number(data.get("rateBase") || 0) <= 0 || offeredRates.length === 0) {
+  if (parseCredits(data.get("rateBase")) <= 0 || offeredRates.length === 0) {
     rateError.classList.remove("is-hidden");
     rateBaseInput.focus();
     return;
@@ -300,14 +309,14 @@ ownerForm.addEventListener("submit", (event) => {
     rates,
     offeredRates,
     rateBasePeriod: data.get("rateBasePeriod") || "hour",
-    rateBase: Number(data.get("rateBase") || 0),
+    rateBase: parseCredits(data.get("rateBase")),
     rateAdjustments: getRateAdjustments(),
     manufacturer: selectedVehicle?.company || data.get("manufacturer"),
     pilotIncluded: data.has("pilotIncluded"),
-    pilotRate: data.has("pilotIncluded") ? Number(data.get("pilotRate") || 0) : 0,
-    hangarLoadCost: Number(data.get("hangarLoadCost") || 0),
+    pilotRate: data.has("pilotIncluded") ? parseCredits(data.get("pilotRate")) : 0,
+    hangarLoadCost: data.get("hangarLoadMode") === "flat" ? parseCredits(data.get("hangarLoadCost")) : 0,
     hangarLoadMode: data.get("hangarLoadMode") || "flat",
-    hangarLoadPercent: Number(data.get("hangarLoadPercent") || 0),
+    hangarLoadPercent: data.get("hangarLoadMode") === "percent" ? getHangarLoadPercent() : 0,
     notes: data.get("notes"),
     dates: existingShip?.dates || [],
     unavailableDates: existingShip?.unavailableDates || [],
@@ -403,7 +412,14 @@ offerHangarServices.addEventListener("change", () => {
   updateHangarEligibility();
 });
 
-hangarLoadModeSelect.addEventListener("change", () => updateAllServicePrices());
+hangarLoadModeSelect.addEventListener("change", () => {
+  updateHangarLoadPriceControls();
+  updateAllServicePrices();
+});
+hangarLoadPercentPreset.addEventListener("change", () => {
+  updateHangarLoadPriceControls();
+  updateAllServicePrices();
+});
 hangarLoadPercentInput.addEventListener("input", () => updateAllServicePrices());
 hangarLoadCostInput.addEventListener("input", () => updateAllServicePrices());
 
@@ -900,8 +916,36 @@ function applyHangarLoadMarkup(price) {
     return Number(price || 0);
   }
 
-  const percent = Math.max(0, Number(hangarLoadPercentInput.value || 0));
+  const percent = getHangarLoadPercent();
   return Math.round(Number(price || 0) * (1 + percent / 100));
+}
+
+function getHangarLoadPercent() {
+  const selected = hangarLoadPercentPreset.value;
+  return Math.max(0, selected === "custom" ? Number(hangarLoadPercentInput.value || 0) : Number(selected || 0));
+}
+
+function updateHangarLoadPriceControls() {
+  const usesFlatRate = hangarLoadModeSelect.value === "flat";
+  const usesCustomMarkup = !usesFlatRate && hangarLoadPercentPreset.value === "custom";
+  hangarFlatPriceField.classList.toggle("is-hidden", !usesFlatRate);
+  hangarMarkupField.classList.toggle("is-hidden", usesFlatRate);
+  hangarCustomMarkupField.classList.toggle("is-hidden", !usesCustomMarkup);
+  hangarLoadCostInput.disabled = !usesFlatRate;
+  hangarLoadPercentPreset.disabled = usesFlatRate;
+  hangarLoadPercentInput.disabled = !usesCustomMarkup;
+}
+
+function setHangarLoadPercent(value) {
+  const normalizedValue = String(Math.max(0, Number(value || 0)));
+  const presetValues = Array.from(hangarLoadPercentPreset.options).map((option) => option.value);
+  if (presetValues.includes(normalizedValue)) {
+    hangarLoadPercentPreset.value = normalizedValue;
+    hangarLoadPercentInput.value = "0";
+  } else {
+    hangarLoadPercentPreset.value = "custom";
+    hangarLoadPercentInput.value = normalizedValue;
+  }
 }
 
 function setSelectOptions(select, options, placeholder, selectedValue) {
@@ -970,11 +1014,13 @@ function resetOwnerForm() {
   });
   hangarLoadModeSelect.value = "flat";
   hangarLoadCostInput.value = "0";
+  hangarLoadPercentPreset.value = "0";
   hangarLoadPercentInput.value = "0";
   ownerSubmitButton.textContent = "Add ship";
   rateError.classList.add("is-hidden");
   updateRateCalculator();
   updatePilotRateVisibility();
+  updateHangarLoadPriceControls();
   resetHangarRows();
   updateHangarEligibility();
   updateAllServicePrices();
@@ -1030,7 +1076,7 @@ function populateOwnerForm(index) {
   ownerForm.elements.ship.value = ship.vehicle?.id || findVehicle(ship.ship, ship.manufacturer)?.id || "";
   const basePeriod = ship.rateBasePeriod || firstShipRatePeriod(ship);
   rateBasePeriodSelect.value = basePeriod;
-  rateBaseInput.value = ship.rateBase || getStoredShipRate(ship, basePeriod) || "";
+  rateBaseInput.value = formatCreditInputValue(ship.rateBase || getStoredShipRate(ship, basePeriod) || "");
   const offeredRates = ship.offeredRates || positiveShipRatePeriods(ship);
   Object.entries(rateOfferInputs).forEach(([period, input]) => {
     input.checked = offeredRates.includes(period);
@@ -1038,16 +1084,17 @@ function populateOwnerForm(index) {
   Object.entries(rateAdjustmentInputs).forEach(([period, input]) => {
     input.value = String(ship.rateAdjustments?.[period] || 0);
   });
-  ownerForm.elements.pilotRate.value = ship.pilotRate || 0;
+  ownerForm.elements.pilotRate.value = formatCreditInputValue(ship.pilotRate || 0);
   ownerForm.elements.pilotIncluded.checked = Boolean(ship.pilotIncluded);
   ownerForm.elements.notes.value = ship.notes || "";
   offerHangarServices.checked = Boolean(ship.hangarServices?.length);
   hangarLoadModeSelect.value = ship.hangarLoadMode || "flat";
-  hangarLoadCostInput.value = ship.hangarLoadCost || 0;
-  hangarLoadPercentInput.value = ship.hangarLoadPercent || 0;
+  hangarLoadCostInput.value = formatCreditInputValue(ship.hangarLoadCost || 0);
+  setHangarLoadPercent(ship.hangarLoadPercent || 0);
   ownerSubmitButton.textContent = "Update ship";
   updatePilotRateVisibility();
   updateRateCalculator();
+  updateHangarLoadPriceControls();
   updateHangarEligibility(ship.vehicle || ship.ship);
   resetHangarRows();
   applySavedHangarServices(ship.hangarServices || []);
@@ -1103,7 +1150,7 @@ function hangarLoadSummary(ship) {
     return `Hangar Services · ${Number(ship.hangarLoadPercent).toLocaleString()}% load markup included`;
   }
 
-  return `Hangar Services${ship.hangarLoadCost ? ` · Load time ${formatCredits(ship.hangarLoadCost)} UEC` : ""}`;
+  return `Hangar Services${ship.hangarLoadCost ? ` · Load price ${formatCredits(ship.hangarLoadCost)} UEC` : ""}`;
 }
 
 function listingPriceFacts(ship) {
@@ -1293,6 +1340,23 @@ function normalizeFilterValue(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function parseCredits(value) {
+  return Number(String(value || "").replace(/[^0-9]/g, "")) || 0;
+}
+
+function formatCreditInput(input) {
+  const digits = String(input.value || "").replace(/[^0-9]/g, "");
+  input.value = digits ? Number(digits).toLocaleString("en-US") : "";
+}
+
+function formatCreditInputValue(value) {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+  const amount = parseCredits(value);
+  return amount ? amount.toLocaleString("en-US") : "0";
+}
+
 function updatePilotRateVisibility() {
   const isIncluded = pilotIncludedInput.checked;
   pilotRateField.classList.toggle("is-hidden", !isIncluded);
@@ -1304,7 +1368,7 @@ function updatePilotRateVisibility() {
 
 function updateRateCalculator() {
   const basePeriod = rateBasePeriodSelect.value;
-  const baseRate = Number(rateBaseInput.value || 0);
+  const baseRate = parseCredits(rateBaseInput.value);
   rateOfferInputs[basePeriod].checked = true;
   rateError.classList.add("is-hidden");
 
@@ -1315,7 +1379,7 @@ function updateRateCalculator() {
     const isBase = period === basePeriod;
     const adjustment = Number(rateAdjustmentInputs[period].value || 0);
 
-    rateInputs[period].value = baseRate ? String(rates[period]) : "";
+    rateInputs[period].value = baseRate ? formatCreditInputValue(rates[period]) : "";
     rateInputs[period].disabled = !offered;
     rateAdjustmentInputs[period].disabled = isBase || !offered;
     row.classList.toggle("is-disabled", !offered);
@@ -1329,7 +1393,7 @@ function updateRateCalculator() {
 
 function calculateRates() {
   const basePeriod = rateBasePeriodSelect.value;
-  const baseRate = Number(rateBaseInput.value || 0);
+  const baseRate = parseCredits(rateBaseInput.value);
   const adjustments = getRateAdjustments();
 
   return Object.fromEntries(

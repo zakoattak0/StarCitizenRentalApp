@@ -158,23 +158,23 @@
                   </label>
                   <label>
                     Base price
-                    <input name="rateBase" id="rate-base" type="number" min="0" step="1" placeholder="1000" />
+                    <input name="rateBase" id="rate-base" type="text" inputmode="numeric" placeholder="1,000" />
                   </label>
                 </div>
                 <div class="rate-offers">
                   <div class="rate-offer-row" data-rate-period="hour">
                     <label class="check rate-enabled"><input type="checkbox" name="offerRateHour" checked />Offer hourly</label>
-                    <label>Final hourly rate<input name="rateHour" type="number" readonly /></label>
+                    <label>Final hourly rate<input name="rateHour" type="text" readonly /></label>
                     <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">Base</span><input name="adjustmentHour" type="range" min="-100" max="100" step="10" value="0" /></label>
                   </div>
                   <div class="rate-offer-row" data-rate-period="day">
                     <label class="check rate-enabled"><input type="checkbox" name="offerRateDay" checked />Offer daily</label>
-                    <label>Final daily rate<input name="rateDay" type="number" readonly /></label>
+                    <label>Final daily rate<input name="rateDay" type="text" readonly /></label>
                     <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">0%</span><input name="adjustmentDay" type="range" min="-100" max="100" step="10" value="0" /></label>
                   </div>
                   <div class="rate-offer-row" data-rate-period="week">
                     <label class="check rate-enabled"><input type="checkbox" name="offerRateWeek" checked />Offer weekly</label>
-                    <label>Final weekly rate<input name="rateWeek" type="number" readonly /></label>
+                    <label>Final weekly rate<input name="rateWeek" type="text" readonly /></label>
                     <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">0%</span><input name="adjustmentWeek" type="range" min="-100" max="100" step="10" value="0" /></label>
                   </div>
                 </div>
@@ -187,7 +187,7 @@
                 <div class="is-hidden" id="pilot-rate-field">
                   <label>
                     Pilot time / hour
-                    <input name="pilotRate" type="number" min="0" value="0" />
+                    <input name="pilotRate" type="text" inputmode="numeric" value="0" />
                   </label>
                 </div>
                 <label>
@@ -205,19 +205,41 @@
                 <div class="hangar-services-panel is-hidden" id="hangar-services-panel">
                   <div class="form-grid">
                     <label>
-                      Load time pricing
+                      Load price
                       <select name="hangarLoadMode" id="hangar-load-mode">
                         <option value="flat">Flat rate</option>
                         <option value="percent">Include in commodity price</option>
                       </select>
                     </label>
-                    <label>
-                      Flat load cost
-                      <input name="hangarLoadCost" id="hangar-load-cost" type="number" min="0" value="0" />
+                    <label id="hangar-flat-price-field">
+                      Flat load price
+                      <input name="hangarLoadCost" id="hangar-load-cost" type="text" inputmode="numeric" value="0" />
                     </label>
-                    <label>
+                    <label class="is-hidden" id="hangar-markup-field">
                       Commodity markup %
-                      <input name="hangarLoadPercent" id="hangar-load-percent" type="number" min="0" value="0" />
+                      <select name="hangarLoadPercentPreset" id="hangar-load-percent-preset">
+                        <option value="0">0%</option>
+                        <option value="10">10%</option>
+                        <option value="20">20%</option>
+                        <option value="30">30%</option>
+                        <option value="40">40%</option>
+                        <option value="50">50%</option>
+                        <option value="60">60%</option>
+                        <option value="70">70%</option>
+                        <option value="80">80%</option>
+                        <option value="90">90%</option>
+                        <option value="100">100%</option>
+                        <option value="125">125%</option>
+                        <option value="150">150%</option>
+                        <option value="200">200%</option>
+                        <option value="250">250%</option>
+                        <option value="500">500%</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </label>
+                    <label class="is-hidden" id="hangar-custom-markup-field">
+                      Custom markup %
+                      <input name="hangarLoadPercent" id="hangar-load-percent" type="number" min="0" step="1" value="0" />
                     </label>
                   </div>
                   <div class="service-row service-heading" aria-hidden="true">
