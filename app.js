@@ -37,6 +37,7 @@ const hangarServiceEligibleShips = new Set(
 let vehicleCatalog = [];
 let hangarMarketRows = [];
 let editingShipIndex = null;
+let pendingRemoveShipIndex = null;
 
 const fallbackVehicles = [
   {
@@ -136,6 +137,13 @@ const hangarServiceStatus = document.querySelector("#hangar-service-status");
 const hangarServicesPanel = document.querySelector("#hangar-services-panel");
 const hangarServiceRows = document.querySelector("#hangar-service-rows");
 const addFleetShipButton = document.querySelector("#add-fleet-ship");
+const ownerConfiguratorModal = document.querySelector("#owner-configurator-modal");
+const ownerConfiguratorTitle = document.querySelector("#owner-configurator-title");
+const ownerConfiguratorClose = document.querySelector("#owner-configurator-close");
+const removeShipModal = document.querySelector("#remove-ship-modal");
+const removeShipMessage = document.querySelector("#remove-ship-message");
+const removeShipCancel = document.querySelector("#remove-ship-cancel");
+const removeShipConfirm = document.querySelector("#remove-ship-confirm");
 const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
@@ -275,6 +283,7 @@ ownerForm.addEventListener("submit", (event) => {
   }
 
   resetOwnerForm();
+  closeOwnerConfigurator();
   renderFleet();
   renderCalendar();
   renderRentalResults();
@@ -284,8 +293,52 @@ ownerForm.addEventListener("submit", (event) => {
 
 addFleetShipButton.addEventListener("click", () => {
   resetOwnerForm();
-  ownerForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  ownerForm.querySelector("[name='owner']").focus();
+  openOwnerConfigurator("add");
+});
+
+ownerConfiguratorClose.addEventListener("click", closeOwnerConfigurator);
+
+ownerConfiguratorModal.addEventListener("click", (event) => {
+  if (event.target === ownerConfiguratorModal) {
+    closeOwnerConfigurator();
+  }
+});
+
+removeShipCancel.addEventListener("click", closeRemoveConfirmation);
+
+removeShipModal.addEventListener("click", (event) => {
+  if (event.target === removeShipModal) {
+    closeRemoveConfirmation();
+  }
+});
+
+removeShipConfirm.addEventListener("click", () => {
+  if (pendingRemoveShipIndex === null || !ships[pendingRemoveShipIndex]) {
+    closeRemoveConfirmation();
+    return;
+  }
+
+  ships.splice(pendingRemoveShipIndex, 1);
+  closeRemoveConfirmation();
+  resetOwnerForm();
+  renderFleet();
+  renderCalendar();
+  renderRentalResults();
+  renderOwnerSchedule();
+  renderCalendarFilterOptions();
+  updateFilterSummary();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (!removeShipModal.classList.contains("is-hidden")) {
+    closeRemoveConfirmation();
+  } else if (!ownerConfiguratorModal.classList.contains("is-hidden")) {
+    closeOwnerConfigurator();
+  }
 });
 
 fleetList.addEventListener("click", (event) => {
@@ -297,17 +350,11 @@ fleetList.addEventListener("click", (event) => {
   const index = Number(actionButton.dataset.shipIndex);
   if (actionButton.dataset.fleetAction === "modify") {
     populateOwnerForm(index);
+    openOwnerConfigurator("modify");
   }
 
   if (actionButton.dataset.fleetAction === "remove") {
-    ships.splice(index, 1);
-    resetOwnerForm();
-    renderFleet();
-    renderCalendar();
-    renderRentalResults();
-    renderOwnerSchedule();
-    renderCalendarFilterOptions();
-    updateFilterSummary();
+    openRemoveConfirmation(index);
   }
 });
 
@@ -882,6 +929,43 @@ function resetOwnerForm() {
   updateAllServicePrices();
 }
 
+function openOwnerConfigurator(mode) {
+  const isEditing = mode === "modify";
+  ownerConfiguratorTitle.textContent = isEditing ? "Modify ship" : "Add ship";
+  ownerSubmitButton.textContent = isEditing ? "Update ship" : "Add ship";
+  ownerConfiguratorModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+  window.setTimeout(() => ownerForm.querySelector("[name='owner']").focus(), 0);
+}
+
+function closeOwnerConfigurator() {
+  ownerConfiguratorModal.classList.add("is-hidden");
+  if (removeShipModal.classList.contains("is-hidden")) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function openRemoveConfirmation(index) {
+  const ship = ships[index];
+  if (!ship) {
+    return;
+  }
+
+  pendingRemoveShipIndex = index;
+  removeShipMessage.textContent = `Are you sure you want to remove ${ship.ship} from your fleet?`;
+  removeShipModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+  removeShipCancel.focus();
+}
+
+function closeRemoveConfirmation() {
+  pendingRemoveShipIndex = null;
+  removeShipModal.classList.add("is-hidden");
+  if (ownerConfiguratorModal.classList.contains("is-hidden")) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
 function populateOwnerForm(index) {
   const ship = ships[index];
   if (!ship) {
@@ -910,7 +994,6 @@ function populateOwnerForm(index) {
   updateHangarEligibility(ship.vehicle || ship.ship);
   resetHangarRows();
   applySavedHangarServices(ship.hangarServices || []);
-  ownerForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function applySavedHangarServices(services) {

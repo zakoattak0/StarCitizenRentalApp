@@ -121,8 +121,13 @@
             <button class="sub-tab" data-owner-view="schedule">Schedule</button>
           </div>
 
-          <div class="split-layout">
-            <form class="data-form" id="owner-form">
+          <div class="modal-backdrop is-hidden" id="owner-configurator-modal">
+            <div class="owner-configurator" role="dialog" aria-modal="true" aria-labelledby="owner-configurator-title">
+              <div class="modal-heading">
+                <h2 id="owner-configurator-title">Add ship</h2>
+                <button class="icon-button" id="owner-configurator-close" type="button" aria-label="Close ship configurator">&times;</button>
+              </div>
+              <form class="data-form" id="owner-form">
               <label>
                 Owner handle
                 <input name="owner" required placeholder="Aegis_Hauler" />
@@ -226,10 +231,12 @@
                   <div id="hangar-service-rows"></div>
                 </div>
               </fieldset>
-              <button class="primary-button" type="submit">Add ship</button>
-            </form>
+                <button class="primary-button" type="submit">Add ship</button>
+              </form>
+            </div>
+          </div>
 
-            <div class="owner-workspace">
+          <div class="owner-workspace">
               <section class="owner-view active" data-owner-panel="fleet">
                 <div class="fleet-toolbar">
                   <button class="primary-button" id="add-fleet-ship" type="button">Add ship</button>
@@ -257,6 +264,16 @@
                 </form>
                 <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>
               </section>
+          </div>
+
+          <div class="modal-backdrop is-hidden" id="remove-ship-modal">
+            <div class="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="remove-ship-title" aria-describedby="remove-ship-message">
+              <h2 id="remove-ship-title">Remove ship?</h2>
+              <p id="remove-ship-message">Are you sure you want to remove this ship from your fleet?</p>
+              <div class="modal-actions">
+                <button class="secondary-button" id="remove-ship-cancel" type="button">Cancel</button>
+                <button class="secondary-button danger-button" id="remove-ship-confirm" type="button">Remove ship</button>
+              </div>
             </div>
           </div>
         </section>
