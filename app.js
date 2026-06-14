@@ -148,15 +148,23 @@ const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
 const ownerSubmitButton = ownerForm.querySelector("button[type='submit']");
+const rateBasePeriodSelect = document.querySelector("#rate-base-period");
+const rateBaseInput = document.querySelector("#rate-base");
+const rateFormula = document.querySelector("#rate-formula");
 const rateInputs = {
   hour: ownerForm.elements.rateHour,
   day: ownerForm.elements.rateDay,
   week: ownerForm.elements.rateWeek,
 };
-const rateMathOutputs = {
-  hour: document.querySelector("#rate-hour-math"),
-  day: document.querySelector("#rate-day-math"),
-  week: document.querySelector("#rate-week-math"),
+const rateOfferInputs = {
+  hour: ownerForm.elements.offerRateHour,
+  day: ownerForm.elements.offerRateDay,
+  week: ownerForm.elements.offerRateWeek,
+};
+const rateAdjustmentInputs = {
+  hour: ownerForm.elements.adjustmentHour,
+  day: ownerForm.elements.adjustmentDay,
+  week: ownerForm.elements.adjustmentWeek,
 };
 const rateError = document.querySelector("#rate-error");
 const pilotIncludedInput = document.querySelector("#pilot-included");
@@ -259,11 +267,13 @@ rentManufacturerSelect.addEventListener("change", () => {
   renderRentalResults();
 });
 
-Object.entries(rateInputs).forEach(([period, input]) => {
-  input.addEventListener("input", () => {
-    rateError.classList.add("is-hidden");
-    updateRateMath(period);
-  });
+rateBasePeriodSelect.addEventListener("change", updateRateCalculator);
+rateBaseInput.addEventListener("input", updateRateCalculator);
+Object.values(rateOfferInputs).forEach((input) => {
+  input.addEventListener("change", updateRateCalculator);
+});
+Object.values(rateAdjustmentInputs).forEach((input) => {
+  input.addEventListener("input", updateRateCalculator);
 });
 
 pilotIncludedInput.addEventListener("change", updatePilotRateVisibility);
@@ -274,15 +284,12 @@ ownerForm.addEventListener("submit", (event) => {
   const selectedVehicle = findVehicle(data.get("ship"));
   const hangarServices = collectHangarServices();
   const existingShip = editingShipIndex === null ? null : ships[editingShipIndex];
-  const rates = {
-    hour: Number(data.get("rateHour") || 0),
-    day: Number(data.get("rateDay") || 0),
-    week: Number(data.get("rateWeek") || 0),
-  };
+  const offeredRates = getOfferedRatePeriods();
+  const rates = calculateRates();
 
-  if (!Object.values(rates).some((rate) => rate > 0)) {
+  if (Number(data.get("rateBase") || 0) <= 0 || offeredRates.length === 0) {
     rateError.classList.remove("is-hidden");
-    rateInputs.hour.focus();
+    rateBaseInput.focus();
     return;
   }
 
@@ -291,6 +298,10 @@ ownerForm.addEventListener("submit", (event) => {
     ship: selectedVehicle?.name || data.get("ship"),
     role: selectedVehicle?.role || existingShip?.role || "General",
     rates,
+    offeredRates,
+    rateBasePeriod: data.get("rateBasePeriod") || "hour",
+    rateBase: Number(data.get("rateBase") || 0),
+    rateAdjustments: getRateAdjustments(),
     manufacturer: selectedVehicle?.company || data.get("manufacturer"),
     pilotIncluded: data.has("pilotIncluded"),
     pilotRate: data.has("pilotIncluded") ? Number(data.get("pilotRate") || 0) : 0,
@@ -949,12 +960,20 @@ function resetHangarRows() {
 function resetOwnerForm() {
   editingShipIndex = null;
   ownerForm.reset();
+  rateBasePeriodSelect.value = "hour";
+  rateBaseInput.value = "";
+  Object.values(rateOfferInputs).forEach((input) => {
+    input.checked = true;
+  });
+  Object.values(rateAdjustmentInputs).forEach((input) => {
+    input.value = "0";
+  });
   hangarLoadModeSelect.value = "flat";
   hangarLoadCostInput.value = "0";
   hangarLoadPercentInput.value = "0";
   ownerSubmitButton.textContent = "Add ship";
   rateError.classList.add("is-hidden");
-  clearRateMath();
+  updateRateCalculator();
   updatePilotRateVisibility();
   resetHangarRows();
   updateHangarEligibility();
@@ -1009,9 +1028,16 @@ function populateOwnerForm(index) {
   ownerManufacturerSelect.value = ship.manufacturer || ship.vehicle?.company || "";
   renderShipOptions();
   ownerForm.elements.ship.value = ship.vehicle?.id || findVehicle(ship.ship, ship.manufacturer)?.id || "";
-  rateInputs.hour.value = ship.rates?.hour || (ship.ratePeriod === "hour" ? ship.rate : "") || "";
-  rateInputs.day.value = ship.rates?.day || (ship.ratePeriod === "day" ? ship.rate : "") || "";
-  rateInputs.week.value = ship.rates?.week || (ship.ratePeriod === "week" ? ship.rate : "") || "";
+  const basePeriod = ship.rateBasePeriod || firstShipRatePeriod(ship);
+  rateBasePeriodSelect.value = basePeriod;
+  rateBaseInput.value = ship.rateBase || getStoredShipRate(ship, basePeriod) || "";
+  const offeredRates = ship.offeredRates || positiveShipRatePeriods(ship);
+  Object.entries(rateOfferInputs).forEach(([period, input]) => {
+    input.checked = offeredRates.includes(period);
+  });
+  Object.entries(rateAdjustmentInputs).forEach(([period, input]) => {
+    input.value = String(ship.rateAdjustments?.[period] || 0);
+  });
   ownerForm.elements.pilotRate.value = ship.pilotRate || 0;
   ownerForm.elements.pilotIncluded.checked = Boolean(ship.pilotIncluded);
   ownerForm.elements.notes.value = ship.notes || "";
@@ -1021,7 +1047,7 @@ function populateOwnerForm(index) {
   hangarLoadPercentInput.value = ship.hangarLoadPercent || 0;
   ownerSubmitButton.textContent = "Update ship";
   updatePilotRateVisibility();
-  updateRateMath(firstEnteredRatePeriod());
+  updateRateCalculator();
   updateHangarEligibility(ship.vehicle || ship.ship);
   resetHangarRows();
   applySavedHangarServices(ship.hangarServices || []);
@@ -1276,44 +1302,74 @@ function updatePilotRateVisibility() {
   }
 }
 
-function updateRateMath(sourcePeriod) {
-  const sourceRate = Number(rateInputs[sourcePeriod]?.value || 0);
-  if (!sourceRate) {
-    clearRateMath();
-    return;
+function updateRateCalculator() {
+  const basePeriod = rateBasePeriodSelect.value;
+  const baseRate = Number(rateBaseInput.value || 0);
+  rateOfferInputs[basePeriod].checked = true;
+  rateError.classList.add("is-hidden");
+
+  const rates = calculateRates();
+  Object.keys(rateInputs).forEach((period) => {
+    const row = document.querySelector(`[data-rate-period="${period}"]`);
+    const offered = rateOfferInputs[period].checked;
+    const isBase = period === basePeriod;
+    const adjustment = Number(rateAdjustmentInputs[period].value || 0);
+
+    rateInputs[period].value = baseRate ? String(rates[period]) : "";
+    rateInputs[period].disabled = !offered;
+    rateAdjustmentInputs[period].disabled = isBase || !offered;
+    row.classList.toggle("is-disabled", !offered);
+    row.querySelector(".rate-adjustment-value").textContent = isBase ? "Base" : formatAdjustment(adjustment);
+  });
+
+  rateFormula.textContent = baseRate
+    ? `${formatCredits(baseRate)} UEC / ${ratePeriodLabel(basePeriod)} converted by time, then adjusted by each slider.`
+    : "Enter a base price to calculate all offered rates.";
+}
+
+function calculateRates() {
+  const basePeriod = rateBasePeriodSelect.value;
+  const baseRate = Number(rateBaseInput.value || 0);
+  const adjustments = getRateAdjustments();
+
+  return Object.fromEntries(
+    ["hour", "day", "week"].map((period) => {
+      const converted = convertPeriodRate(baseRate, basePeriod, period);
+      const adjusted = period === basePeriod ? converted : converted * (1 + adjustments[period] / 100);
+      return [period, Math.max(0, Math.round(adjusted))];
+    }),
+  );
+}
+
+function getRateAdjustments() {
+  return Object.fromEntries(
+    Object.entries(rateAdjustmentInputs).map(([period, input]) => [period, Number(input.value || 0)]),
+  );
+}
+
+function getOfferedRatePeriods() {
+  return Object.entries(rateOfferInputs)
+    .filter(([, input]) => input.checked)
+    .map(([period]) => period);
+}
+
+function formatAdjustment(value) {
+  return `${value > 0 ? "+" : ""}${value}%`;
+}
+
+function positiveShipRatePeriods(ship) {
+  return ["hour", "day", "week"].filter((period) => getStoredShipRate(ship, period) > 0);
+}
+
+function firstShipRatePeriod(ship) {
+  return ship.ratePeriod || positiveShipRatePeriods(ship)[0] || "hour";
+}
+
+function getStoredShipRate(ship, period) {
+  if (Number(ship.rates?.[period] || 0) > 0) {
+    return Number(ship.rates[period]);
   }
-
-  Object.keys(rateMathOutputs).forEach((targetPeriod) => {
-    if (targetPeriod === sourcePeriod) {
-      rateMathOutputs[targetPeriod].textContent = "Entered rate";
-      return;
-    }
-
-    const convertedRate = convertPeriodRate(sourceRate, sourcePeriod, targetPeriod);
-    rateMathOutputs[targetPeriod].textContent = `${rateFormulaLabel(sourcePeriod, targetPeriod)} = ${formatCredits(convertedRate)} UEC`;
-  });
-}
-
-function clearRateMath() {
-  Object.values(rateMathOutputs).forEach((output) => {
-    output.textContent = "";
-  });
-}
-
-function firstEnteredRatePeriod() {
-  return ["hour", "day", "week"].find((period) => Number(rateInputs[period].value || 0) > 0) || "hour";
-}
-
-function rateFormulaLabel(sourcePeriod, targetPeriod) {
-  const labels = {
-    "hour-day": "Hourly x 24",
-    "hour-week": "Hourly x 168",
-    "day-hour": "Daily / 24",
-    "day-week": "Daily x 7",
-    "week-hour": "Weekly / 168",
-    "week-day": "Weekly / 7",
-  };
-  return labels[`${sourcePeriod}-${targetPeriod}`] || "Converted rate";
+  return ship.ratePeriod === period ? Number(ship.rate || 0) : 0;
 }
 
 function convertPeriodRate(rate, fromPeriod, toPeriod) {
@@ -1322,6 +1378,9 @@ function convertPeriodRate(rate, fromPeriod, toPeriod) {
 }
 
 function getShipRate(ship, period) {
+  if (ship.offeredRates && !ship.offeredRates.includes(period)) {
+    return 0;
+  }
   const explicitRate = Number(ship.rates?.[period] || 0);
   if (explicitRate > 0) {
     return explicitRate;
@@ -1337,7 +1396,8 @@ function getShipRate(ship, period) {
 
 function rateFacts(ship) {
   const rates = ship.rates || (ship.rate ? { [ship.ratePeriod || "hour"]: ship.rate } : {});
-  return ["hour", "day", "week"]
+  const offeredRates = ship.offeredRates || ["hour", "day", "week"];
+  return offeredRates
     .filter((period) => Number(rates[period] || 0) > 0)
     .map((period) => `<li>${formatCredits(rates[period])} UEC / ${ratePeriodLabel(period)}</li>`)
     .join("");

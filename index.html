@@ -147,24 +147,39 @@
               <p class="api-status" id="ship-api-status">Loading UEX ship list...</p>
               <fieldset>
                 <legend>Rental rates</legend>
-                <div class="rate-grid">
+                <div class="rate-base-grid">
                   <label>
-                    Per hour
-                    <input name="rateHour" type="number" min="0" step="1" />
+                    Base period
+                    <select name="rateBasePeriod" id="rate-base-period">
+                      <option value="hour">Hourly</option>
+                      <option value="day">Daily</option>
+                      <option value="week">Weekly</option>
+                    </select>
                   </label>
-                  <output class="rate-math" id="rate-hour-math"></output>
                   <label>
-                    Per day
-                    <input name="rateDay" type="number" min="0" step="1" />
+                    Base price
+                    <input name="rateBase" id="rate-base" type="number" min="0" step="1" placeholder="1000" />
                   </label>
-                  <output class="rate-math" id="rate-day-math"></output>
-                  <label>
-                    Per week
-                    <input name="rateWeek" type="number" min="0" step="1" />
-                  </label>
-                  <output class="rate-math" id="rate-week-math"></output>
                 </div>
-                <p class="form-error is-hidden" id="rate-error">Enter at least one rental rate.</p>
+                <div class="rate-offers">
+                  <div class="rate-offer-row" data-rate-period="hour">
+                    <label class="check rate-enabled"><input type="checkbox" name="offerRateHour" checked />Offer hourly</label>
+                    <label>Final hourly rate<input name="rateHour" type="number" readonly /></label>
+                    <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">Base</span><input name="adjustmentHour" type="range" min="-100" max="100" step="10" value="0" /></label>
+                  </div>
+                  <div class="rate-offer-row" data-rate-period="day">
+                    <label class="check rate-enabled"><input type="checkbox" name="offerRateDay" checked />Offer daily</label>
+                    <label>Final daily rate<input name="rateDay" type="number" readonly /></label>
+                    <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">0%</span><input name="adjustmentDay" type="range" min="-100" max="100" step="10" value="0" /></label>
+                  </div>
+                  <div class="rate-offer-row" data-rate-period="week">
+                    <label class="check rate-enabled"><input type="checkbox" name="offerRateWeek" checked />Offer weekly</label>
+                    <label>Final weekly rate<input name="rateWeek" type="number" readonly /></label>
+                    <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">0%</span><input name="adjustmentWeek" type="range" min="-100" max="100" step="10" value="0" /></label>
+                  </div>
+                </div>
+                <p class="api-status" id="rate-formula">Enter a base price to calculate all offered rates.</p>
+                <p class="form-error is-hidden" id="rate-error">Enter a base price and offer at least one rate.</p>
               </fieldset>
               <fieldset>
                 <legend>Owner details</legend>
