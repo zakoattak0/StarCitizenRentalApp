@@ -140,11 +140,12 @@
               </label>
               <label>
                 Ship
-                <input name="ship" required list="owner-ship-options" placeholder="600i Touring" />
-                <datalist id="owner-ship-options"></datalist>
+                <select name="ship" id="owner-ship-options" required>
+                  <option value="">Select ship</option>
+                </select>
               </label>
               <p class="api-status" id="ship-api-status">Loading UEX ship list...</p>
-              <div class="form-grid">
+              <div class="form-grid role-grid">
                 <label>
                   Role
                   <select name="role">
@@ -156,36 +157,37 @@
                     <option>Touring</option>
                   </select>
                 </label>
-                <label>
-                  Ship rate
-                  <input name="rate" type="number" min="0" value="15000" />
-                </label>
-                <label>
-                  Rate period
-                  <select name="ratePeriod">
-                    <option value="hour">Per hour</option>
-                    <option value="day">Per day</option>
-                    <option value="week">Per week</option>
-                  </select>
-                </label>
               </div>
               <fieldset>
-                <legend>Owner configuration</legend>
-                <label>
-                  Configuration name
-                  <input name="configName" placeholder="Cargo-ready, full ballistics, med evac..." />
-                </label>
-                <div class="form-grid">
+                <legend>Rental rates</legend>
+                <div class="rate-grid">
                   <label>
-                    Configuration price
-                    <input name="configPrice" type="number" min="0" value="0" />
+                    Per hour
+                    <input name="rateHour" type="number" min="0" step="1" />
                   </label>
+                  <output class="rate-math" id="rate-hour-math"></output>
+                  <label>
+                    Per day
+                    <input name="rateDay" type="number" min="0" step="1" />
+                  </label>
+                  <output class="rate-math" id="rate-day-math"></output>
+                  <label>
+                    Per week
+                    <input name="rateWeek" type="number" min="0" step="1" />
+                  </label>
+                  <output class="rate-math" id="rate-week-math"></output>
+                </div>
+                <p class="form-error is-hidden" id="rate-error">Enter at least one rental rate.</p>
+              </fieldset>
+              <fieldset>
+                <legend>Owner details</legend>
+                <label class="check"><input type="checkbox" name="pilotIncluded" id="pilot-included" />Offer with pilot</label>
+                <div class="is-hidden" id="pilot-rate-field">
                   <label>
                     Pilot time / hour
                     <input name="pilotRate" type="number" min="0" value="0" />
                   </label>
                 </div>
-                <label class="check"><input type="checkbox" name="pilotIncluded" />Offer with pilot</label>
                 <label>
                   Owner notes
                   <textarea name="notes" rows="4" placeholder="Loadout details, restrictions, crew expectations, insurance terms..."></textarea>
@@ -294,9 +296,10 @@
               </select>
             </label>
             <label>
-              Ship or role
-              <input name="query" list="rent-ship-options" placeholder="Cargo, Carrack, mining..." />
-              <datalist id="rent-ship-options"></datalist>
+              Ship
+              <select name="query" id="rent-ship-options">
+                <option value="">All ships</option>
+              </select>
             </label>
             <label>
               Max UEC

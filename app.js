@@ -148,6 +148,19 @@ const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
 const ownerSubmitButton = ownerForm.querySelector("button[type='submit']");
+const rateInputs = {
+  hour: ownerForm.elements.rateHour,
+  day: ownerForm.elements.rateDay,
+  week: ownerForm.elements.rateWeek,
+};
+const rateMathOutputs = {
+  hour: document.querySelector("#rate-hour-math"),
+  day: document.querySelector("#rate-day-math"),
+  week: document.querySelector("#rate-week-math"),
+};
+const rateError = document.querySelector("#rate-error");
+const pilotIncludedInput = document.querySelector("#pilot-included");
+const pilotRateField = document.querySelector("#pilot-rate-field");
 
 window.handleShipImageError = (image) => {
   const fallback = image.dataset.fallbackSrc;
@@ -241,9 +254,19 @@ ownerManufacturerSelect.addEventListener("change", () => {
 });
 
 rentManufacturerSelect.addEventListener("change", () => {
+  rentShipOptions.value = "";
   renderShipOptions();
   renderRentalResults();
 });
+
+Object.entries(rateInputs).forEach(([period, input]) => {
+  input.addEventListener("input", () => {
+    rateError.classList.add("is-hidden");
+    updateRateMath(period);
+  });
+});
+
+pilotIncludedInput.addEventListener("change", updatePilotRateVisibility);
 
 ownerForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -251,18 +274,26 @@ ownerForm.addEventListener("submit", (event) => {
   const selectedVehicle = findVehicle(data.get("ship"));
   const hangarServices = collectHangarServices();
   const existingShip = editingShipIndex === null ? null : ships[editingShipIndex];
+  const rates = {
+    hour: Number(data.get("rateHour") || 0),
+    day: Number(data.get("rateDay") || 0),
+    week: Number(data.get("rateWeek") || 0),
+  };
+
+  if (!Object.values(rates).some((rate) => rate > 0)) {
+    rateError.classList.remove("is-hidden");
+    rateInputs.hour.focus();
+    return;
+  }
 
   const listing = {
     owner: data.get("owner"),
     ship: selectedVehicle?.name || data.get("ship"),
     role: selectedVehicle?.role || data.get("role"),
-    rate: Number(data.get("rate")),
-    ratePeriod: data.get("ratePeriod"),
+    rates,
     manufacturer: selectedVehicle?.company || data.get("manufacturer"),
-    configName: data.get("configName"),
-    configPrice: Number(data.get("configPrice") || 0),
     pilotIncluded: data.has("pilotIncluded"),
-    pilotRate: Number(data.get("pilotRate") || 0),
+    pilotRate: data.has("pilotIncluded") ? Number(data.get("pilotRate") || 0) : 0,
     hangarLoadCost: Number(data.get("hangarLoadCost") || 0),
     hangarLoadMode: data.get("hangarLoadMode") || "flat",
     hangarLoadPercent: Number(data.get("hangarLoadPercent") || 0),
@@ -356,7 +387,6 @@ fleetList.addEventListener("click", (event) => {
 });
 
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
-ownerShipInput.addEventListener("input", () => syncOwnerShipFields(ownerShipInput.value));
 
 offerHangarServices.addEventListener("change", () => {
   updateHangarEligibility();
@@ -578,7 +608,7 @@ function filterCalendarShips(sourceShips) {
   return sourceShips.filter((ship) => {
     const matchesOwner = !ownerFilter || normalizeFilterValue(ship.owner).includes(ownerFilter);
     const matchesShip = !shipFilter || normalizeFilterValue(ship.ship).includes(shipFilter);
-    const matchesConfig = configMode !== "custom" || Boolean(ship.configName || ship.configPrice || ship.hangarServices?.length);
+    const matchesConfig = configMode !== "custom" || Boolean(ship.hangarServices?.length);
     return matchesOwner && matchesShip && matchesConfig;
   });
 }
@@ -616,7 +646,7 @@ function renderFleet() {
               </div>
               <ul class="meta-list">
                 <li>Owner: ${escapeHtml(ship.owner)}</li>
-                <li>Ship rate: ${formatCredits(ship.rate)} UEC / ${ratePeriodLabel(ship.ratePeriod)}</li>
+                ${rateFacts(ship)}
                 ${listingPriceFacts(ship)}
                 ${vehicleFacts(ship)}
               </ul>
@@ -636,17 +666,17 @@ function renderFleet() {
 function renderRentalResults() {
   const form = new FormData(rentForm);
   const neededDate = form.get("date");
-  const query = String(form.get("query") || "").trim().toLowerCase();
   const budget = Number(form.get("budget") || Infinity);
   const budgetPeriod = form.get("budgetPeriod") || "hour";
   const manufacturer = String(form.get("manufacturer") || "");
+  const selectedVehicleId = String(form.get("query") || "");
   const results = ships.filter((ship) => {
     const matchesDate = !neededDate || ship.dates.includes(neededDate);
-    const matchesBudget = Number.isNaN(budget) || convertRate(ship.rate, ship.ratePeriod, budgetPeriod) <= budget;
+    const comparableRate = getShipRate(ship, budgetPeriod);
+    const matchesBudget = Number.isNaN(budget) || (comparableRate > 0 && comparableRate <= budget);
     const matchesManufacturer = !manufacturer || ship.manufacturer === manufacturer || ship.vehicle?.company === manufacturer;
-    const haystack = `${ship.ship} ${ship.role} ${ship.owner} ${ship.manufacturer || ""}`.toLowerCase();
-    const matchesQuery = !query || haystack.includes(query);
-    return matchesDate && matchesBudget && matchesManufacturer && matchesQuery;
+    const matchesShip = !selectedVehicleId || String(ship.vehicle?.id || "") === selectedVehicleId;
+    return matchesDate && matchesBudget && matchesManufacturer && matchesShip;
   });
 
   rentalResults.innerHTML = results.length
@@ -657,11 +687,12 @@ function renderRentalResults() {
               ${shipImage(ship)}
               <div class="card-top">
                 <h2>${escapeHtml(ship.ship)}</h2>
-                <span class="tag">${formatCredits(ship.rate)} UEC/${ratePeriodLabel(ship.ratePeriod)}</span>
+                <span class="tag">${formatCredits(getShipRate(ship, budgetPeriod))} UEC/${ratePeriodLabel(budgetPeriod)}</span>
               </div>
               <ul class="meta-list">
                 <li>Owner: ${escapeHtml(ship.owner)}</li>
                 <li>Role: ${escapeHtml(ship.role)}</li>
+                ${rateFacts(ship)}
                 ${listingPriceFacts(ship)}
                 <li>Available: ${ship.dates.map(formatShortDate).join(", ")}</li>
                 ${vehicleFacts(ship)}
@@ -920,6 +951,9 @@ function resetOwnerForm() {
   hangarLoadCostInput.value = "0";
   hangarLoadPercentInput.value = "0";
   ownerSubmitButton.textContent = "Add ship";
+  rateError.classList.add("is-hidden");
+  clearRateMath();
+  updatePilotRateVisibility();
   resetHangarRows();
   updateHangarEligibility();
   updateAllServicePrices();
@@ -972,12 +1006,11 @@ function populateOwnerForm(index) {
   ownerForm.elements.owner.value = ship.owner || "";
   ownerManufacturerSelect.value = ship.manufacturer || ship.vehicle?.company || "";
   renderShipOptions();
-  ownerForm.elements.ship.value = ship.ship || "";
   ownerRoleSelect.value = roleForSelect(ship.role || "Cargo");
-  ownerForm.elements.rate.value = ship.rate || "";
-  ownerForm.elements.ratePeriod.value = ship.ratePeriod || "hour";
-  ownerForm.elements.configName.value = ship.configName || "";
-  ownerForm.elements.configPrice.value = ship.configPrice || 0;
+  ownerForm.elements.ship.value = ship.vehicle?.id || findVehicle(ship.ship, ship.manufacturer)?.id || "";
+  rateInputs.hour.value = ship.rates?.hour || (ship.ratePeriod === "hour" ? ship.rate : "") || "";
+  rateInputs.day.value = ship.rates?.day || (ship.ratePeriod === "day" ? ship.rate : "") || "";
+  rateInputs.week.value = ship.rates?.week || (ship.ratePeriod === "week" ? ship.rate : "") || "";
   ownerForm.elements.pilotRate.value = ship.pilotRate || 0;
   ownerForm.elements.pilotIncluded.checked = Boolean(ship.pilotIncluded);
   ownerForm.elements.notes.value = ship.notes || "";
@@ -986,6 +1019,8 @@ function populateOwnerForm(index) {
   hangarLoadCostInput.value = ship.hangarLoadCost || 0;
   hangarLoadPercentInput.value = ship.hangarLoadPercent || 0;
   ownerSubmitButton.textContent = "Update ship";
+  updatePilotRateVisibility();
+  updateRateMath(firstEnteredRatePeriod());
   updateHangarEligibility(ship.vehicle || ship.ship);
   resetHangarRows();
   applySavedHangarServices(ship.hangarServices || []);
@@ -1045,22 +1080,19 @@ function hangarLoadSummary(ship) {
 }
 
 function listingPriceFacts(ship) {
-  return [
-    ship.configPrice ? `<li>Config price: ${formatCredits(ship.configPrice)} UEC</li>` : "",
-    ship.pilotIncluded ? `<li>Pilot: offered${ship.pilotRate ? ` at ${formatCredits(ship.pilotRate)} UEC / hour` : ""}</li>` : "",
-  ].join("");
+  return ship.pilotIncluded
+    ? `<li>Pilot: offered${ship.pilotRate ? ` at ${formatCredits(ship.pilotRate)} UEC / hour` : ""}</li>`
+    : "";
 }
 
 function configurationSummary(ship) {
-  const hasSummary = ship.configName || ship.notes;
-  if (!hasSummary) {
+  if (!ship.notes) {
     return "";
   }
 
   return `
     <div class="config-summary">
-      ${ship.configName ? `<strong>${escapeHtml(ship.configName)}</strong>` : ""}
-      ${ship.notes ? `<p>${escapeHtml(ship.notes)}</p>` : ""}
+      <p>${escapeHtml(ship.notes)}</p>
     </div>
   `;
 }
@@ -1115,31 +1147,41 @@ function inferVehicleRole(vehicle) {
 }
 
 function renderShipOptions() {
-  ownerShipOptions.innerHTML = filteredVehicles(ownerManufacturerSelect.value)
-    .map(
-      (vehicle) =>
-        `<option value="${escapeHtml(vehicle.name)}"></option>`,
-    )
-    .join("");
-  rentShipOptions.innerHTML = filteredVehicles(rentManufacturerSelect.value)
-    .map(
-      (vehicle) =>
-        `<option value="${escapeHtml(vehicle.name)}"></option>`,
-    )
-    .join("");
+  const selectedOwnerShip = ownerShipOptions.value;
+  const selectedRentShip = rentShipOptions.value;
+  ownerShipOptions.innerHTML = [
+    `<option value="">Select ship</option>`,
+    ...filteredVehicles(ownerManufacturerSelect.value).map(
+      (vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.name)}</option>`,
+    ),
+  ].join("");
+  rentShipOptions.innerHTML = [
+    `<option value="">All ships</option>`,
+    ...filteredVehicles(rentManufacturerSelect.value).map(
+      (vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.name)}</option>`,
+    ),
+  ].join("");
+
+  if (Array.from(ownerShipOptions.options).some((option) => option.value === selectedOwnerShip)) {
+    ownerShipOptions.value = selectedOwnerShip;
+  }
+  if (Array.from(rentShipOptions.options).some((option) => option.value === selectedRentShip)) {
+    rentShipOptions.value = selectedRentShip;
+  }
 }
 
-function findVehicle(value) {
+function findVehicle(value, manufacturer = ownerManufacturerSelect.value) {
   const query = String(value || "").trim().toLowerCase();
   if (!query) {
     return null;
   }
 
   return (
+    vehicleCatalog.find((vehicle) => String(vehicle.id) === query) ||
     vehicleCatalog.find(
       (vehicle) =>
         vehicle.name.toLowerCase() === query &&
-        (!ownerManufacturerSelect.value || vehicle.company === ownerManufacturerSelect.value),
+        (!manufacturer || vehicle.company === manufacturer),
     ) ||
     vehicleCatalog.find((vehicle) => vehicle.nameFull.toLowerCase() === query) ||
     vehicleCatalog.find((vehicle) => vehicle.name.toLowerCase() === query) ||
@@ -1162,7 +1204,7 @@ function filteredVehicles(manufacturer) {
 }
 
 function syncOwnerShipFields(value) {
-  const vehicle = findVehicle(value);
+  const vehicle = findVehicle(value, ownerManufacturerSelect.value);
   if (!vehicle) {
     updateHangarEligibility();
     return;
@@ -1230,18 +1272,84 @@ function normalizeFilterValue(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function ratePeriodLabel(period = "hour") {
-  return period === "day" ? "day" : period === "week" ? "week" : "hour";
+function updatePilotRateVisibility() {
+  const isIncluded = pilotIncludedInput.checked;
+  pilotRateField.classList.toggle("is-hidden", !isIncluded);
+  ownerForm.elements.pilotRate.disabled = !isIncluded;
+  if (!isIncluded) {
+    ownerForm.elements.pilotRate.value = "0";
+  }
 }
 
-function convertRate(rate, fromPeriod = "hour", toPeriod = "hour") {
-  const periodHours = {
-    hour: 1,
-    day: 24,
-    week: 168,
+function updateRateMath(sourcePeriod) {
+  const sourceRate = Number(rateInputs[sourcePeriod]?.value || 0);
+  if (!sourceRate) {
+    clearRateMath();
+    return;
+  }
+
+  Object.keys(rateMathOutputs).forEach((targetPeriod) => {
+    if (targetPeriod === sourcePeriod) {
+      rateMathOutputs[targetPeriod].textContent = "Entered rate";
+      return;
+    }
+
+    const convertedRate = convertPeriodRate(sourceRate, sourcePeriod, targetPeriod);
+    rateMathOutputs[targetPeriod].textContent = `${rateFormulaLabel(sourcePeriod, targetPeriod)} = ${formatCredits(convertedRate)} UEC`;
+  });
+}
+
+function clearRateMath() {
+  Object.values(rateMathOutputs).forEach((output) => {
+    output.textContent = "";
+  });
+}
+
+function firstEnteredRatePeriod() {
+  return ["hour", "day", "week"].find((period) => Number(rateInputs[period].value || 0) > 0) || "hour";
+}
+
+function rateFormulaLabel(sourcePeriod, targetPeriod) {
+  const labels = {
+    "hour-day": "Hourly x 24",
+    "hour-week": "Hourly x 168",
+    "day-hour": "Daily / 24",
+    "day-week": "Daily x 7",
+    "week-hour": "Weekly / 168",
+    "week-day": "Weekly / 7",
   };
-  const hourlyRate = Number(rate || 0) / (periodHours[fromPeriod] || 1);
-  return hourlyRate * (periodHours[toPeriod] || 1);
+  return labels[`${sourcePeriod}-${targetPeriod}`] || "Converted rate";
+}
+
+function convertPeriodRate(rate, fromPeriod, toPeriod) {
+  const periodHours = { hour: 1, day: 24, week: 168 };
+  return (Number(rate || 0) / periodHours[fromPeriod]) * periodHours[toPeriod];
+}
+
+function getShipRate(ship, period) {
+  const explicitRate = Number(ship.rates?.[period] || 0);
+  if (explicitRate > 0) {
+    return explicitRate;
+  }
+
+  if (ship.rate && ship.ratePeriod) {
+    return convertPeriodRate(ship.rate, ship.ratePeriod, period);
+  }
+
+  const sourcePeriod = ["hour", "day", "week"].find((candidate) => Number(ship.rates?.[candidate] || 0) > 0);
+  return sourcePeriod ? convertPeriodRate(ship.rates[sourcePeriod], sourcePeriod, period) : 0;
+}
+
+function rateFacts(ship) {
+  const rates = ship.rates || (ship.rate ? { [ship.ratePeriod || "hour"]: ship.rate } : {});
+  return ["hour", "day", "week"]
+    .filter((period) => Number(rates[period] || 0) > 0)
+    .map((period) => `<li>${formatCredits(rates[period])} UEC / ${ratePeriodLabel(period)}</li>`)
+    .join("");
+}
+
+function ratePeriodLabel(period = "hour") {
+  return period === "day" ? "day" : period === "week" ? "week" : "hour";
 }
 
 function normalizeShipName(value) {

@@ -491,6 +491,33 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.role-grid {
+  grid-template-columns: minmax(180px, 1fr);
+}
+
+.rate-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(190px, 1fr);
+  gap: 10px 14px;
+  align-items: end;
+}
+
+.rate-math {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  color: var(--cyan);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--red);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .search-bar {
   grid-template-columns: 160px 180px minmax(170px, 1fr) 150px 150px auto;
   align-items: end;
@@ -821,6 +848,14 @@ legend {
 
   .service-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rate-math:empty {
+    display: none;
   }
 
   .service-heading {
