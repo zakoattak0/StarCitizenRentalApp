@@ -1676,7 +1676,7 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   }
 
   if (configType === "salvage") {
-    const shipName = normalizeShipName(vehicle?.name || ownerShipInput.value);
+    const shipName = normalizeConfigShipName(vehicle?.name || ownerShipInput.value);
     const headCapacity = salvageHeadCounts.get(shipName) || 0;
     return {
       type: "salvage",
@@ -1686,7 +1686,7 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   }
 
   if (configType === "mining") {
-    const shipName = normalizeShipName(vehicle?.name || ownerShipInput.value);
+    const shipName = normalizeConfigShipName(vehicle?.name || ownerShipInput.value);
     const miningSpec = miningShips.get(shipName);
     const headCapacity = miningSpec?.headCapacity || 0;
     return {
@@ -1806,11 +1806,11 @@ function headSlotLabel(slot) {
   return slot.charAt(0).toUpperCase() + slot.slice(1);
 }
 
-function equipmentSlotMarkup({ slot, inputName, options }) {
+function equipmentSlotMarkup({ slot, inputName, options, heading }) {
   const slotLabel = headSlotLabel(slot);
   return `
     <div class="equipment-slot">
-      <strong>${slotLabel} head</strong>
+      <strong>${escapeHtml(heading || `${slotLabel} head`)}</strong>
       ${options.map((option) => `
         <label class="check equipment-check">
           <input type="checkbox" name="${inputName}" data-slot="${slot}" value="${escapeHtml(option.value)}" />
@@ -2008,7 +2008,7 @@ function configOptionLabels(values, labels) {
 }
 
 function getShipConfigurationType(vehicleOrName) {
-  const name = normalizeShipName(typeof vehicleOrName === "string" ? vehicleOrName : vehicleOrName?.name);
+  const name = normalizeConfigShipName(typeof vehicleOrName === "string" ? vehicleOrName : vehicleOrName?.name);
   if (name === "apollo medivac" || name === "apollo triage") {
     return "apollo";
   }
@@ -2030,12 +2030,13 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   idrisConfig.classList.toggle("is-hidden", configType !== "idris");
 
   if (configType === "salvage") {
-    const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
+    const shipName = normalizeConfigShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
     const headCount = salvageHeadCounts.get(shipName) || 0;
-    salvageConfigDescription.textContent = `${headCount} salvage head${headCount === 1 ? "" : "s"}`;
+    salvageConfigDescription.textContent = "";
     salvageHeadGrid.innerHTML = headSlotNames(headCount).map((slot) => equipmentSlotMarkup({
       slot,
       inputName: "salvageHeads",
+      heading: `${headSlotLabel(slot)} Salvage Heads Available`,
       options: salvageHeadOptions.map((head) => ({ value: head, label: head })),
     })).join("");
   } else {
@@ -2043,7 +2044,7 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   }
 
   if (configType === "mining") {
-    const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
+    const shipName = normalizeConfigShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
     const miningSpec = miningShips.get(shipName);
     const compatibleHeads = miningHeads.filter((head) => head.size === miningSpec?.headSize);
     const capacityLabel = miningSpec?.headCapacity === 1 ? "head" : "heads";
@@ -2482,6 +2483,13 @@ function normalizeShipName(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\b(rsi|roberts space industries)\b/g, "rsi")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeConfigShipName(value) {
+  return normalizeShipName(value)
+    .replace(/\bbest in show edition\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
