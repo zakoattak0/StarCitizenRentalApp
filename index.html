@@ -199,22 +199,18 @@
                 <legend>Ship configuration</legend>
                 <div class="is-hidden" id="apollo-config">
                   <div class="form-grid">
-                    <label>
-                      Left medical module
-                      <select name="apolloLeftModule">
-                        <option value="tier-1">1x Tier 1 Medbed</option>
-                        <option value="tier-2">2x Tier 2 Medbeds</option>
-                        <option value="tier-3">3x Tier 3 Medbeds</option>
-                      </select>
-                    </label>
-                    <label>
-                      Right medical module
-                      <select name="apolloRightModule">
-                        <option value="tier-1">1x Tier 1 Medbed</option>
-                        <option value="tier-2">2x Tier 2 Medbeds</option>
-                        <option value="tier-3">3x Tier 3 Medbeds</option>
-                      </select>
-                    </label>
+                    <div class="config-check-group">
+                      <strong>Left medical modules available</strong>
+                      <label class="check"><input type="checkbox" name="apolloLeftModules" value="tier-1" />1x Tier 1 Medbed</label>
+                      <label class="check"><input type="checkbox" name="apolloLeftModules" value="tier-2" />2x Tier 2 Medbeds</label>
+                      <label class="check"><input type="checkbox" name="apolloLeftModules" value="tier-3" />3x Tier 3 Medbeds</label>
+                    </div>
+                    <div class="config-check-group">
+                      <strong>Right medical modules available</strong>
+                      <label class="check"><input type="checkbox" name="apolloRightModules" value="tier-1" />1x Tier 1 Medbed</label>
+                      <label class="check"><input type="checkbox" name="apolloRightModules" value="tier-2" />2x Tier 2 Medbeds</label>
+                      <label class="check"><input type="checkbox" name="apolloRightModules" value="tier-3" />3x Tier 3 Medbeds</label>
+                    </div>
                   </div>
                 </div>
                 <div class="is-hidden" id="salvage-config">

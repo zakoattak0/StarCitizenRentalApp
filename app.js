@@ -1547,15 +1547,17 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   if (configType === "apollo") {
     return {
       type: "apollo",
-      leftModule: ownerForm.elements.apolloLeftModule.value,
-      rightModule: ownerForm.elements.apolloRightModule.value,
+      leftModules: checkedConfigValues("apolloLeftModules"),
+      rightModules: checkedConfigValues("apolloRightModules"),
     };
   }
 
   if (configType === "salvage") {
+    const shipName = normalizeShipName(vehicle?.name || ownerShipInput.value);
     return {
       type: "salvage",
-      heads: Array.from(salvageHeadGrid.querySelectorAll("select")).map((select) => select.value),
+      headCapacity: salvageHeadCounts.get(shipName) || 0,
+      heads: checkedConfigValues("salvageHeads"),
     };
   }
 
@@ -1568,30 +1570,50 @@ function applyShipConfiguration(config) {
   }
 
   if (config.type === "apollo") {
-    ownerForm.elements.apolloLeftModule.value = config.leftModule || "tier-1";
-    ownerForm.elements.apolloRightModule.value = config.rightModule || "tier-1";
+    const leftModules = config.leftModules || (config.leftModule ? [config.leftModule] : []);
+    const rightModules = config.rightModules || (config.rightModule ? [config.rightModule] : []);
+    setCheckedConfigValues("apolloLeftModules", leftModules);
+    setCheckedConfigValues("apolloRightModules", rightModules);
   }
 
   if (config.type === "salvage") {
-    salvageHeadGrid.querySelectorAll("select").forEach((select, index) => {
-      select.value = config.heads?.[index] || "Trawler";
-    });
+    setCheckedConfigValues("salvageHeads", config.heads || []);
   }
 }
 
 function shipConfigurationLines(config) {
   if (config?.type === "apollo") {
+    const leftModules = config.leftModules || (config.leftModule ? [config.leftModule] : []);
+    const rightModules = config.rightModules || (config.rightModule ? [config.rightModule] : []);
     return [
-      { label: "Left module", value: apolloModuleLabels[config.leftModule] || apolloModuleLabels["tier-1"] },
-      { label: "Right module", value: apolloModuleLabels[config.rightModule] || apolloModuleLabels["tier-1"] },
+      { label: "Left modules offered", value: configOptionLabels(leftModules, apolloModuleLabels) },
+      { label: "Right modules offered", value: configOptionLabels(rightModules, apolloModuleLabels) },
     ];
   }
 
   if (config?.type === "salvage") {
-    return (config.heads || []).map((head, index) => ({ label: `Salvage head ${index + 1}`, value: head }));
+    return [
+      { label: "Head capacity", value: `${config.headCapacity || config.heads?.length || 0}` },
+      { label: "Heads offered", value: (config.heads || []).join(", ") || "None selected" },
+    ];
   }
 
   return [];
+}
+
+function checkedConfigValues(name) {
+  return Array.from(ownerForm.querySelectorAll(`input[name="${name}"]:checked`)).map((input) => input.value);
+}
+
+function setCheckedConfigValues(name, values) {
+  const selectedValues = new Set(values || []);
+  ownerForm.querySelectorAll(`input[name="${name}"]`).forEach((input) => {
+    input.checked = selectedValues.has(input.value);
+  });
+}
+
+function configOptionLabels(values, labels) {
+  return values.map((value) => labels[value] || value).join(", ") || "None selected";
 }
 
 function getShipConfigurationType(vehicleOrName) {
@@ -1612,12 +1634,10 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
     const headCount = salvageHeadCounts.get(shipName) || 0;
     salvageConfigDescription.textContent = `${headCount} salvage head${headCount === 1 ? "" : "s"}`;
-    salvageHeadGrid.innerHTML = Array.from({ length: headCount }, (_, index) => `
-      <label>
-        Salvage head ${index + 1}
-        <select name="salvageHead${index + 1}">
-          ${salvageHeadOptions.map((head) => `<option value="${head}">${head}</option>`).join("")}
-        </select>
+    salvageHeadGrid.innerHTML = salvageHeadOptions.map((head) => `
+      <label class="check">
+        <input type="checkbox" name="salvageHeads" value="${head}" />
+        ${head}
       </label>
     `).join("");
   } else {

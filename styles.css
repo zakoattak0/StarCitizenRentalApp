@@ -658,6 +658,28 @@ h1 {
   gap: 12px;
 }
 
+.config-check-group {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid var(--line-soft);
+  background: #07121b;
+  padding: 12px;
+}
+
+.config-check-group > strong {
+  color: var(--cyan);
+  font-size: 0.8rem;
+}
+
+.config-check-group .check,
+.salvage-head-grid .check {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: #050b11;
+  padding: 8px 10px;
+}
+
 .rate-base-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
