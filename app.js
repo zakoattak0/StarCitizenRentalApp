@@ -41,8 +41,6 @@ let editingShipIndex = null;
 let pendingRemoveShipIndex = null;
 let availabilityShipIndex = null;
 let availabilityView = "week";
-let availabilityStatus = "available";
-let scheduleStatus = "available";
 let scheduleView = "month";
 let scheduleCursor = startOfDay(new Date());
 let availabilityCursor = startOfDay(new Date());
@@ -309,8 +307,14 @@ Object.values(rateAdjustmentInputs).forEach((input) => {
   input.addEventListener("input", updateRateCalculator);
 });
 
-pilotIncludedInput.addEventListener("change", updatePilotRateVisibility);
-ownerForm.elements.pilotRate.addEventListener("input", () => formatCreditInput(ownerForm.elements.pilotRate));
+pilotIncludedInput.addEventListener("change", () => {
+  updatePilotRateVisibility();
+  updateHangarFeeSummary();
+});
+ownerForm.elements.pilotRate.addEventListener("input", () => {
+  formatCreditInput(ownerForm.elements.pilotRate);
+  updateHangarFeeSummary();
+});
 hangarLoadCostInput.addEventListener("input", () => formatCreditInput(hangarLoadCostInput));
 
 ownerForm.addEventListener("submit", (event) => {
@@ -346,7 +350,6 @@ ownerForm.addEventListener("submit", (event) => {
     hangarFeeTreatment: data.get("hangarFeeTreatment") || "add",
     notes: data.get("notes"),
     dates: existingShip?.dates || [],
-    unavailableDates: existingShip?.unavailableDates || [],
     hangarServices,
     vehicle: selectedVehicle,
   };
@@ -455,13 +458,6 @@ document.querySelectorAll("[data-availability-view]").forEach((button) => {
   });
 });
 
-document.querySelectorAll("[data-availability-status]").forEach((button) => {
-  button.addEventListener("click", () => {
-    availabilityStatus = button.dataset.availabilityStatus;
-    updateAvailabilityControls();
-  });
-});
-
 availabilityPrev.addEventListener("click", () => {
   availabilityCursor = shiftAvailabilityPeriod(availabilityCursor, -1);
   renderAvailabilityPicker();
@@ -485,21 +481,11 @@ availabilityPicker.addEventListener("click", (event) => {
 
   const dateKey = dateButton.dataset.availabilityDate;
   const currentStatus = availabilityDraft.get(dateKey) || "unset";
-  availabilityDraft.set(dateKey, currentStatus === availabilityStatus ? "unset" : availabilityStatus);
+  availabilityDraft.set(dateKey, currentStatus === "available" ? "unset" : "available");
   renderAvailabilityPicker();
 });
 
 availabilitySave.addEventListener("click", saveAvailabilityChanges);
-
-document.querySelectorAll("[data-schedule-status]").forEach((button) => {
-  button.addEventListener("click", () => {
-    scheduleStatus = button.dataset.scheduleStatus;
-    document.querySelectorAll("[data-schedule-status]").forEach((candidate) => {
-      candidate.classList.toggle("active", candidate.dataset.scheduleStatus === scheduleStatus);
-    });
-    renderOwnerSchedule();
-  });
-});
 
 document.querySelectorAll("[data-schedule-view]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -898,10 +884,8 @@ function renderOwnerSchedule() {
   calendarDays.forEach((date) => {
     const isVisibleDate = scheduleView === "week" || date.getMonth() === visibleMonth;
     const dateKey = dateToKey(date);
-    const matchingShips = scheduleStatus === "available"
-      ? selectedShips.filter((ship) => ship.dates.includes(dateKey))
-      : selectedShips.filter((ship) => ship.unavailableDates?.includes(dateKey));
-    const pills = matchingShips.map((ship) => scheduleShipPill(ship.ship, scheduleStatus)).join("");
+    const matchingShips = selectedShips.filter((ship) => ship.dates.includes(dateKey));
+    const pills = matchingShips.map((ship) => scheduleShipPill(ship.ship)).join("");
 
     markup += `
       <article class="day-cell${isVisibleDate ? "" : " is-muted"}">
@@ -917,8 +901,8 @@ function renderOwnerSchedule() {
   ownerCalendar.innerHTML = markup;
 }
 
-function scheduleShipPill(shipName, status) {
-  return `<div class="availability-pill ${status === "available" ? "available" : "booked"}"><strong>${escapeHtml(shipName)}</strong></div>`;
+function scheduleShipPill(shipName) {
+  return `<div class="availability-pill available"><strong>${escapeHtml(shipName)}</strong></div>`;
 }
 
 function shiftSchedulePeriod(date, direction) {
@@ -1112,17 +1096,29 @@ function updateHangarFeeSummary() {
   const treatment = hangarFeeTreatmentSelect.value;
   const rates = calculateRates();
   const offeredRates = getOfferedRatePeriods();
+  const adjustedRates = Object.fromEntries(
+    offeredRates.map((period) => {
+      const rentalRate = Number(rates[period] || 0);
+      return [
+        period,
+        treatment === "subtract" ? Math.max(0, rentalRate - totalFee) : rentalRate + totalFee,
+      ];
+    }),
+  );
+  const pilotRate = pilotIncludedInput.checked ? parseCredits(ownerForm.elements.pilotRate.value) : 0;
+  const hourlyRentalTotal = treatment === "subtract"
+    ? Math.max(0, Number(rates.hour || 0) - totalFee)
+    : Number(rates.hour || 0) + totalFee;
 
   hangarFeeTotal.textContent = `${formatCredits(totalFee)} UEC`;
-  adjustedRentalTotals.innerHTML = offeredRates
-    .map((period) => {
-      const rentalRate = Number(rates[period] || 0);
-      const adjustedTotal = treatment === "subtract"
-        ? Math.max(0, rentalRate - totalFee)
-        : rentalRate + totalFee;
-      return `<div><span>${ratePeriodLabel(period)}</span><strong>${formatCredits(adjustedTotal)} UEC</strong></div>`;
-    })
-    .join("");
+  adjustedRentalTotals.innerHTML = [
+    ...offeredRates.map(
+      (period) => `<div><span>${totalRateLabel(period)}</span><strong>${formatCredits(adjustedRates[period])} UEC</strong></div>`,
+    ),
+    ...(pilotIncludedInput.checked
+      ? [`<div class="pilot-total"><span>Hourly with pilot</span><strong>${formatCredits(hourlyRentalTotal + pilotRate)} UEC</strong></div>`]
+      : []),
+  ].join("");
 }
 
 function setSelectOptions(select, options, placeholder, selectedValue) {
@@ -1229,11 +1225,9 @@ function openAvailabilityModal(index) {
 
   availabilityShipIndex = index;
   availabilityView = "week";
-  availabilityStatus = "available";
   availabilityCursor = startOfDay(new Date());
   availabilityDraft = new Map();
   (ship.dates || []).forEach((date) => availabilityDraft.set(date, "available"));
-  (ship.unavailableDates || []).forEach((date) => availabilityDraft.set(date, "unavailable"));
   availabilityModalTitle.textContent = `${ship.ship} availability`;
   availabilityModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
@@ -1262,12 +1256,6 @@ function saveAvailabilityChanges() {
       .filter(([, status]) => status === "available")
       .map(([date]) => date),
   );
-  ship.unavailableDates = uniqueSorted(
-    Array.from(availabilityDraft.entries())
-      .filter(([, status]) => status === "unavailable")
-      .map(([date]) => date),
-  );
-
   closeAvailabilityModal();
   renderFleet();
   renderCalendar();
@@ -1294,7 +1282,7 @@ function renderAvailabilityPicker() {
     .map((date) => {
       const dateKey = dateToKey(date);
       const status = availabilityDraft.get(dateKey) || "unset";
-      const statusLabel = status === "available" ? "Available" : status === "unavailable" ? "Unavailable" : "Not set";
+      const statusLabel = status === "available" ? "Available" : "Not set";
       const mutedClass = availabilityView === "month" && date.getMonth() !== visibleMonth ? " is-muted" : "";
       const todayClass = dateKey === todayKey ? " is-today" : "";
       return `
@@ -1312,9 +1300,6 @@ function renderAvailabilityPicker() {
 function updateAvailabilityControls() {
   document.querySelectorAll("[data-availability-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.availabilityView === availabilityView);
-  });
-  document.querySelectorAll("[data-availability-status]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.availabilityStatus === availabilityStatus);
   });
 }
 
@@ -1810,6 +1795,10 @@ function rateFacts(ship) {
 
 function ratePeriodLabel(period = "hour") {
   return period === "day" ? "day" : period === "week" ? "week" : "hour";
+}
+
+function totalRateLabel(period = "hour") {
+  return period === "day" ? "Daily" : period === "week" ? "Weekly" : "Hourly";
 }
 
 function normalizeShipName(value) {

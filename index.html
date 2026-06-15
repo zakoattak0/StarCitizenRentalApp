@@ -284,13 +284,6 @@
                     </div>
                     <strong id="schedule-period-label"></strong>
                   </div>
-                  <div class="schedule-status-filter">
-                    <span>Show fleet dates</span>
-                    <div class="segmented-control" aria-label="Schedule availability filter">
-                      <button class="segment active" type="button" data-schedule-status="available">Available</button>
-                      <button class="segment" type="button" data-schedule-status="unavailable">Unavailable</button>
-                    </div>
-                  </div>
                 </div>
                 <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>
               </section>
@@ -328,17 +321,10 @@
                 </div>
                 <strong id="availability-period-label"></strong>
               </div>
-              <div class="availability-mode" aria-label="Date status">
-                <span>Mark selected dates as</span>
-                <div class="segmented-control">
-                  <button class="segment active" type="button" data-availability-status="available">Available</button>
-                  <button class="segment" type="button" data-availability-status="unavailable">Unavailable</button>
-                </div>
-              </div>
+              <p class="availability-instruction">Select each date the ship is available. Select it again to clear it.</p>
               <div class="availability-picker" id="availability-picker" aria-label="Choose ship availability dates"></div>
               <div class="availability-legend" aria-label="Availability legend">
                 <span><i class="available"></i> Available</span>
-                <span><i class="unavailable"></i> Unavailable</span>
                 <span><i class="unchanged"></i> Not set</span>
               </div>
               <div class="modal-actions availability-actions">

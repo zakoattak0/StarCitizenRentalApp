@@ -360,7 +360,8 @@ h1 {
   padding-inline: 10px;
 }
 
-.availability-mode {
+.availability-mode,
+.availability-instruction {
   justify-content: space-between;
   border: 1px solid var(--line-soft);
   background: #07121b;
@@ -368,6 +369,11 @@ h1 {
   margin-bottom: 12px;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.availability-instruction {
+  display: block;
+  margin: 0 0 12px;
 }
 
 .availability-picker {
@@ -410,11 +416,6 @@ h1 {
   background: rgba(57, 217, 138, 0.12);
 }
 
-.availability-date.unavailable {
-  border-color: rgba(255, 92, 115, 0.7);
-  background: rgba(255, 92, 115, 0.11);
-}
-
 .availability-date strong {
   font-size: 1rem;
 }
@@ -426,10 +427,6 @@ h1 {
 
 .availability-date.available small {
   color: var(--green);
-}
-
-.availability-date.unavailable small {
-  color: var(--red);
 }
 
 .availability-legend {
@@ -449,11 +446,6 @@ h1 {
 .availability-legend i.available {
   border-color: var(--green);
   background: var(--green);
-}
-
-.availability-legend i.unavailable {
-  border-color: var(--red);
-  background: var(--red);
 }
 
 .availability-actions {
@@ -721,7 +713,7 @@ h1 {
 
 .schedule-calendar-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
   justify-content: space-between;
   gap: 12px;
@@ -962,16 +954,17 @@ legend {
 
 .adjusted-rental-totals {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 12px;
 }
 
 .adjusted-rental-totals div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
   min-width: 0;
+  border-left: 2px solid rgba(57, 217, 138, 0.55);
+  padding-left: 10px;
 }
 
 .adjusted-rental-totals span {
@@ -984,6 +977,14 @@ legend {
   color: var(--green);
   font-size: 1.15rem;
   white-space: nowrap;
+}
+
+.adjusted-rental-totals .pilot-total {
+  border-left-color: var(--cyan);
+}
+
+.adjusted-rental-totals .pilot-total strong {
+  color: var(--cyan);
 }
 
 .hangar-fieldset input:disabled + span,
