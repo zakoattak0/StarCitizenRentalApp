@@ -696,11 +696,21 @@ h1 {
   align-items: end;
 }
 
+.current-mining-slot label,
 .module-quantity-row label:last-child {
   display: grid;
   gap: 4px;
   color: var(--muted);
   font-size: 0.7rem;
+}
+
+.current-module-selects {
+  display: grid;
+  gap: 8px;
+}
+
+.current-module-selects select:disabled {
+  opacity: 0.45;
 }
 
 .idris-s5-field {

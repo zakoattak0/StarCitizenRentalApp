@@ -232,6 +232,7 @@ const salvageHeadGrid = document.querySelector("#salvage-head-grid");
 const miningConfig = document.querySelector("#mining-config");
 const miningConfigDescription = document.querySelector("#mining-config-description");
 const miningHeadGrid = document.querySelector("#mining-head-grid");
+const miningAvailableHeadGrid = document.querySelector("#mining-available-head-grid");
 const miningModuleGroups = document.querySelector("#mining-module-groups");
 const idrisConfig = document.querySelector("#idris-config");
 const idrisS10Group = document.querySelector("#idris-s10-group");
@@ -423,6 +424,17 @@ ownerForm.addEventListener("change", (event) => {
     updateIdrisS5WeaponVisibility();
   }
 
+  if (event.target?.name === "miningCurrentHeads") {
+    updateMiningCurrentModuleSlots(event.target.dataset.slot);
+  }
+
+  if (event.target?.name === "miningAvailableHeads") {
+    const quantityInput = ownerForm.querySelector(`input[name="miningAvailableHeadQuantities"][data-head="${cssEscape(event.target.value)}"]`);
+    if (quantityInput) {
+      quantityInput.value = event.target.checked ? quantityInput.value || "1" : "";
+    }
+  }
+
   if (event.target?.name === "miningModules") {
     const quantityInput = ownerForm.querySelector(`input[name="miningModuleQuantities"][data-module="${cssEscape(event.target.value)}"]`);
     if (quantityInput) {
@@ -431,6 +443,14 @@ ownerForm.addEventListener("change", (event) => {
   }
 });
 ownerForm.addEventListener("input", (event) => {
+  if (event.target?.name === "miningAvailableHeadQuantities") {
+    const checkbox = ownerForm.querySelector(`input[name="miningAvailableHeads"][value="${cssEscape(event.target.dataset.head)}"]`);
+    if (checkbox && Number(event.target.value || 0) > 0) {
+      checkbox.checked = true;
+    }
+    return;
+  }
+
   if (event.target?.name !== "miningModuleQuantities") {
     return;
   }
@@ -1673,8 +1693,9 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
       type: "mining",
       headCapacity,
       headSize: miningSpec?.headSize || 1,
-      headSlots: collectHeadSlotConfiguration("miningHeads", headSlotNames(headCapacity)),
-      modules: collectMiningModules(),
+      currentHeads: collectCurrentMiningConfiguration(headSlotNames(headCapacity)),
+      availableHeads: collectAvailableMiningHeads(),
+      availableModules: collectMiningModules(),
     };
   }
 
@@ -1708,8 +1729,9 @@ function applyShipConfiguration(config) {
   }
 
   if (config.type === "mining") {
-    applyHeadSlotConfiguration("miningHeads", normalizeHeadSlotConfig(config));
-    applyMiningModules(config.modules || []);
+    applyCurrentMiningConfiguration(normalizeCurrentMiningConfig(config));
+    applyAvailableMiningHeads(config.availableHeads || legacyAvailableHeads(config));
+    applyMiningModules(config.availableModules || config.modules || []);
   }
 
   if (config.type === "idris") {
@@ -1738,10 +1760,12 @@ function shipConfigurationLines(config) {
   }
 
   if (config?.type === "mining") {
+    const currentHeads = normalizeCurrentMiningConfig(config);
     return [
       { label: "Head capacity", value: `${config.headCapacity || 0}x Size ${config.headSize || 1}` },
-      ...headSlotSummaryLines(normalizeHeadSlotConfig(config), "mining head"),
-      { label: "Mining modules available", value: miningModuleSummary(config.modules || []) },
+      ...currentMiningSummaryLines(currentHeads),
+      { label: "Additional heads available", value: inventorySummary(config.availableHeads || legacyAvailableHeads(config), "name") },
+      { label: "Additional modules available", value: miningModuleSummary(config.availableModules || config.modules || []) },
     ];
   }
 
@@ -1843,6 +1867,100 @@ function headSlotSummaryLines(headSlots, noun) {
   }));
 }
 
+function collectCurrentMiningConfiguration(slots) {
+  return slots.reduce((currentHeads, slot) => {
+    const head = ownerForm.querySelector(`select[name="miningCurrentHeads"][data-slot="${slot}"]`)?.value || "";
+    const modules = Array.from(ownerForm.querySelectorAll(`select[name="miningCurrentModules"][data-slot="${slot}"]`))
+      .map((select) => select.value)
+      .filter(Boolean);
+    currentHeads[slot] = { head, modules };
+    return currentHeads;
+  }, {});
+}
+
+function normalizeCurrentMiningConfig(config) {
+  if (config?.currentHeads) {
+    return config.currentHeads;
+  }
+
+  const legacySlots = normalizeHeadSlotConfig(config);
+  return Object.entries(legacySlots).reduce((currentHeads, [slot, heads]) => {
+    currentHeads[slot] = { head: heads[0] || "", modules: [] };
+    return currentHeads;
+  }, {});
+}
+
+function applyCurrentMiningConfiguration(currentHeads) {
+  Object.entries(currentHeads || {}).forEach(([slot, config]) => {
+    const headSelect = ownerForm.querySelector(`select[name="miningCurrentHeads"][data-slot="${slot}"]`);
+    if (headSelect) {
+      headSelect.value = config.head || "";
+      updateMiningCurrentModuleSlots(slot);
+    }
+    ownerForm.querySelectorAll(`select[name="miningCurrentModules"][data-slot="${slot}"]`).forEach((select, index) => {
+      select.value = (config.modules || [])[index] || "";
+    });
+  });
+}
+
+function currentMiningSummaryLines(currentHeads) {
+  const slots = Object.keys(currentHeads || {});
+  if (!slots.length) {
+    return [{ label: "Current mining loadout", value: "None selected" }];
+  }
+
+  return slots.map((slot) => {
+    const config = currentHeads[slot] || {};
+    const modules = (config.modules || []).filter(Boolean);
+    return {
+      label: `${headSlotLabel(slot)} current head`,
+      value: config.head
+        ? `${config.head}${modules.length ? ` | Modules: ${modules.join(", ")}` : ""}`
+        : "None selected",
+    };
+  });
+}
+
+function collectAvailableMiningHeads() {
+  return Array.from(ownerForm.querySelectorAll('input[name="miningAvailableHeads"]:checked')).map((input) => {
+    const quantityInput = ownerForm.querySelector(`input[name="miningAvailableHeadQuantities"][data-head="${cssEscape(input.value)}"]`);
+    return {
+      name: input.value,
+      quantity: Math.max(1, Number.parseInt(quantityInput?.value || "1", 10) || 1),
+    };
+  });
+}
+
+function applyAvailableMiningHeads(heads) {
+  const normalizedHeads = normalizeInventory(heads, "name");
+  const quantities = new Map(normalizedHeads.map((head) => [head.name, head.quantity]));
+  ownerForm.querySelectorAll('input[name="miningAvailableHeads"]').forEach((input) => {
+    input.checked = quantities.has(input.value);
+  });
+  ownerForm.querySelectorAll('input[name="miningAvailableHeadQuantities"]').forEach((input) => {
+    input.value = quantities.get(input.dataset.head) || "";
+  });
+}
+
+function legacyAvailableHeads(config) {
+  const legacyHeads = Object.values(normalizeHeadSlotConfig(config || {})).flat();
+  return Array.from(new Set(legacyHeads)).map((name) => ({ name, quantity: 1 }));
+}
+
+function inventorySummary(items, key = "name") {
+  return normalizeInventory(items, key)
+    .map((item) => `${item[key]} x${item.quantity}`)
+    .join(", ") || "None selected";
+}
+
+function normalizeInventory(items, key = "name") {
+  return (items || []).map((item) => (
+    typeof item === "string"
+      ? { [key]: item, quantity: 1 }
+      : { [key]: item[key], quantity: Math.max(1, Number(item.quantity || 1)) }
+  )).filter((item) => item[key]);
+}
+
 function collectMiningModules() {
   return Array.from(ownerForm.querySelectorAll('input[name="miningModules"]:checked')).map((input) => {
     const quantityInput = ownerForm.querySelector(`input[name="miningModuleQuantities"][data-module="${cssEscape(input.value)}"]`);
@@ -1865,11 +1983,7 @@ function applyMiningModules(modules) {
 }
 
 function normalizeMiningModules(modules) {
-  return (modules || []).map((module) => (
-    typeof module === "string"
-      ? { name: module, quantity: 1 }
-      : { name: module.name, quantity: Math.max(1, Number(module.quantity || 1)) }
-  )).filter((module) => module.name);
+  return normalizeInventory(modules, "name");
 }
 
 function miningModuleSummary(modules) {
@@ -1933,19 +2047,50 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     const miningSpec = miningShips.get(shipName);
     const compatibleHeads = miningHeads.filter((head) => head.size === miningSpec?.headSize);
     const capacityLabel = miningSpec?.headCapacity === 1 ? "head" : "heads";
-    miningConfigDescription.textContent = `${miningSpec?.headCapacity || 0} equipped Size ${miningSpec?.headSize || 1} mining ${capacityLabel}. Module slots depend on the selected head.`;
-    miningHeadGrid.innerHTML = headSlotNames(miningSpec?.headCapacity || 0).map((slot) => equipmentSlotMarkup({
-      slot,
-      inputName: "miningHeads",
-      options: compatibleHeads.map((head) => ({
-        value: head.name,
-        label: head.name,
-        detail: `Size ${head.size} - ${head.moduleSlots ? `${head.moduleSlots} module slot${head.moduleSlots === 1 ? "" : "s"}` : "No module slots"}`,
-      })),
-    })).join("");
+    const maxModuleSlots = compatibleHeads.reduce((max, head) => Math.max(max, head.moduleSlots), 0);
+    const allMiningModuleOptions = Object.values(miningModules).flat();
+    miningConfigDescription.textContent = `${miningSpec?.headCapacity || 0} equipped Size ${miningSpec?.headSize || 1} mining ${capacityLabel}. Current modules follow the selected head slot count.`;
+    miningHeadGrid.innerHTML = headSlotNames(miningSpec?.headCapacity || 0).map((slot) => `
+      <div class="equipment-slot current-mining-slot" data-slot="${slot}">
+        <strong>${headSlotLabel(slot)} current head</strong>
+        <label>
+          Head
+          <select name="miningCurrentHeads" data-slot="${slot}">
+            <option value="">Select head</option>
+            ${compatibleHeads.map((head) => `<option value="${escapeHtml(head.name)}" data-module-slots="${head.moduleSlots}">${escapeHtml(head.name)} (${head.moduleSlots} slot${head.moduleSlots === 1 ? "" : "s"})</option>`).join("")}
+          </select>
+        </label>
+        <div class="current-module-selects">
+          ${Array.from({ length: maxModuleSlots }, (_, index) => `
+            <label>
+              Module ${index + 1}
+              <select name="miningCurrentModules" data-slot="${slot}" data-module-index="${index}">
+                <option value="">No module</option>
+                ${allMiningModuleOptions.map((module) => `<option value="${escapeHtml(module)}">${escapeHtml(module)}</option>`).join("")}
+              </select>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+    `).join("");
+    miningAvailableHeadGrid.innerHTML = compatibleHeads.map((head) => `
+      <div class="module-quantity-row">
+        <label class="check equipment-check">
+          <input type="checkbox" name="miningAvailableHeads" value="${escapeHtml(head.name)}" />
+          <span>
+            <strong>${escapeHtml(head.name)}</strong>
+            <small>Size ${head.size} - ${head.moduleSlots ? `${head.moduleSlots} module slot${head.moduleSlots === 1 ? "" : "s"}` : "No module slots"}</small>
+          </span>
+        </label>
+        <label>
+          Qty
+          <input type="number" name="miningAvailableHeadQuantities" data-head="${escapeHtml(head.name)}" min="0" step="1" inputmode="numeric" />
+        </label>
+      </div>
+    `).join("");
     miningModuleGroups.innerHTML = Object.entries(miningModules).map(([group, modules]) => `
       <div class="mining-module-group">
-        <strong>${group} modules</strong>
+        <strong>Additional ${group.toLowerCase()} modules</strong>
         ${modules.map((module) => `
           <div class="module-quantity-row">
             <label class="check">
@@ -1960,8 +2105,10 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
         `).join("")}
       </div>
     `).join("");
+    headSlotNames(miningSpec?.headCapacity || 0).forEach(updateMiningCurrentModuleSlots);
   } else {
     miningHeadGrid.innerHTML = "";
+    miningAvailableHeadGrid.innerHTML = "";
     miningModuleGroups.innerHTML = "";
   }
 
@@ -2003,6 +2150,24 @@ function updateIdrisS5WeaponVisibility() {
   if (!hasW57Turret) {
     idrisS5WeaponSelect.value = "";
   }
+}
+
+function updateMiningCurrentModuleSlots(slot) {
+  const headSelect = ownerForm.querySelector(`select[name="miningCurrentHeads"][data-slot="${slot}"]`);
+  if (!headSelect) {
+    return;
+  }
+
+  const selectedOption = headSelect.selectedOptions[0];
+  const moduleSlots = Number(selectedOption?.dataset.moduleSlots || 0);
+  ownerForm.querySelectorAll(`select[name="miningCurrentModules"][data-slot="${slot}"]`).forEach((select) => {
+    const moduleIndex = Number(select.dataset.moduleIndex || 0);
+    const enabled = Boolean(headSelect.value) && moduleIndex < moduleSlots;
+    select.disabled = !enabled;
+    if (!enabled) {
+      select.value = "";
+    }
+  });
 }
 
 function normalizeVehicle(vehicle) {
