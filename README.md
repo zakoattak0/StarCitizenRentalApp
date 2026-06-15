@@ -1,4 +1,4 @@
-# Stanton Ship Rentals
+# Frontier Fleet Exchange
 
 A Vercel-ready static prototype for scheduling Star Citizen ship rentals.
 

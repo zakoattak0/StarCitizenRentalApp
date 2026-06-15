@@ -1,14 +1,14 @@
 :root {
   color-scheme: dark;
-  --bg: #05080c;
-  --panel: #0b1118;
-  --panel-2: #101822;
-  --line: #1e3143;
-  --line-soft: #142230;
-  --text: #d8e6f2;
-  --muted: #8092a5;
-  --cyan: #22d3ee;
-  --blue: #2f81f7;
+  --bg: #050505;
+  --panel: #101010;
+  --panel-2: #181818;
+  --line: #353535;
+  --line-soft: #242424;
+  --text: #d0d0d0;
+  --muted: #898989;
+  --cyan: #ff3b30;
+  --blue: #b92420;
   --green: #39d98a;
   --amber: #f5b84b;
   --red: #ff5c73;
@@ -28,8 +28,8 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 34rem),
-    linear-gradient(180deg, #071018 0%, var(--bg) 38%, #030507 100%);
+    radial-gradient(circle at top left, rgba(255, 59, 48, 0.1), transparent 34rem),
+    linear-gradient(180deg, #101010 0%, var(--bg) 38%, #020202 100%);
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -53,7 +53,7 @@ select {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(240px, 320px) 1fr auto;
+  grid-template-columns: minmax(280px, 360px) 1fr auto;
   gap: 14px;
   align-items: center;
   position: sticky;
@@ -64,32 +64,20 @@ select {
 }
 
 .brand {
-  display: flex;
-  gap: 12px;
+  display: inline-flex;
   align-items: center;
   color: var(--text);
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border: 1px solid var(--cyan);
-  background: #071924;
-  color: var(--cyan);
-  font-weight: 800;
-  letter-spacing: 0;
-  box-shadow: 0 0 24px rgba(34, 211, 238, 0.18);
-}
-
-.brand strong,
-.brand small {
+.brand img {
   display: block;
+  width: min(100%, 330px);
+  height: 72px;
+  object-fit: contain;
+  object-position: left center;
 }
 
-.brand small,
 .eyebrow,
 label,
 legend {
@@ -108,7 +96,7 @@ legend {
 
 .market-strip span {
   border-left: 2px solid var(--cyan);
-  background: #09131d;
+  background: #151515;
   color: var(--muted);
   padding: 7px 10px;
   font-size: 0.78rem;
@@ -133,7 +121,7 @@ legend {
 .secondary-button,
 .primary-button {
   border: 1px solid var(--line);
-  background: #0a131c;
+  background: #151515;
   color: var(--text);
   cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
@@ -155,9 +143,9 @@ legend {
 .tab.active,
 .sub-tab.active,
 .primary-button {
-  background: linear-gradient(180deg, rgba(34, 211, 238, 0.2), rgba(47, 129, 247, 0.16));
+  background: linear-gradient(180deg, rgba(255, 59, 48, 0.25), rgba(185, 36, 32, 0.18));
   border-color: var(--cyan);
-  color: #f2fbff;
+  color: #ffffff;
 }
 
 .secondary-button {
@@ -336,7 +324,7 @@ h1 {
 
 .segmented-control {
   border: 1px solid var(--line);
-  background: #050b11;
+  background: #090909;
   padding: 3px;
 }
 
@@ -364,7 +352,7 @@ h1 {
 .availability-instruction {
   justify-content: space-between;
   border: 1px solid var(--line-soft);
-  background: #07121b;
+  background: #121212;
   padding: 9px 10px;
   margin-bottom: 12px;
   color: var(--muted);
@@ -392,7 +380,7 @@ h1 {
   align-content: space-between;
   min-height: 86px;
   border: 1px solid var(--line);
-  background: #071018;
+  background: #101010;
   color: var(--text);
   padding: 9px;
   text-align: left;
@@ -548,7 +536,7 @@ h1 {
 
 .weekday,
 .day-cell {
-  background: #071018;
+  background: #101010;
 }
 
 .weekday {
@@ -568,7 +556,7 @@ h1 {
 }
 
 .day-cell.is-muted {
-  background: #050a0f;
+  background: #080808;
   color: #4f6170;
 }
 
@@ -582,7 +570,7 @@ h1 {
 
 .availability-pill {
   border: 1px solid var(--line-soft);
-  background: #0d1822;
+  background: #181818;
   padding: 7px;
   font-size: 0.78rem;
   line-height: 1.25;
@@ -686,7 +674,7 @@ h1 {
   align-content: start;
   gap: 8px;
   border: 1px solid var(--line-soft);
-  background: #07121b;
+  background: #121212;
   padding: 12px;
 }
 
@@ -695,7 +683,7 @@ h1 {
   align-content: start;
   gap: 8px;
   border: 1px solid var(--line-soft);
-  background: #07121b;
+  background: #121212;
   padding: 12px;
 }
 
@@ -710,7 +698,7 @@ h1 {
 .mining-module-group .check {
   min-height: 38px;
   border: 1px solid var(--line);
-  background: #050b11;
+  background: #090909;
   padding: 8px 10px;
 }
 
@@ -751,7 +739,7 @@ h1 {
   gap: 12px;
   align-items: end;
   border: 1px solid var(--line-soft);
-  background: #07121b;
+  background: #121212;
   padding: 10px;
 }
 
@@ -843,7 +831,7 @@ select,
 datalist {
   width: 100%;
   border: 1px solid var(--line);
-  background: #050b11;
+  background: #090909;
   color: var(--text);
   padding: 0 11px;
   outline: none;
@@ -865,7 +853,7 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.14);
 }
 
 fieldset {
@@ -945,7 +933,7 @@ legend {
   gap: 8px;
   align-items: center;
   border: 1px solid var(--line-soft);
-  background: #07121b;
+  background: #121212;
   padding: 8px;
 }
 
@@ -975,7 +963,7 @@ legend {
   align-items: center;
   min-height: 42px;
   border: 1px solid var(--line);
-  background: #050b11;
+  background: #090909;
   color: var(--green);
   padding: 0 10px;
   font-size: 0.82rem;
@@ -1001,7 +989,7 @@ legend {
   align-items: center;
   justify-content: end;
   border: 1px solid var(--line-soft);
-  background: #07121b;
+  background: #121212;
   padding: 10px 12px;
 }
 
@@ -1011,7 +999,7 @@ legend {
   justify-content: space-between;
   gap: 12px;
   border: 1px solid var(--line);
-  background: #050b11;
+  background: #090909;
   padding: 10px 12px;
 }
 
@@ -1120,7 +1108,7 @@ legend {
   aspect-ratio: 16 / 8;
   object-fit: cover;
   border: 1px solid var(--line-soft);
-  background: #050b11;
+  background: #090909;
   margin-bottom: 12px;
 }
 
@@ -1147,7 +1135,7 @@ legend {
 .tag {
   border: 1px solid var(--line);
   color: var(--cyan);
-  background: rgba(34, 211, 238, 0.08);
+  background: rgba(255, 59, 48, 0.08);
   padding: 4px 7px;
   font-size: 0.72rem;
   font-weight: 800;
@@ -1199,7 +1187,7 @@ legend {
   justify-content: space-between;
   gap: 12px;
   border-left: 2px solid var(--cyan);
-  background: #07131d;
+  background: #121212;
   padding: 7px 9px;
 }
 
@@ -1232,7 +1220,7 @@ legend {
   display: grid;
   gap: 3px;
   border-left: 2px solid var(--cyan);
-  background: #07131d;
+  background: #121212;
   padding: 7px 9px;
 }
 
