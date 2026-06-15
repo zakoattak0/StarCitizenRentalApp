@@ -147,10 +147,12 @@ const removeShipConfirm = document.querySelector("#remove-ship-confirm");
 const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
-const hangarLoadPercentPreset = document.querySelector("#hangar-load-percent-preset");
+const hangarLoadPercentValue = document.querySelector("#hangar-load-percent-value");
 const hangarFlatPriceField = document.querySelector("#hangar-flat-price-field");
 const hangarMarkupField = document.querySelector("#hangar-markup-field");
-const hangarCustomMarkupField = document.querySelector("#hangar-custom-markup-field");
+const hangarFeeTreatmentSelect = document.querySelector("#hangar-fee-treatment");
+const hangarFeeTotal = document.querySelector("#hangar-fee-total");
+const adjustedRentalTotals = document.querySelector("#adjusted-rental-totals");
 const ownerSubmitButton = ownerForm.querySelector("button[type='submit']");
 const rateBasePeriodSelect = document.querySelector("#rate-base-period");
 const rateBaseInput = document.querySelector("#rate-base");
@@ -317,6 +319,7 @@ ownerForm.addEventListener("submit", (event) => {
     hangarLoadCost: data.get("hangarLoadMode") === "flat" ? parseCredits(data.get("hangarLoadCost")) : 0,
     hangarLoadMode: data.get("hangarLoadMode") || "flat",
     hangarLoadPercent: data.get("hangarLoadMode") === "percent" ? getHangarLoadPercent() : 0,
+    hangarFeeTreatment: data.get("hangarFeeTreatment") || "add",
     notes: data.get("notes"),
     dates: existingShip?.dates || [],
     unavailableDates: existingShip?.unavailableDates || [],
@@ -410,18 +413,19 @@ ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInp
 
 offerHangarServices.addEventListener("change", () => {
   updateHangarEligibility();
+  updateHangarFeeSummary();
 });
 
 hangarLoadModeSelect.addEventListener("change", () => {
   updateHangarLoadPriceControls();
   updateAllServicePrices();
 });
-hangarLoadPercentPreset.addEventListener("change", () => {
+hangarLoadPercentInput.addEventListener("input", () => {
   updateHangarLoadPriceControls();
   updateAllServicePrices();
 });
-hangarLoadPercentInput.addEventListener("input", () => updateAllServicePrices());
-hangarLoadCostInput.addEventListener("input", () => updateAllServicePrices());
+hangarLoadCostInput.addEventListener("input", updateHangarFeeSummary);
+hangarFeeTreatmentSelect.addEventListener("change", updateHangarFeeSummary);
 
 hangarServiceRows.addEventListener("change", (event) => {
   const row = event.target.closest(".service-row");
@@ -442,6 +446,17 @@ hangarServiceRows.addEventListener("change", (event) => {
 
   if (event.target.matches(".service-terminal")) {
     updateServicePrice(row);
+  }
+
+  if (event.target.matches(".service-enabled")) {
+    updateServiceRowTotal(row);
+  }
+});
+
+hangarServiceRows.addEventListener("input", (event) => {
+  const row = event.target.closest(".service-row");
+  if (row && event.target.matches(".service-quantity")) {
+    updateServiceRowTotal(row);
   }
 });
 
@@ -845,7 +860,8 @@ function renderHangarServiceRow(service) {
       </label>
       <label class="visually-hidden" for="${service.key}-quantity">${escapeHtml(service.label)} quantity</label>
       <input id="${service.key}-quantity" class="service-quantity" type="number" min="0" step="1" placeholder="Quantity" />
-      <output class="service-price">-</output>
+      <output class="service-price" data-label="Price / SCU">-</output>
+      <output class="service-total" data-label="Total">-</output>
       <select class="service-system" aria-label="${escapeHtml(service.label)} system"></select>
       <select class="service-planet" aria-label="${escapeHtml(service.label)} planet"></select>
       <select class="service-terminal" aria-label="${escapeHtml(service.label)} terminal"></select>
@@ -905,10 +921,12 @@ function updateServicePrice(row) {
   price.value = match ? `${formatCredits(adjustedPrice)} UEC` : "-";
   price.dataset.price = match ? String(adjustedPrice) : "";
   price.dataset.basePrice = match ? String(match.price) : "";
+  updateServiceRowTotal(row);
 }
 
 function updateAllServicePrices() {
   hangarServiceRows.querySelectorAll(".service-row").forEach((row) => updateServicePrice(row));
+  updateHangarFeeSummary();
 }
 
 function applyHangarLoadMarkup(price) {
@@ -921,31 +939,60 @@ function applyHangarLoadMarkup(price) {
 }
 
 function getHangarLoadPercent() {
-  const selected = hangarLoadPercentPreset.value;
-  return Math.max(0, selected === "custom" ? Number(hangarLoadPercentInput.value || 0) : Number(selected || 0));
+  return Math.max(0, Number(hangarLoadPercentInput.value || 0));
 }
 
 function updateHangarLoadPriceControls() {
   const usesFlatRate = hangarLoadModeSelect.value === "flat";
-  const usesCustomMarkup = !usesFlatRate && hangarLoadPercentPreset.value === "custom";
   hangarFlatPriceField.classList.toggle("is-hidden", !usesFlatRate);
   hangarMarkupField.classList.toggle("is-hidden", usesFlatRate);
-  hangarCustomMarkupField.classList.toggle("is-hidden", !usesCustomMarkup);
   hangarLoadCostInput.disabled = !usesFlatRate;
-  hangarLoadPercentPreset.disabled = usesFlatRate;
-  hangarLoadPercentInput.disabled = !usesCustomMarkup;
+  hangarLoadPercentInput.disabled = usesFlatRate;
+  hangarLoadPercentValue.textContent = `${getHangarLoadPercent()}%`;
 }
 
 function setHangarLoadPercent(value) {
-  const normalizedValue = String(Math.max(0, Number(value || 0)));
-  const presetValues = Array.from(hangarLoadPercentPreset.options).map((option) => option.value);
-  if (presetValues.includes(normalizedValue)) {
-    hangarLoadPercentPreset.value = normalizedValue;
-    hangarLoadPercentInput.value = "0";
-  } else {
-    hangarLoadPercentPreset.value = "custom";
-    hangarLoadPercentInput.value = normalizedValue;
+  hangarLoadPercentInput.value = String(Math.min(500, Math.max(0, Number(value || 0))));
+}
+
+function updateServiceRowTotal(row) {
+  const quantity = Number(row.querySelector(".service-quantity").value || 0);
+  const unitPrice = Number(row.querySelector(".service-price").dataset.price || 0);
+  const enabled = row.querySelector(".service-enabled").checked;
+  const total = enabled ? quantity * unitPrice : 0;
+  const output = row.querySelector(".service-total");
+  output.value = total ? `${formatCredits(total)} UEC` : "-";
+  output.dataset.total = String(total);
+  updateHangarFeeSummary();
+}
+
+function updateHangarFeeSummary() {
+  if (!hangarFeeTotal || !adjustedRentalTotals) {
+    return;
   }
+
+  const commodityTotal = Array.from(hangarServiceRows.querySelectorAll(".service-row")).reduce(
+    (total, row) => total + Number(row.querySelector(".service-total")?.dataset.total || 0),
+    0,
+  );
+  const flatLoadPrice = offerHangarServices.checked && hangarLoadModeSelect.value === "flat"
+    ? parseCredits(hangarLoadCostInput.value)
+    : 0;
+  const totalFee = offerHangarServices.checked ? commodityTotal + flatLoadPrice : 0;
+  const treatment = hangarFeeTreatmentSelect.value;
+  const rates = calculateRates();
+  const offeredRates = getOfferedRatePeriods();
+
+  hangarFeeTotal.textContent = `${formatCredits(totalFee)} UEC`;
+  adjustedRentalTotals.innerHTML = offeredRates
+    .map((period) => {
+      const rentalRate = Number(rates[period] || 0);
+      const adjustedTotal = treatment === "subtract"
+        ? Math.max(0, rentalRate - totalFee)
+        : rentalRate + totalFee;
+      return `<div><span>${ratePeriodLabel(period)}</span><strong>${formatCredits(adjustedTotal)} UEC</strong></div>`;
+    })
+    .join("");
 }
 
 function setSelectOptions(select, options, placeholder, selectedValue) {
@@ -986,6 +1033,7 @@ function collectHangarServices() {
         quantity,
         price: Number(priceOutput.dataset.price || 0),
         basePrice: Number(priceOutput.dataset.basePrice || 0),
+        total: Number(row.querySelector(".service-total").dataset.total || 0),
         system: row.querySelector(".service-system").value,
         planet: row.querySelector(".service-planet").value,
         terminal: row.querySelector(".service-terminal").value,
@@ -998,6 +1046,7 @@ function resetHangarRows() {
   hangarServiceRows.querySelectorAll(".service-row").forEach((row) => {
     row.querySelector(".service-enabled").checked = false;
     row.querySelector(".service-quantity").value = "";
+    updateServiceRowTotal(row);
   });
 }
 
@@ -1014,8 +1063,8 @@ function resetOwnerForm() {
   });
   hangarLoadModeSelect.value = "flat";
   hangarLoadCostInput.value = "0";
-  hangarLoadPercentPreset.value = "0";
   hangarLoadPercentInput.value = "0";
+  hangarFeeTreatmentSelect.value = "add";
   ownerSubmitButton.textContent = "Add ship";
   rateError.classList.add("is-hidden");
   updateRateCalculator();
@@ -1091,6 +1140,7 @@ function populateOwnerForm(index) {
   hangarLoadModeSelect.value = ship.hangarLoadMode || "flat";
   hangarLoadCostInput.value = formatCreditInputValue(ship.hangarLoadCost || 0);
   setHangarLoadPercent(ship.hangarLoadPercent || 0);
+  hangarFeeTreatmentSelect.value = ship.hangarFeeTreatment || "add";
   ownerSubmitButton.textContent = "Update ship";
   updatePilotRateVisibility();
   updateRateCalculator();
@@ -1098,6 +1148,7 @@ function populateOwnerForm(index) {
   updateHangarEligibility(ship.vehicle || ship.ship);
   resetHangarRows();
   applySavedHangarServices(ship.hangarServices || []);
+  updateHangarFeeSummary();
 }
 
 function applySavedHangarServices(services) {
@@ -1117,6 +1168,7 @@ function applySavedHangarServices(services) {
     updateServiceTerminalOptions(row);
     row.querySelector(".service-terminal").value = service.terminal || "";
     updateServicePrice(row);
+    updateServiceRowTotal(row);
   });
 }
 
@@ -1134,15 +1186,29 @@ function hangarServicesSummary(ship) {
             <div class="hangar-summary-line">
               <span>${escapeHtml(service.label)}</span>
               <small>${service.quantity ? `${Number(service.quantity).toLocaleString()} qty` : "Qty open"} ${
-                service.price ? `@ ${formatCredits(service.price)} UEC` : ""
+                service.price ? `@ ${formatCredits(service.price)} UEC / SCU` : ""
               }</small>
+              ${service.total ? `<small>Total: ${formatCredits(service.total)} UEC</small>` : ""}
               <small>${[service.system, service.planet, service.terminal].filter(Boolean).map(escapeHtml).join(" / ")}</small>
             </div>
           `,
         )
         .join("")}
+      <div class="hangar-summary-total">
+        <span>Total rental fee</span>
+        <strong>${formatCredits(getShipHangarFeeTotal(ship))} UEC</strong>
+        <small>${ship.hangarFeeTreatment === "subtract" ? "Subtracted from rental rate" : "Added to rental total"}</small>
+      </div>
     </div>
   `;
+}
+
+function getShipHangarFeeTotal(ship) {
+  const commodityTotal = (ship.hangarServices || []).reduce(
+    (total, service) => total + Number(service.total || Number(service.quantity || 0) * Number(service.price || 0)),
+    0,
+  );
+  return commodityTotal + (ship.hangarLoadMode === "flat" ? Number(ship.hangarLoadCost || 0) : 0);
 }
 
 function hangarLoadSummary(ship) {
@@ -1389,6 +1455,7 @@ function updateRateCalculator() {
   rateFormula.textContent = baseRate
     ? `${formatCredits(baseRate)} UEC / ${ratePeriodLabel(basePeriod)} converted by time, then adjusted by each slider.`
     : "Enter a base price to calculate all offered rates.";
+  updateHangarFeeSummary();
 }
 
 function calculateRates() {

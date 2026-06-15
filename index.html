@@ -216,41 +216,34 @@
                       <input name="hangarLoadCost" id="hangar-load-cost" type="text" inputmode="numeric" value="0" />
                     </label>
                     <label class="is-hidden" id="hangar-markup-field">
-                      Commodity markup %
-                      <select name="hangarLoadPercentPreset" id="hangar-load-percent-preset">
-                        <option value="0">0%</option>
-                        <option value="10">10%</option>
-                        <option value="20">20%</option>
-                        <option value="30">30%</option>
-                        <option value="40">40%</option>
-                        <option value="50">50%</option>
-                        <option value="60">60%</option>
-                        <option value="70">70%</option>
-                        <option value="80">80%</option>
-                        <option value="90">90%</option>
-                        <option value="100">100%</option>
-                        <option value="125">125%</option>
-                        <option value="150">150%</option>
-                        <option value="200">200%</option>
-                        <option value="250">250%</option>
-                        <option value="500">500%</option>
-                        <option value="custom">Custom</option>
-                      </select>
+                      Commodity markup <span id="hangar-load-percent-value">0%</span>
+                      <input name="hangarLoadPercent" id="hangar-load-percent" type="range" min="0" max="500" step="10" value="0" />
                     </label>
-                    <label class="is-hidden" id="hangar-custom-markup-field">
-                      Custom markup %
-                      <input name="hangarLoadPercent" id="hangar-load-percent" type="number" min="0" step="1" value="0" />
+                    <label>
+                      Fee treatment
+                      <select name="hangarFeeTreatment" id="hangar-fee-treatment">
+                        <option value="add">Add fees to rental total</option>
+                        <option value="subtract">Subtract fees from rental rate</option>
+                      </select>
                     </label>
                   </div>
                   <div class="service-row service-heading" aria-hidden="true">
                     <span>Offer</span>
-                    <span>Quantity</span>
-                    <span>Price</span>
+                    <span>SCU</span>
+                    <span>Price / SCU</span>
+                    <span>Total price</span>
                     <span>System</span>
                     <span>Planet</span>
                     <span>Terminal</span>
                   </div>
                   <div id="hangar-service-rows"></div>
+                  <div class="hangar-fee-summary">
+                    <div>
+                      <span>Total rental fee</span>
+                      <strong id="hangar-fee-total">0 UEC</strong>
+                    </div>
+                    <div class="adjusted-rental-totals" id="adjusted-rental-totals"></div>
+                  </div>
                 </div>
               </fieldset>
                 <button class="primary-button" type="submit">Add ship</button>

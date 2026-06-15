@@ -649,9 +649,26 @@ legend {
   display: none;
 }
 
+#hangar-markup-field {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+#hangar-markup-field input {
+  grid-column: 1 / -1;
+  min-height: 24px;
+  padding: 0;
+  accent-color: var(--cyan);
+}
+
+#hangar-load-percent-value {
+  color: var(--cyan);
+  font-weight: 800;
+}
+
 .service-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.35fr) minmax(92px, 0.75fr) minmax(88px, 0.75fr) repeat(3, minmax(110px, 1fr));
+  grid-template-columns: minmax(150px, 1.3fr) minmax(82px, 0.6fr) minmax(105px, 0.8fr) minmax(105px, 0.85fr) repeat(3, minmax(110px, 1fr));
   gap: 8px;
   align-items: center;
   border: 1px solid var(--line-soft);
@@ -679,7 +696,8 @@ legend {
   font-size: 0.68rem;
 }
 
-.service-price {
+.service-price,
+.service-total {
   display: grid;
   align-items: center;
   min-height: 42px;
@@ -689,6 +707,43 @@ legend {
   padding: 0 10px;
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.service-total {
+  color: var(--cyan);
+}
+
+.hangar-fee-summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) 1fr;
+  gap: 12px;
+  border: 1px solid var(--cyan);
+  background: #071924;
+  padding: 12px;
+}
+
+.hangar-fee-summary > div:first-child,
+.adjusted-rental-totals div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hangar-fee-summary span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.hangar-fee-summary strong {
+  color: var(--green);
+}
+
+.adjusted-rental-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .hangar-fieldset input:disabled + span,
@@ -845,6 +900,18 @@ legend {
   color: var(--muted);
 }
 
+.hangar-summary-total {
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 9px;
+}
+
+.hangar-summary-total span,
+.hangar-summary-total small {
+  color: var(--muted);
+}
+
 .empty-state {
   grid-column: 1 / -1;
   border: 1px dashed var(--line);
@@ -877,6 +944,11 @@ legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .hangar-fee-summary,
+  .adjusted-rental-totals {
+    grid-template-columns: 1fr;
+  }
+
   .rate-base-grid,
   .rate-offer-row {
     grid-template-columns: 1fr;
@@ -884,6 +956,14 @@ legend {
 
   .service-heading {
     display: none;
+  }
+
+  .service-price::before,
+  .service-total::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.65rem;
+    text-transform: uppercase;
   }
 }
 
