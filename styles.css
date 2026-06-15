@@ -713,21 +713,19 @@ legend {
   color: var(--cyan);
 }
 
-.hangar-fee-summary {
+.hangar-price-summary {
   display: grid;
-  grid-template-columns: minmax(180px, 0.7fr) 1fr;
-  gap: 12px;
-  border: 1px solid var(--cyan);
-  background: #071924;
-  padding: 12px;
+  gap: 8px;
 }
 
-.hangar-fee-summary > div:first-child,
-.adjusted-rental-totals div {
+.hangar-fee-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  border: 1px solid var(--line);
+  background: #050b11;
+  padding: 10px 12px;
 }
 
 .hangar-fee-summary span {
@@ -737,13 +735,48 @@ legend {
 }
 
 .hangar-fee-summary strong {
-  color: var(--green);
+  color: var(--cyan);
+}
+
+.rental-total-summary {
+  border: 1px solid var(--green);
+  background: #071c19;
+  padding: 14px 16px 16px;
+}
+
+.rental-total-heading {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .adjusted-rental-totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.adjusted-rental-totals div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.adjusted-rental-totals span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+
+.adjusted-rental-totals strong {
+  color: var(--green);
+  font-size: 1.15rem;
+  white-space: nowrap;
 }
 
 .hangar-fieldset input:disabled + span,
@@ -944,9 +977,13 @@ legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hangar-fee-summary,
   .adjusted-rental-totals {
     grid-template-columns: 1fr;
+  }
+
+  .adjusted-rental-totals div {
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
   }
 
   .rate-base-grid,
