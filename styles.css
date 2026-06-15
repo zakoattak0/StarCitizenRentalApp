@@ -449,7 +449,14 @@ h1 {
 }
 
 .availability-actions {
+  flex-wrap: wrap;
   margin-top: 18px;
+}
+
+.availability-bulk-actions {
+  display: flex;
+  gap: 8px;
+  margin-right: auto;
 }
 
 .confirm-modal h2 {
@@ -1215,6 +1222,15 @@ legend {
 
   .availability-date small {
     display: none;
+  }
+
+  .availability-bulk-actions {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .availability-bulk-actions .secondary-button {
+    flex: 1;
   }
 
   .hangar-fee-treatment {

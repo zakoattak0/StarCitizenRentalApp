@@ -166,6 +166,8 @@ const availabilityToday = document.querySelector("#availability-today");
 const availabilityNext = document.querySelector("#availability-next");
 const availabilityCancel = document.querySelector("#availability-cancel");
 const availabilitySave = document.querySelector("#availability-save");
+const availabilitySelectAll = document.querySelector("#availability-select-all");
+const availabilityDeselectAll = document.querySelector("#availability-deselect-all");
 const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
@@ -486,6 +488,14 @@ availabilityPicker.addEventListener("click", (event) => {
 });
 
 availabilitySave.addEventListener("click", saveAvailabilityChanges);
+availabilitySelectAll.addEventListener("click", () => {
+  getSelectableAvailabilityDays().forEach((date) => availabilityDraft.set(dateToKey(date), "available"));
+  renderAvailabilityPicker();
+});
+availabilityDeselectAll.addEventListener("click", () => {
+  getSelectableAvailabilityDays().forEach((date) => availabilityDraft.delete(dateToKey(date)));
+  renderAvailabilityPicker();
+});
 
 document.querySelectorAll("[data-schedule-view]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -724,9 +734,6 @@ function renderCalendar() {
           cell.insertAdjacentHTML("beforeend", availabilityPill(ship.ship, ship.owner, "available"));
         });
 
-        if (!visibleShips.length) {
-          cell.insertAdjacentHTML("beforeend", availabilityPill("No listings yet", "Owners can claim this day", "owner"));
-        }
       }
     }
 
@@ -1111,13 +1118,18 @@ function updateHangarFeeSummary() {
     : Number(rates.hour || 0) + totalFee;
 
   hangarFeeTotal.textContent = `${formatCredits(totalFee)} UEC`;
+  const standardTotals = offeredRates.map(
+    (period) => `<div><span>${totalRateLabel(period)}</span><strong>${formatCredits(adjustedRates[period])} UEC</strong></div>`,
+  );
+  const hourlyIndex = offeredRates.indexOf("hour");
+  const pilotTotal = pilotIncludedInput.checked
+    ? `<div class="pilot-total"><span>Hourly with pilot</span><strong>${formatCredits(hourlyRentalTotal + pilotRate)} UEC</strong></div>`
+    : "";
+  if (pilotTotal) {
+    standardTotals.splice(hourlyIndex >= 0 ? hourlyIndex + 1 : 0, 0, pilotTotal);
+  }
   adjustedRentalTotals.innerHTML = [
-    ...offeredRates.map(
-      (period) => `<div><span>${totalRateLabel(period)}</span><strong>${formatCredits(adjustedRates[period])} UEC</strong></div>`,
-    ),
-    ...(pilotIncludedInput.checked
-      ? [`<div class="pilot-total"><span>Hourly with pilot</span><strong>${formatCredits(hourlyRentalTotal + pilotRate)} UEC</strong></div>`]
-      : []),
+    ...standardTotals,
   ].join("");
 }
 
@@ -1295,6 +1307,15 @@ function renderAvailabilityPicker() {
     .join("");
 
   availabilityPicker.innerHTML = weekdays + dateButtons;
+}
+
+function getSelectableAvailabilityDays() {
+  const days = availabilityView === "month"
+    ? availabilityMonthDays(availabilityCursor)
+    : availabilityWeekDays(availabilityCursor);
+  return availabilityView === "month"
+    ? days.filter((date) => date.getMonth() === availabilityCursor.getMonth())
+    : days;
 }
 
 function updateAvailabilityControls() {
