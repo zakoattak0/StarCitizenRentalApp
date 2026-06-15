@@ -42,6 +42,7 @@ let pendingRemoveShipIndex = null;
 let availabilityShipIndex = null;
 let availabilityView = "week";
 let availabilityStatus = "available";
+let scheduleStatus = "available";
 let availabilityCursor = startOfDay(new Date());
 let availabilityDraft = new Map();
 
@@ -139,7 +140,9 @@ const availabilityShipSelect = document.querySelector("#availability-ship");
 const ownerCalendar = document.querySelector("#owner-calendar");
 const offerHangarServices = document.querySelector("#offer-hangar-services");
 const hangarServiceStatus = document.querySelector("#hangar-service-status");
+const hangarFieldset = document.querySelector("#hangar-fieldset");
 const hangarServicesPanel = document.querySelector("#hangar-services-panel");
+const hangarFeeControls = document.querySelector("#hangar-fee-controls");
 const hangarServiceRows = document.querySelector("#hangar-service-rows");
 const addFleetShipButton = document.querySelector("#add-fleet-ship");
 const ownerConfiguratorModal = document.querySelector("#owner-configurator-modal");
@@ -482,6 +485,16 @@ availabilityPicker.addEventListener("click", (event) => {
 
 availabilitySave.addEventListener("click", saveAvailabilityChanges);
 
+document.querySelectorAll("[data-schedule-status]").forEach((button) => {
+  button.addEventListener("click", () => {
+    scheduleStatus = button.dataset.scheduleStatus;
+    document.querySelectorAll("[data-schedule-status]").forEach((candidate) => {
+      candidate.classList.toggle("active", candidate.dataset.scheduleStatus === scheduleStatus);
+    });
+    renderOwnerSchedule();
+  });
+});
+
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
 
 offerHangarServices.addEventListener("change", () => {
@@ -540,27 +553,14 @@ rentForm.addEventListener("submit", (event) => {
 
 availabilityForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const data = new FormData(availabilityForm);
-  const ship = ships[Number(data.get("shipIndex"))];
-  const dates = parseDateList(data.get("dates"));
-  const status = data.get("status");
-
-  if (!ship || dates.length === 0) {
-    return;
+  const selectedIndex = availabilityShipSelect.value;
+  if (selectedIndex !== "all" && ships[Number(selectedIndex)]) {
+    openAvailabilityModal(Number(selectedIndex));
   }
+});
 
-  if (status === "available") {
-    ship.dates = uniqueSorted([...ship.dates, ...dates]);
-    ship.unavailableDates = (ship.unavailableDates || []).filter((date) => !dates.includes(date));
-  } else {
-    ship.dates = ship.dates.filter((date) => !dates.includes(date));
-    ship.unavailableDates = uniqueSorted([...(ship.unavailableDates || []), ...dates]);
-  }
-
-  availabilityForm.reset();
-  renderFleet();
-  renderCalendar();
-  renderRentalResults();
+availabilityShipSelect.addEventListener("change", () => {
+  availabilityForm.querySelector("button[type='submit']").disabled = availabilityShipSelect.value === "all";
   renderOwnerSchedule();
 });
 
@@ -825,15 +825,21 @@ function renderRentalResults() {
 }
 
 function renderOwnerSchedule() {
+  const previousSelection = availabilityShipSelect.value || "all";
   availabilityShipSelect.innerHTML = ships.length
-    ? ships
-        .map((ship, index) => `<option value="${index}">${escapeHtml(ship.ship)} - ${escapeHtml(ship.owner)}</option>`)
-        .join("")
+    ? [
+        `<option value="all">All fleet ships</option>`,
+        ...ships.map((ship, index) => `<option value="${index}">${escapeHtml(ship.ship)} - ${escapeHtml(ship.owner)}</option>`),
+      ].join("")
     : `<option value="">No fleet ships yet</option>`;
+  availabilityShipSelect.value = previousSelection === "all" || ships[Number(previousSelection)]
+    ? previousSelection
+    : "all";
 
-  availabilityForm.querySelectorAll("input, select, button").forEach((control) => {
+  availabilityForm.querySelectorAll("select, button").forEach((control) => {
     control.disabled = ships.length === 0;
   });
+  availabilityForm.querySelector("button[type='submit']").disabled = ships.length === 0 || availabilityShipSelect.value === "all";
 
   if (!ships.length) {
     ownerCalendar.innerHTML = `<div class="empty-state">Add ships to your fleet, then use this schedule view to set availability.</div>`;
@@ -846,6 +852,11 @@ function renderOwnerSchedule() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startOffset = firstDay.getDay();
   const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const selectedShips = availabilityShipSelect.value === "all"
+    ? ships
+    : ships[Number(availabilityShipSelect.value)]
+      ? [ships[Number(availabilityShipSelect.value)]]
+      : ships;
 
   let markup = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     .map((day) => `<div class="weekday">${day}</div>`)
@@ -855,25 +866,27 @@ function renderOwnerSchedule() {
     const dayNumber = index - startOffset + 1;
     const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
     const dateKey = isCurrentMonth ? toDateKey(year, month, dayNumber) : "";
-    const availableShips = ships.filter((ship) => ship.dates.includes(dateKey));
-    const unavailableShips = ships.filter((ship) => ship.unavailableDates?.includes(dateKey));
-    const pills = [
-      ...availableShips.map((ship) => availabilityPill(ship.ship, "Available", "available")),
-      ...unavailableShips.map((ship) => availabilityPill(ship.ship, "Unavailable", "booked")),
-    ].join("");
+    const matchingShips = scheduleStatus === "available"
+      ? selectedShips.filter((ship) => ship.dates.includes(dateKey))
+      : selectedShips.filter((ship) => ship.unavailableDates?.includes(dateKey));
+    const pills = matchingShips.map((ship) => scheduleShipPill(ship.ship, scheduleStatus)).join("");
 
     markup += `
       <article class="day-cell${isCurrentMonth ? "" : " is-muted"}">
         <div class="day-number">
           <span>${isCurrentMonth ? dayNumber : ""}</span>
-          ${isCurrentMonth ? `<small>${availableShips.length} available</small>` : ""}
+          ${isCurrentMonth && matchingShips.length ? `<small>${matchingShips.length}</small>` : ""}
         </div>
-        ${isCurrentMonth ? pills || availabilityPill("No fleet availability", "Set dates above", "owner") : ""}
+        ${isCurrentMonth ? pills : ""}
       </article>
     `;
   }
 
   ownerCalendar.innerHTML = markup;
+}
+
+function scheduleShipPill(shipName, status) {
+  return `<div class="availability-pill ${status === "available" ? "available" : "booked"}"><strong>${escapeHtml(shipName)}</strong></div>`;
 }
 
 function renderCalendarFilterOptions() {
@@ -1790,11 +1803,13 @@ function isHangarServiceEligible(vehicleOrName) {
 
 function updateHangarEligibility(vehicle = findVehicle(ownerShipInput.value)) {
   const eligible = isHangarServiceEligible(vehicle || ownerShipInput.value);
+  hangarFieldset.classList.toggle("is-hidden", !eligible);
   offerHangarServices.disabled = !eligible;
 
   if (!eligible) {
     offerHangarServices.checked = false;
     hangarServicesPanel.classList.add("is-hidden");
+    hangarFeeControls.classList.add("is-hidden");
     hangarServiceStatus.textContent = ownerShipInput.value
       ? "Hangar Services are only available for R/R/R capable flight-ready ships"
       : "Select an R/R/R capable ship to offer Hangar Services";
@@ -1805,6 +1820,7 @@ function updateHangarEligibility(vehicle = findVehicle(ownerShipInput.value)) {
     ? `${hangarMarketRows.length.toLocaleString()} UEX purchase locations loaded`
     : hangarMarketError || "No UEX purchase locations available";
   hangarServicesPanel.classList.toggle("is-hidden", !offerHangarServices.checked);
+  hangarFeeControls.classList.toggle("is-hidden", !offerHangarServices.checked);
 }
 
 function formatCredits(value) {

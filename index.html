@@ -195,7 +195,7 @@
                   <textarea name="notes" rows="4" placeholder="Loadout details, restrictions, crew expectations, insurance terms..."></textarea>
                 </label>
               </fieldset>
-              <fieldset class="hangar-fieldset">
+              <fieldset class="hangar-fieldset is-hidden" id="hangar-fieldset">
                 <legend>Hangar Services</legend>
                 <label class="check">
                   <input type="checkbox" name="offerHangarServices" id="offer-hangar-services" />
@@ -230,7 +230,10 @@
                     <span>Terminal</span>
                   </div>
                   <div id="hangar-service-rows"></div>
-                  <div class="hangar-price-summary">
+                </div>
+              </fieldset>
+              <div class="hangar-price-summary">
+                  <div class="hangar-fee-controls is-hidden" id="hangar-fee-controls">
                     <label class="hangar-fee-treatment">
                       Fee treatment
                       <select name="hangarFeeTreatment" id="hangar-fee-treatment">
@@ -242,13 +245,12 @@
                       <span>Hangar service fees</span>
                       <strong id="hangar-fee-total">0 UEC</strong>
                     </div>
-                    <div class="rental-total-summary">
-                      <span class="rental-total-heading">Total rental rates</span>
-                      <div class="adjusted-rental-totals" id="adjusted-rental-totals"></div>
-                    </div>
                   </div>
-                </div>
-              </fieldset>
+                  <div class="rental-total-summary">
+                    <span class="rental-total-heading">Total rental rates</span>
+                    <div class="adjusted-rental-totals" id="adjusted-rental-totals"></div>
+                  </div>
+              </div>
                 <button class="primary-button" type="submit">Add ship</button>
               </form>
             </div>
@@ -267,19 +269,15 @@
                     Fleet ship
                     <select name="shipIndex" id="availability-ship"></select>
                   </label>
-                  <label>
-                    Dates
-                    <input name="dates" placeholder="2026-06-14, 2026-06-15" />
-                  </label>
-                  <label>
-                    Availability
-                    <select name="status">
-                      <option value="available">Available</option>
-                      <option value="unavailable">Unavailable</option>
-                    </select>
-                  </label>
                   <button class="primary-button" type="submit">Update availability</button>
                 </form>
+                <div class="schedule-calendar-toolbar">
+                  <span>Show fleet dates</span>
+                  <div class="segmented-control" aria-label="Schedule availability filter">
+                    <button class="segment active" type="button" data-schedule-status="available">Available</button>
+                    <button class="segment" type="button" data-schedule-status="unavailable">Unavailable</button>
+                  </div>
+                </div>
                 <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>
               </section>
           </div>

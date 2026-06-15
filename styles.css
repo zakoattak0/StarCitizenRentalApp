@@ -714,9 +714,23 @@ h1 {
 }
 
 .schedule-form {
-  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) 160px auto;
+  grid-template-columns: minmax(220px, 1fr) auto;
   align-items: end;
   margin-bottom: 14px;
+}
+
+.schedule-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 label {
@@ -876,6 +890,11 @@ legend {
 }
 
 .hangar-price-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.hangar-fee-controls {
   display: grid;
   gap: 8px;
 }
@@ -1214,6 +1233,16 @@ legend {
 
   .section-heading {
     display: grid;
+  }
+
+  .schedule-calendar-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .schedule-calendar-toolbar .segmented-control,
+  .schedule-calendar-toolbar .segment {
+    width: 100%;
   }
 
   h1 {
