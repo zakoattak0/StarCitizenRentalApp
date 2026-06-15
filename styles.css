@@ -298,6 +298,168 @@ h1 {
   padding: 18px;
 }
 
+.availability-modal {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.availability-modal .eyebrow {
+  margin-bottom: 4px;
+}
+
+.availability-toolbar {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin: 18px 0 12px;
+}
+
+.availability-toolbar > strong {
+  justify-self: end;
+  color: var(--cyan);
+}
+
+.segmented-control,
+.availability-navigation,
+.availability-mode,
+.availability-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmented-control {
+  border: 1px solid var(--line);
+  background: #050b11;
+  padding: 3px;
+}
+
+.segment {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.segment.active {
+  background: var(--cyan);
+  color: #031014;
+  font-weight: 800;
+}
+
+.availability-navigation .secondary-button {
+  min-width: 42px;
+  padding-inline: 10px;
+}
+
+.availability-mode {
+  justify-content: space-between;
+  border: 1px solid var(--line-soft);
+  background: #07121b;
+  padding: 9px 10px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.availability-picker {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.availability-picker .weekday {
+  padding: 7px 4px;
+  text-align: center;
+}
+
+.availability-date {
+  display: grid;
+  align-content: space-between;
+  min-height: 86px;
+  border: 1px solid var(--line);
+  background: #071018;
+  color: var(--text);
+  padding: 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.availability-date:hover {
+  border-color: var(--cyan);
+}
+
+.availability-date.is-muted {
+  opacity: 0.38;
+}
+
+.availability-date.is-today {
+  box-shadow: inset 0 0 0 1px var(--cyan);
+}
+
+.availability-date.available {
+  border-color: rgba(57, 217, 138, 0.75);
+  background: rgba(57, 217, 138, 0.12);
+}
+
+.availability-date.unavailable {
+  border-color: rgba(255, 92, 115, 0.7);
+  background: rgba(255, 92, 115, 0.11);
+}
+
+.availability-date strong {
+  font-size: 1rem;
+}
+
+.availability-date small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.availability-date.available small {
+  color: var(--green);
+}
+
+.availability-date.unavailable small {
+  color: var(--red);
+}
+
+.availability-legend {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.availability-legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--line);
+  margin-right: 3px;
+}
+
+.availability-legend i.available {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.availability-legend i.unavailable {
+  border-color: var(--red);
+  background: var(--red);
+}
+
+.availability-actions {
+  margin-top: 18px;
+}
+
 .confirm-modal h2 {
   margin: 0 0 8px;
 }
@@ -718,6 +880,15 @@ legend {
   gap: 8px;
 }
 
+.hangar-fee-treatment {
+  grid-template-columns: minmax(150px, 0.45fr) minmax(230px, 0.8fr);
+  align-items: center;
+  justify-content: end;
+  border: 1px solid var(--line-soft);
+  background: #07121b;
+  padding: 10px 12px;
+}
+
 .hangar-fee-summary {
   display: flex;
   align-items: center;
@@ -978,6 +1149,38 @@ legend {
   }
 
   .adjusted-rental-totals {
+    grid-template-columns: 1fr;
+  }
+
+  .availability-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .availability-toolbar > strong {
+    justify-self: start;
+  }
+
+  .availability-mode {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .availability-mode .segmented-control,
+  .availability-mode .segment {
+    width: 100%;
+  }
+
+  .availability-date {
+    min-height: 54px;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .availability-date small {
+    display: none;
+  }
+
+  .hangar-fee-treatment {
     grid-template-columns: 1fr;
   }
 

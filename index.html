@@ -219,13 +219,6 @@
                       Commodity markup <span id="hangar-load-percent-value">0%</span>
                       <input name="hangarLoadPercent" id="hangar-load-percent" type="range" min="0" max="500" step="10" value="0" />
                     </label>
-                    <label>
-                      Fee treatment
-                      <select name="hangarFeeTreatment" id="hangar-fee-treatment">
-                        <option value="add">Add fees to rental total</option>
-                        <option value="subtract">Subtract fees from rental rate</option>
-                      </select>
-                    </label>
                   </div>
                   <div class="service-row service-heading" aria-hidden="true">
                     <span>Offer</span>
@@ -238,6 +231,13 @@
                   </div>
                   <div id="hangar-service-rows"></div>
                   <div class="hangar-price-summary">
+                    <label class="hangar-fee-treatment">
+                      Fee treatment
+                      <select name="hangarFeeTreatment" id="hangar-fee-treatment">
+                        <option value="add">Add fees to rental total</option>
+                        <option value="subtract">Subtract fees from rental rate</option>
+                      </select>
+                    </label>
                     <div class="hangar-fee-summary">
                       <span>Hangar service fees</span>
                       <strong id="hangar-fee-total">0 UEC</strong>
@@ -291,6 +291,47 @@
               <div class="modal-actions">
                 <button class="secondary-button" id="remove-ship-cancel" type="button">Cancel</button>
                 <button class="secondary-button danger-button" id="remove-ship-confirm" type="button">Remove ship</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-backdrop is-hidden" id="availability-modal">
+            <div class="availability-modal" role="dialog" aria-modal="true" aria-labelledby="availability-modal-title">
+              <div class="modal-heading">
+                <div>
+                  <p class="eyebrow">Fleet availability</p>
+                  <h2 id="availability-modal-title">Set availability</h2>
+                </div>
+                <button class="icon-button" id="availability-modal-close" type="button" aria-label="Close availability calendar">&times;</button>
+              </div>
+              <div class="availability-toolbar">
+                <div class="segmented-control" aria-label="Calendar view">
+                  <button class="segment active" type="button" data-availability-view="week">Week</button>
+                  <button class="segment" type="button" data-availability-view="month">Month</button>
+                </div>
+                <div class="availability-navigation">
+                  <button class="secondary-button" id="availability-prev" type="button" aria-label="Previous period">&lsaquo;</button>
+                  <button class="secondary-button" id="availability-today" type="button">Today</button>
+                  <button class="secondary-button" id="availability-next" type="button" aria-label="Next period">&rsaquo;</button>
+                </div>
+                <strong id="availability-period-label"></strong>
+              </div>
+              <div class="availability-mode" aria-label="Date status">
+                <span>Mark selected dates as</span>
+                <div class="segmented-control">
+                  <button class="segment active" type="button" data-availability-status="available">Available</button>
+                  <button class="segment" type="button" data-availability-status="unavailable">Unavailable</button>
+                </div>
+              </div>
+              <div class="availability-picker" id="availability-picker" aria-label="Choose ship availability dates"></div>
+              <div class="availability-legend" aria-label="Availability legend">
+                <span><i class="available"></i> Available</span>
+                <span><i class="unavailable"></i> Unavailable</span>
+                <span><i class="unchanged"></i> Not set</span>
+              </div>
+              <div class="modal-actions availability-actions">
+                <button class="secondary-button" id="availability-cancel" type="button">Cancel</button>
+                <button class="primary-button" id="availability-save" type="button">Save availability</button>
               </div>
             </div>
           </div>

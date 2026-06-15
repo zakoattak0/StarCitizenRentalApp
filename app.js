@@ -39,6 +39,11 @@ let hangarMarketRows = [];
 let hangarMarketError = "";
 let editingShipIndex = null;
 let pendingRemoveShipIndex = null;
+let availabilityShipIndex = null;
+let availabilityView = "week";
+let availabilityStatus = "available";
+let availabilityCursor = startOfDay(new Date());
+let availabilityDraft = new Map();
 
 const fallbackVehicles = [
   {
@@ -144,6 +149,16 @@ const removeShipModal = document.querySelector("#remove-ship-modal");
 const removeShipMessage = document.querySelector("#remove-ship-message");
 const removeShipCancel = document.querySelector("#remove-ship-cancel");
 const removeShipConfirm = document.querySelector("#remove-ship-confirm");
+const availabilityModal = document.querySelector("#availability-modal");
+const availabilityModalTitle = document.querySelector("#availability-modal-title");
+const availabilityModalClose = document.querySelector("#availability-modal-close");
+const availabilityPicker = document.querySelector("#availability-picker");
+const availabilityPeriodLabel = document.querySelector("#availability-period-label");
+const availabilityPrev = document.querySelector("#availability-prev");
+const availabilityToday = document.querySelector("#availability-today");
+const availabilityNext = document.querySelector("#availability-next");
+const availabilityCancel = document.querySelector("#availability-cancel");
+const availabilitySave = document.querySelector("#availability-save");
 const hangarLoadModeSelect = document.querySelector("#hangar-load-mode");
 const hangarLoadCostInput = document.querySelector("#hangar-load-cost");
 const hangarLoadPercentInput = document.querySelector("#hangar-load-percent");
@@ -385,7 +400,9 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (!removeShipModal.classList.contains("is-hidden")) {
+  if (!availabilityModal.classList.contains("is-hidden")) {
+    closeAvailabilityModal();
+  } else if (!removeShipModal.classList.contains("is-hidden")) {
     closeRemoveConfirmation();
   } else if (!ownerConfiguratorModal.classList.contains("is-hidden")) {
     closeOwnerConfigurator();
@@ -399,6 +416,10 @@ fleetList.addEventListener("click", (event) => {
   }
 
   const index = Number(actionButton.dataset.shipIndex);
+  if (actionButton.dataset.fleetAction === "availability") {
+    openAvailabilityModal(index);
+  }
+
   if (actionButton.dataset.fleetAction === "modify") {
     populateOwnerForm(index);
     openOwnerConfigurator("modify");
@@ -408,6 +429,58 @@ fleetList.addEventListener("click", (event) => {
     openRemoveConfirmation(index);
   }
 });
+
+availabilityModalClose.addEventListener("click", closeAvailabilityModal);
+availabilityCancel.addEventListener("click", closeAvailabilityModal);
+
+availabilityModal.addEventListener("click", (event) => {
+  if (event.target === availabilityModal) {
+    closeAvailabilityModal();
+  }
+});
+
+document.querySelectorAll("[data-availability-view]").forEach((button) => {
+  button.addEventListener("click", () => {
+    availabilityView = button.dataset.availabilityView;
+    renderAvailabilityPicker();
+  });
+});
+
+document.querySelectorAll("[data-availability-status]").forEach((button) => {
+  button.addEventListener("click", () => {
+    availabilityStatus = button.dataset.availabilityStatus;
+    updateAvailabilityControls();
+  });
+});
+
+availabilityPrev.addEventListener("click", () => {
+  availabilityCursor = shiftAvailabilityPeriod(availabilityCursor, -1);
+  renderAvailabilityPicker();
+});
+
+availabilityToday.addEventListener("click", () => {
+  availabilityCursor = startOfDay(new Date());
+  renderAvailabilityPicker();
+});
+
+availabilityNext.addEventListener("click", () => {
+  availabilityCursor = shiftAvailabilityPeriod(availabilityCursor, 1);
+  renderAvailabilityPicker();
+});
+
+availabilityPicker.addEventListener("click", (event) => {
+  const dateButton = event.target.closest("[data-availability-date]");
+  if (!dateButton) {
+    return;
+  }
+
+  const dateKey = dateButton.dataset.availabilityDate;
+  const currentStatus = availabilityDraft.get(dateKey) || "unset";
+  availabilityDraft.set(dateKey, currentStatus === availabilityStatus ? "unset" : availabilityStatus);
+  renderAvailabilityPicker();
+});
+
+availabilitySave.addEventListener("click", saveAvailabilityChanges);
 
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
 
@@ -696,6 +769,7 @@ function renderFleet() {
               </ul>
               ${configurationSummary(ship)}
               <div class="card-actions">
+                <button class="primary-button" type="button" data-fleet-action="availability" data-ship-index="${ships.indexOf(ship)}">Availability</button>
                 <button class="secondary-button" type="button" data-fleet-action="modify" data-ship-index="${ships.indexOf(ship)}">Modify</button>
                 <button class="secondary-button danger-button" type="button" data-fleet-action="remove" data-ship-index="${ships.indexOf(ship)}">Remove</button>
               </div>
@@ -1086,9 +1160,153 @@ function openOwnerConfigurator(mode) {
 
 function closeOwnerConfigurator() {
   ownerConfiguratorModal.classList.add("is-hidden");
-  if (removeShipModal.classList.contains("is-hidden")) {
+  if (removeShipModal.classList.contains("is-hidden") && availabilityModal.classList.contains("is-hidden")) {
     document.body.classList.remove("modal-open");
   }
+}
+
+function openAvailabilityModal(index) {
+  const ship = ships[index];
+  if (!ship) {
+    return;
+  }
+
+  availabilityShipIndex = index;
+  availabilityView = "week";
+  availabilityStatus = "available";
+  availabilityCursor = startOfDay(new Date());
+  availabilityDraft = new Map();
+  (ship.dates || []).forEach((date) => availabilityDraft.set(date, "available"));
+  (ship.unavailableDates || []).forEach((date) => availabilityDraft.set(date, "unavailable"));
+  availabilityModalTitle.textContent = `${ship.ship} availability`;
+  availabilityModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+  renderAvailabilityPicker();
+  availabilityModalClose.focus();
+}
+
+function closeAvailabilityModal() {
+  availabilityShipIndex = null;
+  availabilityDraft = new Map();
+  availabilityModal.classList.add("is-hidden");
+  if (ownerConfiguratorModal.classList.contains("is-hidden") && removeShipModal.classList.contains("is-hidden")) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function saveAvailabilityChanges() {
+  const ship = ships[availabilityShipIndex];
+  if (!ship) {
+    closeAvailabilityModal();
+    return;
+  }
+
+  ship.dates = uniqueSorted(
+    Array.from(availabilityDraft.entries())
+      .filter(([, status]) => status === "available")
+      .map(([date]) => date),
+  );
+  ship.unavailableDates = uniqueSorted(
+    Array.from(availabilityDraft.entries())
+      .filter(([, status]) => status === "unavailable")
+      .map(([date]) => date),
+  );
+
+  closeAvailabilityModal();
+  renderFleet();
+  renderCalendar();
+  renderRentalResults();
+  renderOwnerSchedule();
+}
+
+function renderAvailabilityPicker() {
+  updateAvailabilityControls();
+  const days = availabilityView === "month"
+    ? availabilityMonthDays(availabilityCursor)
+    : availabilityWeekDays(availabilityCursor);
+  const visibleMonth = availabilityCursor.getMonth();
+  const todayKey = dateToKey(new Date());
+
+  availabilityPeriodLabel.textContent = availabilityView === "month"
+    ? availabilityCursor.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : formatWeekRange(days[0], days[days.length - 1]);
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    .map((day) => `<div class="weekday">${day}</div>`)
+    .join("");
+  const dateButtons = days
+    .map((date) => {
+      const dateKey = dateToKey(date);
+      const status = availabilityDraft.get(dateKey) || "unset";
+      const statusLabel = status === "available" ? "Available" : status === "unavailable" ? "Unavailable" : "Not set";
+      const mutedClass = availabilityView === "month" && date.getMonth() !== visibleMonth ? " is-muted" : "";
+      const todayClass = dateKey === todayKey ? " is-today" : "";
+      return `
+        <button class="availability-date ${status}${mutedClass}${todayClass}" type="button" data-availability-date="${dateKey}" aria-label="${escapeHtml(date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}: ${statusLabel}">
+          <strong>${date.getDate()}</strong>
+          <small>${statusLabel}</small>
+        </button>
+      `;
+    })
+    .join("");
+
+  availabilityPicker.innerHTML = weekdays + dateButtons;
+}
+
+function updateAvailabilityControls() {
+  document.querySelectorAll("[data-availability-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.availabilityView === availabilityView);
+  });
+  document.querySelectorAll("[data-availability-status]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.availabilityStatus === availabilityStatus);
+  });
+}
+
+function shiftAvailabilityPeriod(date, direction) {
+  const shifted = new Date(date);
+  if (availabilityView === "month") {
+    shifted.setDate(1);
+    shifted.setMonth(shifted.getMonth() + direction);
+  } else {
+    shifted.setDate(shifted.getDate() + direction * 7);
+  }
+  return startOfDay(shifted);
+}
+
+function availabilityWeekDays(date) {
+  const start = startOfDay(date);
+  start.setDate(start.getDate() - start.getDay());
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+}
+
+function availabilityMonthDays(date) {
+  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const start = new Date(first);
+  start.setDate(first.getDate() - first.getDay());
+  const last = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  const end = new Date(last);
+  end.setDate(last.getDate() + (6 - last.getDay()));
+  const totalDays = Math.round((end - start) / 86400000) + 1;
+  return Array.from({ length: totalDays }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+}
+
+function formatWeekRange(start, end) {
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const startLabel = start.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+  });
+  const endLabel = end.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${startLabel} - ${endLabel}`;
 }
 
 function openRemoveConfirmation(index) {
@@ -1107,7 +1325,7 @@ function openRemoveConfirmation(index) {
 function closeRemoveConfirmation() {
   pendingRemoveShipIndex = null;
   removeShipModal.classList.add("is-hidden");
-  if (ownerConfiguratorModal.classList.contains("is-hidden")) {
+  if (ownerConfiguratorModal.classList.contains("is-hidden") && availabilityModal.classList.contains("is-hidden")) {
     document.body.classList.remove("modal-open");
   }
 }
@@ -1597,6 +1815,14 @@ function formatCredits(value) {
 
 function toDateKey(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function dateToKey(date) {
+  return toDateKey(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function formatShortDate(value) {
