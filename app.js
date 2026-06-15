@@ -422,6 +422,23 @@ ownerForm.addEventListener("change", (event) => {
   if (event.target?.name === "idrisS7Turrets") {
     updateIdrisS5WeaponVisibility();
   }
+
+  if (event.target?.name === "miningModules") {
+    const quantityInput = ownerForm.querySelector(`input[name="miningModuleQuantities"][data-module="${cssEscape(event.target.value)}"]`);
+    if (quantityInput) {
+      quantityInput.value = event.target.checked ? quantityInput.value || "1" : "";
+    }
+  }
+});
+ownerForm.addEventListener("input", (event) => {
+  if (event.target?.name !== "miningModuleQuantities") {
+    return;
+  }
+
+  const checkbox = ownerForm.querySelector(`input[name="miningModules"][value="${cssEscape(event.target.dataset.module)}"]`);
+  if (checkbox && Number(event.target.value || 0) > 0) {
+    checkbox.checked = true;
+  }
 });
 
 ownerForm.addEventListener("submit", (event) => {
@@ -1640,22 +1657,24 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
 
   if (configType === "salvage") {
     const shipName = normalizeShipName(vehicle?.name || ownerShipInput.value);
+    const headCapacity = salvageHeadCounts.get(shipName) || 0;
     return {
       type: "salvage",
-      headCapacity: salvageHeadCounts.get(shipName) || 0,
-      heads: checkedConfigValues("salvageHeads"),
+      headCapacity,
+      headSlots: collectHeadSlotConfiguration("salvageHeads", headSlotNames(headCapacity)),
     };
   }
 
   if (configType === "mining") {
     const shipName = normalizeShipName(vehicle?.name || ownerShipInput.value);
     const miningSpec = miningShips.get(shipName);
+    const headCapacity = miningSpec?.headCapacity || 0;
     return {
       type: "mining",
-      headCapacity: miningSpec?.headCapacity || 0,
+      headCapacity,
       headSize: miningSpec?.headSize || 1,
-      heads: checkedConfigValues("miningHeads"),
-      modules: checkedConfigValues("miningModules"),
+      headSlots: collectHeadSlotConfiguration("miningHeads", headSlotNames(headCapacity)),
+      modules: collectMiningModules(),
     };
   }
 
@@ -1685,12 +1704,12 @@ function applyShipConfiguration(config) {
   }
 
   if (config.type === "salvage") {
-    setCheckedConfigValues("salvageHeads", config.heads || []);
+    applyHeadSlotConfiguration("salvageHeads", normalizeHeadSlotConfig(config));
   }
 
   if (config.type === "mining") {
-    setCheckedConfigValues("miningHeads", config.heads || []);
-    setCheckedConfigValues("miningModules", config.modules || []);
+    applyHeadSlotConfiguration("miningHeads", normalizeHeadSlotConfig(config));
+    applyMiningModules(config.modules || []);
   }
 
   if (config.type === "idris") {
@@ -1714,15 +1733,15 @@ function shipConfigurationLines(config) {
   if (config?.type === "salvage") {
     return [
       { label: "Head capacity", value: `${config.headCapacity || config.heads?.length || 0}` },
-      { label: "Heads offered", value: (config.heads || []).join(", ") || "None selected" },
+      ...headSlotSummaryLines(normalizeHeadSlotConfig(config), "head"),
     ];
   }
 
   if (config?.type === "mining") {
     return [
       { label: "Head capacity", value: `${config.headCapacity || 0}x Size ${config.headSize || 1}` },
-      { label: "Mining heads equipped", value: (config.heads || []).join(", ") || "None selected" },
-      { label: "Mining modules available", value: (config.modules || []).join(", ") || "None selected" },
+      ...headSlotSummaryLines(normalizeHeadSlotConfig(config), "mining head"),
+      { label: "Mining modules available", value: miningModuleSummary(config.modules || []) },
     ];
   }
 
@@ -1738,6 +1757,125 @@ function shipConfigurationLines(config) {
   }
 
   return [];
+}
+
+function headSlotNames(count) {
+  if (count <= 1) {
+    return ["main"];
+  }
+  if (count === 2) {
+    return ["left", "right"];
+  }
+  if (count === 3) {
+    return ["left", "center", "right"];
+  }
+  return Array.from({ length: count }, (_, index) => `head-${index + 1}`);
+}
+
+function headSlotLabel(slot) {
+  if (slot === "main") {
+    return "Main";
+  }
+  if (slot.startsWith("head-")) {
+    return `Head ${slot.split("-")[1]}`;
+  }
+  return slot.charAt(0).toUpperCase() + slot.slice(1);
+}
+
+function equipmentSlotMarkup({ slot, inputName, options }) {
+  const slotLabel = headSlotLabel(slot);
+  return `
+    <div class="equipment-slot">
+      <strong>${slotLabel} head</strong>
+      ${options.map((option) => `
+        <label class="check equipment-check">
+          <input type="checkbox" name="${inputName}" data-slot="${slot}" value="${escapeHtml(option.value)}" />
+          <span>
+            <strong>${escapeHtml(option.label)}</strong>
+            ${option.detail ? `<small>${escapeHtml(option.detail)}</small>` : ""}
+          </span>
+        </label>
+      `).join("")}
+    </div>
+  `;
+}
+
+function collectHeadSlotConfiguration(inputName, slots) {
+  return slots.reduce((headSlots, slot) => {
+    headSlots[slot] = Array.from(ownerForm.querySelectorAll(`input[name="${inputName}"][data-slot="${slot}"]:checked`))
+      .map((input) => input.value);
+    return headSlots;
+  }, {});
+}
+
+function normalizeHeadSlotConfig(config) {
+  if (config?.headSlots) {
+    return config.headSlots;
+  }
+
+  const legacyHeads = config?.heads || [];
+  if (!legacyHeads.length) {
+    return {};
+  }
+
+  const slots = headSlotNames(config?.headCapacity || legacyHeads.length);
+  return slots.reduce((headSlots, slot) => {
+    headSlots[slot] = legacyHeads;
+    return headSlots;
+  }, {});
+}
+
+function applyHeadSlotConfiguration(inputName, headSlots) {
+  ownerForm.querySelectorAll(`input[name="${inputName}"]`).forEach((input) => {
+    input.checked = (headSlots[input.dataset.slot] || []).includes(input.value);
+  });
+}
+
+function headSlotSummaryLines(headSlots, noun) {
+  const slots = Object.keys(headSlots);
+  if (!slots.length) {
+    return [{ label: `${noun.charAt(0).toUpperCase() + noun.slice(1)} loadout`, value: "None selected" }];
+  }
+
+  return slots.map((slot) => ({
+    label: `${headSlotLabel(slot)} ${noun}`,
+    value: (headSlots[slot] || []).join(", ") || "None selected",
+  }));
+}
+
+function collectMiningModules() {
+  return Array.from(ownerForm.querySelectorAll('input[name="miningModules"]:checked')).map((input) => {
+    const quantityInput = ownerForm.querySelector(`input[name="miningModuleQuantities"][data-module="${cssEscape(input.value)}"]`);
+    return {
+      name: input.value,
+      quantity: Math.max(1, Number.parseInt(quantityInput?.value || "1", 10) || 1),
+    };
+  });
+}
+
+function applyMiningModules(modules) {
+  const normalizedModules = normalizeMiningModules(modules);
+  const quantities = new Map(normalizedModules.map((module) => [module.name, module.quantity]));
+  ownerForm.querySelectorAll('input[name="miningModules"]').forEach((input) => {
+    input.checked = quantities.has(input.value);
+  });
+  ownerForm.querySelectorAll('input[name="miningModuleQuantities"]').forEach((input) => {
+    input.value = quantities.get(input.dataset.module) || "";
+  });
+}
+
+function normalizeMiningModules(modules) {
+  return (modules || []).map((module) => (
+    typeof module === "string"
+      ? { name: module, quantity: 1 }
+      : { name: module.name, quantity: Math.max(1, Number(module.quantity || 1)) }
+  )).filter((module) => module.name);
+}
+
+function miningModuleSummary(modules) {
+  return normalizeMiningModules(modules)
+    .map((module) => `${module.name} x${module.quantity}`)
+    .join(", ") || "None selected";
 }
 
 function checkedConfigValues(name) {
@@ -1781,12 +1919,11 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
     const headCount = salvageHeadCounts.get(shipName) || 0;
     salvageConfigDescription.textContent = `${headCount} salvage head${headCount === 1 ? "" : "s"}`;
-    salvageHeadGrid.innerHTML = salvageHeadOptions.map((head) => `
-      <label class="check">
-        <input type="checkbox" name="salvageHeads" value="${head}" />
-        ${head}
-      </label>
-    `).join("");
+    salvageHeadGrid.innerHTML = headSlotNames(headCount).map((slot) => equipmentSlotMarkup({
+      slot,
+      inputName: "salvageHeads",
+      options: salvageHeadOptions.map((head) => ({ value: head, label: head })),
+    })).join("");
   } else {
     salvageHeadGrid.innerHTML = "";
   }
@@ -1797,23 +1934,29 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     const compatibleHeads = miningHeads.filter((head) => head.size === miningSpec?.headSize);
     const capacityLabel = miningSpec?.headCapacity === 1 ? "head" : "heads";
     miningConfigDescription.textContent = `${miningSpec?.headCapacity || 0} equipped Size ${miningSpec?.headSize || 1} mining ${capacityLabel}. Module slots depend on the selected head.`;
-    miningHeadGrid.innerHTML = compatibleHeads.map((head) => `
-      <label class="check equipment-check">
-        <input type="checkbox" name="miningHeads" value="${head.name}" />
-        <span>
-          <strong>${head.name}</strong>
-          <small>Size ${head.size} &middot; ${head.moduleSlots ? `${head.moduleSlots} module slot${head.moduleSlots === 1 ? "" : "s"}` : "No module slots"}</small>
-        </span>
-      </label>
-    `).join("");
+    miningHeadGrid.innerHTML = headSlotNames(miningSpec?.headCapacity || 0).map((slot) => equipmentSlotMarkup({
+      slot,
+      inputName: "miningHeads",
+      options: compatibleHeads.map((head) => ({
+        value: head.name,
+        label: head.name,
+        detail: `Size ${head.size} - ${head.moduleSlots ? `${head.moduleSlots} module slot${head.moduleSlots === 1 ? "" : "s"}` : "No module slots"}`,
+      })),
+    })).join("");
     miningModuleGroups.innerHTML = Object.entries(miningModules).map(([group, modules]) => `
       <div class="mining-module-group">
         <strong>${group} modules</strong>
         ${modules.map((module) => `
-          <label class="check">
-            <input type="checkbox" name="miningModules" value="${module}" />
-            ${module}
-          </label>
+          <div class="module-quantity-row">
+            <label class="check">
+              <input type="checkbox" name="miningModules" value="${module}" />
+              ${module}
+            </label>
+            <label>
+              Qty
+              <input type="number" name="miningModuleQuantities" data-module="${escapeHtml(module)}" min="0" step="1" inputmode="numeric" />
+            </label>
+          </div>
         `).join("")}
       </div>
     `).join("");
@@ -2263,6 +2406,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function cssEscape(value) {
+  return window.CSS?.escape ? CSS.escape(String(value)) : String(value).replaceAll('"', '\\"');
 }
 
 renderCalendar();

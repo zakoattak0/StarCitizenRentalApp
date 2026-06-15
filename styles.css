@@ -640,9 +640,10 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.salvage-head-grid {
+.salvage-head-grid,
+.apollo-module-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -653,6 +654,7 @@ h1 {
 }
 
 .mining-config-section > strong,
+.equipment-slot > strong,
 .mining-module-group > strong {
   color: var(--cyan);
   font-size: 0.8rem;
@@ -663,6 +665,15 @@ h1 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.equipment-slot {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid var(--line-soft);
+  background: #121212;
+  padding: 12px;
 }
 
 .mining-module-groups {
@@ -676,6 +687,20 @@ h1 {
   border: 1px solid var(--line-soft);
   background: #121212;
   padding: 12px;
+}
+
+.module-quantity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 8px;
+  align-items: end;
+}
+
+.module-quantity-row label:last-child {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.7rem;
 }
 
 .idris-s5-field {
@@ -699,7 +724,7 @@ h1 {
 }
 
 .config-check-group .check,
-.salvage-head-grid .check,
+.equipment-slot .check,
 .equipment-check-grid .check,
 .mining-module-group .check {
   min-height: 38px;
@@ -1335,8 +1360,10 @@ legend {
   .rate-base-grid,
   .rate-offer-row,
   .salvage-head-grid,
+  .apollo-module-grid,
   .equipment-check-grid,
-  .mining-module-groups {
+  .mining-module-groups,
+  .module-quantity-row {
     grid-template-columns: 1fr;
   }
 
