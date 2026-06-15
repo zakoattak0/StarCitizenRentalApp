@@ -658,6 +658,38 @@ h1 {
   gap: 12px;
 }
 
+.mining-config-section {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mining-config-section > strong,
+.mining-module-group > strong {
+  color: var(--cyan);
+  font-size: 0.8rem;
+}
+
+.equipment-check-grid,
+.mining-module-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mining-module-groups {
+  margin-top: 12px;
+}
+
+.mining-module-group {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid var(--line-soft);
+  background: #07121b;
+  padding: 12px;
+}
+
 .config-check-group {
   display: grid;
   align-content: start;
@@ -673,11 +705,32 @@ h1 {
 }
 
 .config-check-group .check,
-.salvage-head-grid .check {
+.salvage-head-grid .check,
+.equipment-check-grid .check,
+.mining-module-group .check {
   min-height: 38px;
   border: 1px solid var(--line);
   background: #050b11;
   padding: 8px 10px;
+}
+
+.equipment-check {
+  align-items: flex-start;
+}
+
+.equipment-check span {
+  display: grid;
+  gap: 3px;
+}
+
+.equipment-check strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.equipment-check small {
+  color: var(--muted);
+  font-size: 0.68rem;
 }
 
 .rate-base-grid {
@@ -1287,7 +1340,9 @@ legend {
 
   .rate-base-grid,
   .rate-offer-row,
-  .salvage-head-grid {
+  .salvage-head-grid,
+  .equipment-check-grid,
+  .mining-module-groups {
     grid-template-columns: 1fr;
   }
 

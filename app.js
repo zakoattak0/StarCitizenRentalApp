@@ -32,6 +32,47 @@ const salvageHeadCounts = new Map([
   ["fortune", 1],
 ]);
 
+const miningShips = new Map([
+  ["mole", { headCapacity: 3, headSize: 2 }],
+  ["prospector", { headCapacity: 1, headSize: 1 }],
+  ["golem", { headCapacity: 1, headSize: 1 }],
+]);
+
+const miningHeads = [
+  { name: "Arbor MH1 Mining Laser", size: 1, moduleSlots: 1 },
+  { name: "Helix I Mining Laser", size: 1, moduleSlots: 2 },
+  { name: "Hofstede-S1 Mining Laser", size: 1, moduleSlots: 1 },
+  { name: "Impact I Mining Laser", size: 1, moduleSlots: 2 },
+  { name: "Klein-S1 Mining Laser", size: 1, moduleSlots: 0 },
+  { name: "Lancet MH1 Mining Laser", size: 1, moduleSlots: 1 },
+  { name: "Pitman Mining Laser", size: 1, moduleSlots: 2 },
+  { name: "Arbor MH2 Mining Laser", size: 2, moduleSlots: 2 },
+  { name: "Helix II Mining Laser", size: 2, moduleSlots: 3 },
+  { name: "Hofstede-S2 Mining Laser", size: 2, moduleSlots: 2 },
+  { name: "Impact II Mining Laser", size: 2, moduleSlots: 3 },
+  { name: "Klein-S2 Mining Laser", size: 2, moduleSlots: 1 },
+  { name: "Lancet MH2 Mining Laser", size: 2, moduleSlots: 2 },
+];
+
+const miningModules = {
+  Active: [
+    "Brandt Module",
+    "Forel Module",
+    "Lifeline Module",
+    "Optimum Module",
+    "Rime Module",
+    "Stampede Module",
+    "Surge Module",
+    "Torpid Module",
+  ],
+  Passive: [
+    "FLTR Module", "FLTR-L Module", "FLTR-XL Module", "Focus Module", "Focus II Module",
+    "Focus III Module", "Rieger Module", "Rieger-C2 Module", "Rieger-C3 Module", "Torrent Module",
+    "Torrent II Module", "Torrent III Module", "Vaux Module", "Vaux-C2 Module", "Vaux-C3 Module",
+    "XTR Module", "XTR-L Module", "XTR-XL Module",
+  ],
+};
+
 const hangarServiceEligibleShips = new Set(
   [
     "Origin 600i Explorer",
@@ -157,6 +198,10 @@ const apolloConfig = document.querySelector("#apollo-config");
 const salvageConfig = document.querySelector("#salvage-config");
 const salvageConfigDescription = document.querySelector("#salvage-config-description");
 const salvageHeadGrid = document.querySelector("#salvage-head-grid");
+const miningConfig = document.querySelector("#mining-config");
+const miningConfigDescription = document.querySelector("#mining-config-description");
+const miningHeadGrid = document.querySelector("#mining-head-grid");
+const miningModuleGroups = document.querySelector("#mining-module-groups");
 const schedulePeriodLabel = document.querySelector("#schedule-period-label");
 const schedulePrev = document.querySelector("#schedule-prev");
 const scheduleToday = document.querySelector("#schedule-today");
@@ -1561,6 +1606,18 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     };
   }
 
+  if (configType === "mining") {
+    const shipName = normalizeShipName(vehicle?.name || ownerShipInput.value);
+    const miningSpec = miningShips.get(shipName);
+    return {
+      type: "mining",
+      headCapacity: miningSpec?.headCapacity || 0,
+      headSize: miningSpec?.headSize || 1,
+      heads: checkedConfigValues("miningHeads"),
+      modules: checkedConfigValues("miningModules"),
+    };
+  }
+
   return null;
 }
 
@@ -1579,6 +1636,11 @@ function applyShipConfiguration(config) {
   if (config.type === "salvage") {
     setCheckedConfigValues("salvageHeads", config.heads || []);
   }
+
+  if (config.type === "mining") {
+    setCheckedConfigValues("miningHeads", config.heads || []);
+    setCheckedConfigValues("miningModules", config.modules || []);
+  }
 }
 
 function shipConfigurationLines(config) {
@@ -1595,6 +1657,14 @@ function shipConfigurationLines(config) {
     return [
       { label: "Head capacity", value: `${config.headCapacity || config.heads?.length || 0}` },
       { label: "Heads offered", value: (config.heads || []).join(", ") || "None selected" },
+    ];
+  }
+
+  if (config?.type === "mining") {
+    return [
+      { label: "Head capacity", value: `${config.headCapacity || 0}x Size ${config.headSize || 1}` },
+      { label: "Mining heads equipped", value: (config.heads || []).join(", ") || "None selected" },
+      { label: "Mining modules available", value: (config.modules || []).join(", ") || "None selected" },
     ];
   }
 
@@ -1621,7 +1691,10 @@ function getShipConfigurationType(vehicleOrName) {
   if (name === "apollo medivac" || name === "apollo triage") {
     return "apollo";
   }
-  return salvageHeadCounts.has(name) ? "salvage" : "";
+  if (salvageHeadCounts.has(name)) {
+    return "salvage";
+  }
+  return miningShips.has(name) ? "mining" : "";
 }
 
 function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
@@ -1629,6 +1702,7 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   shipConfigFieldset.classList.toggle("is-hidden", !configType);
   apolloConfig.classList.toggle("is-hidden", configType !== "apollo");
   salvageConfig.classList.toggle("is-hidden", configType !== "salvage");
+  miningConfig.classList.toggle("is-hidden", configType !== "mining");
 
   if (configType === "salvage") {
     const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
@@ -1642,6 +1716,37 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     `).join("");
   } else {
     salvageHeadGrid.innerHTML = "";
+  }
+
+  if (configType === "mining") {
+    const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
+    const miningSpec = miningShips.get(shipName);
+    const compatibleHeads = miningHeads.filter((head) => head.size === miningSpec?.headSize);
+    const capacityLabel = miningSpec?.headCapacity === 1 ? "head" : "heads";
+    miningConfigDescription.textContent = `${miningSpec?.headCapacity || 0} equipped Size ${miningSpec?.headSize || 1} mining ${capacityLabel}. Module slots depend on the selected head.`;
+    miningHeadGrid.innerHTML = compatibleHeads.map((head) => `
+      <label class="check equipment-check">
+        <input type="checkbox" name="miningHeads" value="${head.name}" />
+        <span>
+          <strong>${head.name}</strong>
+          <small>Size ${head.size} &middot; ${head.moduleSlots ? `${head.moduleSlots} module slot${head.moduleSlots === 1 ? "" : "s"}` : "No module slots"}</small>
+        </span>
+      </label>
+    `).join("");
+    miningModuleGroups.innerHTML = Object.entries(miningModules).map(([group, modules]) => `
+      <div class="mining-module-group">
+        <strong>${group} modules</strong>
+        ${modules.map((module) => `
+          <label class="check">
+            <input type="checkbox" name="miningModules" value="${module}" />
+            ${module}
+          </label>
+        `).join("")}
+      </div>
+    `).join("");
+  } else {
+    miningHeadGrid.innerHTML = "";
+    miningModuleGroups.innerHTML = "";
   }
 }
 
