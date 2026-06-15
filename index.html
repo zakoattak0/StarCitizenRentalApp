@@ -272,10 +272,24 @@
                   <button class="primary-button" type="submit">Update availability</button>
                 </form>
                 <div class="schedule-calendar-toolbar">
-                  <span>Show fleet dates</span>
-                  <div class="segmented-control" aria-label="Schedule availability filter">
-                    <button class="segment active" type="button" data-schedule-status="available">Available</button>
-                    <button class="segment" type="button" data-schedule-status="unavailable">Unavailable</button>
+                  <div class="schedule-calendar-view">
+                    <div class="segmented-control" aria-label="Schedule calendar view">
+                      <button class="segment" type="button" data-schedule-view="week">Week</button>
+                      <button class="segment active" type="button" data-schedule-view="month">Month</button>
+                    </div>
+                    <div class="availability-navigation">
+                      <button class="secondary-button" id="schedule-prev" type="button" aria-label="Previous schedule period">&lsaquo;</button>
+                      <button class="secondary-button" id="schedule-today" type="button">Today</button>
+                      <button class="secondary-button" id="schedule-next" type="button" aria-label="Next schedule period">&rsaquo;</button>
+                    </div>
+                    <strong id="schedule-period-label"></strong>
+                  </div>
+                  <div class="schedule-status-filter">
+                    <span>Show fleet dates</span>
+                    <div class="segmented-control" aria-label="Schedule availability filter">
+                      <button class="segment active" type="button" data-schedule-status="available">Available</button>
+                      <button class="segment" type="button" data-schedule-status="unavailable">Unavailable</button>
+                    </div>
                   </div>
                 </div>
                 <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>

@@ -43,6 +43,8 @@ let availabilityShipIndex = null;
 let availabilityView = "week";
 let availabilityStatus = "available";
 let scheduleStatus = "available";
+let scheduleView = "month";
+let scheduleCursor = startOfDay(new Date());
 let availabilityCursor = startOfDay(new Date());
 let availabilityDraft = new Map();
 
@@ -138,6 +140,10 @@ const rentManufacturerSelect = document.querySelector("#rent-manufacturer");
 const availabilityForm = document.querySelector("#availability-form");
 const availabilityShipSelect = document.querySelector("#availability-ship");
 const ownerCalendar = document.querySelector("#owner-calendar");
+const schedulePeriodLabel = document.querySelector("#schedule-period-label");
+const schedulePrev = document.querySelector("#schedule-prev");
+const scheduleToday = document.querySelector("#schedule-today");
+const scheduleNext = document.querySelector("#schedule-next");
 const offerHangarServices = document.querySelector("#offer-hangar-services");
 const hangarServiceStatus = document.querySelector("#hangar-service-status");
 const hangarFieldset = document.querySelector("#hangar-fieldset");
@@ -495,6 +501,31 @@ document.querySelectorAll("[data-schedule-status]").forEach((button) => {
   });
 });
 
+document.querySelectorAll("[data-schedule-view]").forEach((button) => {
+  button.addEventListener("click", () => {
+    scheduleView = button.dataset.scheduleView;
+    document.querySelectorAll("[data-schedule-view]").forEach((candidate) => {
+      candidate.classList.toggle("active", candidate.dataset.scheduleView === scheduleView);
+    });
+    renderOwnerSchedule();
+  });
+});
+
+schedulePrev.addEventListener("click", () => {
+  scheduleCursor = shiftSchedulePeriod(scheduleCursor, -1);
+  renderOwnerSchedule();
+});
+
+scheduleToday.addEventListener("click", () => {
+  scheduleCursor = startOfDay(new Date());
+  renderOwnerSchedule();
+});
+
+scheduleNext.addEventListener("click", () => {
+  scheduleCursor = shiftSchedulePeriod(scheduleCursor, 1);
+  renderOwnerSchedule();
+});
+
 ownerShipInput.addEventListener("change", () => syncOwnerShipFields(ownerShipInput.value));
 
 offerHangarServices.addEventListener("change", () => {
@@ -841,17 +872,19 @@ function renderOwnerSchedule() {
   });
   availabilityForm.querySelector("button[type='submit']").disabled = ships.length === 0 || availabilityShipSelect.value === "all";
 
+  const visibleMonth = scheduleCursor.getMonth();
+  const calendarDays = scheduleView === "week"
+    ? availabilityWeekDays(scheduleCursor)
+    : availabilityMonthDays(scheduleCursor);
+  schedulePeriodLabel.textContent = scheduleView === "week"
+    ? formatWeekRange(calendarDays[0], calendarDays[calendarDays.length - 1])
+    : scheduleCursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
   if (!ships.length) {
     ownerCalendar.innerHTML = `<div class="empty-state">Add ships to your fleet, then use this schedule view to set availability.</div>`;
     return;
   }
 
-  const year = state.activeDate.getFullYear();
-  const month = state.activeDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startOffset = firstDay.getDay();
-  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
   const selectedShips = availabilityShipSelect.value === "all"
     ? ships
     : ships[Number(availabilityShipSelect.value)]
@@ -862,31 +895,41 @@ function renderOwnerSchedule() {
     .map((day) => `<div class="weekday">${day}</div>`)
     .join("");
 
-  for (let index = 0; index < totalCells; index += 1) {
-    const dayNumber = index - startOffset + 1;
-    const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
-    const dateKey = isCurrentMonth ? toDateKey(year, month, dayNumber) : "";
+  calendarDays.forEach((date) => {
+    const isVisibleDate = scheduleView === "week" || date.getMonth() === visibleMonth;
+    const dateKey = dateToKey(date);
     const matchingShips = scheduleStatus === "available"
       ? selectedShips.filter((ship) => ship.dates.includes(dateKey))
       : selectedShips.filter((ship) => ship.unavailableDates?.includes(dateKey));
     const pills = matchingShips.map((ship) => scheduleShipPill(ship.ship, scheduleStatus)).join("");
 
     markup += `
-      <article class="day-cell${isCurrentMonth ? "" : " is-muted"}">
+      <article class="day-cell${isVisibleDate ? "" : " is-muted"}">
         <div class="day-number">
-          <span>${isCurrentMonth ? dayNumber : ""}</span>
-          ${isCurrentMonth && matchingShips.length ? `<small>${matchingShips.length}</small>` : ""}
+          <span>${isVisibleDate ? date.getDate() : ""}</span>
+          ${isVisibleDate && matchingShips.length ? `<small>${matchingShips.length}</small>` : ""}
         </div>
-        ${isCurrentMonth ? pills : ""}
+        ${isVisibleDate ? pills : ""}
       </article>
     `;
-  }
+  });
 
   ownerCalendar.innerHTML = markup;
 }
 
 function scheduleShipPill(shipName, status) {
   return `<div class="availability-pill ${status === "available" ? "available" : "booked"}"><strong>${escapeHtml(shipName)}</strong></div>`;
+}
+
+function shiftSchedulePeriod(date, direction) {
+  const shifted = new Date(date);
+  if (scheduleView === "month") {
+    shifted.setDate(1);
+    shifted.setMonth(shifted.getMonth() + direction);
+  } else {
+    shifted.setDate(shifted.getDate() + direction * 7);
+  }
+  return startOfDay(shifted);
 }
 
 function renderCalendarFilterOptions() {

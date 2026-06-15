@@ -720,8 +720,9 @@ h1 {
 }
 
 .schedule-calendar-toolbar {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   justify-content: space-between;
   gap: 12px;
   border: 1px solid var(--line);
@@ -731,6 +732,22 @@ h1 {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.schedule-calendar-view {
+  display: grid;
+  grid-template-columns: auto auto minmax(150px, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.schedule-calendar-view > strong {
+  color: var(--cyan);
+}
+
+.schedule-status-filter {
+  display: grid;
+  gap: 6px;
 }
 
 label {
@@ -1236,12 +1253,16 @@ legend {
   }
 
   .schedule-calendar-toolbar {
+    grid-template-columns: 1fr;
     align-items: stretch;
-    flex-direction: column;
   }
 
-  .schedule-calendar-toolbar .segmented-control,
-  .schedule-calendar-toolbar .segment {
+  .schedule-calendar-view {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-status-filter .segmented-control,
+  .schedule-status-filter .segment {
     width: 100%;
   }
 
