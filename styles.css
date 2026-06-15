@@ -652,6 +652,12 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.salvage-head-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .rate-base-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1112,6 +1118,21 @@ legend {
   color: #f8fbff;
 }
 
+.config-summary-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-left: 2px solid var(--cyan);
+  background: #07131d;
+  padding: 7px 9px;
+}
+
+.config-summary-line span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .config-summary p {
   margin: 0;
   color: var(--muted);
@@ -1243,7 +1264,8 @@ legend {
   }
 
   .rate-base-grid,
-  .rate-offer-row {
+  .rate-offer-row,
+  .salvage-head-grid {
     grid-template-columns: 1fr;
   }
 

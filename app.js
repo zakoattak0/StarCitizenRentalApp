@@ -18,6 +18,20 @@ const hangarServiceOptions = [
   { key: "decoys", label: "Decoys", uexNames: ["Ship Decoy Countermeasures"] },
 ];
 
+const apolloModuleLabels = {
+  "tier-1": "1x Tier 1 Medbed",
+  "tier-2": "2x Tier 2 Medbeds",
+  "tier-3": "3x Tier 3 Medbeds",
+};
+
+const salvageHeadOptions = ["Trawler", "Cinch", "Abrade"];
+const salvageHeadCounts = new Map([
+  ["reclaimer", 2],
+  ["vulture", 2],
+  ["moth", 3],
+  ["fortune", 1],
+]);
+
 const hangarServiceEligibleShips = new Set(
   [
     "Origin 600i Explorer",
@@ -138,6 +152,11 @@ const rentManufacturerSelect = document.querySelector("#rent-manufacturer");
 const availabilityForm = document.querySelector("#availability-form");
 const availabilityShipSelect = document.querySelector("#availability-ship");
 const ownerCalendar = document.querySelector("#owner-calendar");
+const shipConfigFieldset = document.querySelector("#ship-config-fieldset");
+const apolloConfig = document.querySelector("#apollo-config");
+const salvageConfig = document.querySelector("#salvage-config");
+const salvageConfigDescription = document.querySelector("#salvage-config-description");
+const salvageHeadGrid = document.querySelector("#salvage-head-grid");
 const schedulePeriodLabel = document.querySelector("#schedule-period-label");
 const schedulePrev = document.querySelector("#schedule-prev");
 const scheduleToday = document.querySelector("#schedule-today");
@@ -352,6 +371,7 @@ ownerForm.addEventListener("submit", (event) => {
     hangarFeeTreatment: data.get("hangarFeeTreatment") || "add",
     notes: data.get("notes"),
     dates: existingShip?.dates || [],
+    shipConfig: collectShipConfiguration(selectedVehicle),
     hangarServices,
     vehicle: selectedVehicle,
   };
@@ -749,7 +769,7 @@ function filterCalendarShips(sourceShips) {
   return sourceShips.filter((ship) => {
     const matchesOwner = !ownerFilter || normalizeFilterValue(ship.owner).includes(ownerFilter);
     const matchesShip = !shipFilter || normalizeFilterValue(ship.ship).includes(shipFilter);
-    const matchesConfig = configMode !== "custom" || Boolean(ship.hangarServices?.length);
+    const matchesConfig = configMode !== "custom" || Boolean(ship.hangarServices?.length || ship.shipConfig);
     return matchesOwner && matchesShip && matchesConfig;
   });
 }
@@ -1207,6 +1227,7 @@ function resetOwnerForm() {
   rateError.classList.add("is-hidden");
   updateRateCalculator();
   updatePilotRateVisibility();
+  updateShipConfiguration();
   updateHangarLoadPriceControls();
   resetHangarRows();
   updateHangarEligibility();
@@ -1416,6 +1437,8 @@ function populateOwnerForm(index) {
   ownerForm.elements.pilotRate.value = formatCreditInputValue(ship.pilotRate || 0);
   ownerForm.elements.pilotIncluded.checked = Boolean(ship.pilotIncluded);
   ownerForm.elements.notes.value = ship.notes || "";
+  updateShipConfiguration(ship.vehicle || ship.ship);
+  applyShipConfiguration(ship.shipConfig);
   offerHangarServices.checked = Boolean(ship.hangarServices?.length);
   hangarLoadModeSelect.value = ship.hangarLoadMode || "flat";
   hangarLoadCostInput.value = formatCreditInputValue(ship.hangarLoadCost || 0);
@@ -1506,15 +1529,100 @@ function listingPriceFacts(ship) {
 }
 
 function configurationSummary(ship) {
-  if (!ship.notes) {
+  const configLines = shipConfigurationLines(ship.shipConfig);
+  if (!ship.notes && !configLines.length) {
     return "";
   }
 
   return `
     <div class="config-summary">
-      <p>${escapeHtml(ship.notes)}</p>
+      ${configLines.map((line) => `<div class="config-summary-line"><span>${escapeHtml(line.label)}</span><strong>${escapeHtml(line.value)}</strong></div>`).join("")}
+      ${ship.notes ? `<p>${escapeHtml(ship.notes)}</p>` : ""}
     </div>
   `;
+}
+
+function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
+  const configType = getShipConfigurationType(vehicle);
+  if (configType === "apollo") {
+    return {
+      type: "apollo",
+      leftModule: ownerForm.elements.apolloLeftModule.value,
+      rightModule: ownerForm.elements.apolloRightModule.value,
+    };
+  }
+
+  if (configType === "salvage") {
+    return {
+      type: "salvage",
+      heads: Array.from(salvageHeadGrid.querySelectorAll("select")).map((select) => select.value),
+    };
+  }
+
+  return null;
+}
+
+function applyShipConfiguration(config) {
+  if (!config) {
+    return;
+  }
+
+  if (config.type === "apollo") {
+    ownerForm.elements.apolloLeftModule.value = config.leftModule || "tier-1";
+    ownerForm.elements.apolloRightModule.value = config.rightModule || "tier-1";
+  }
+
+  if (config.type === "salvage") {
+    salvageHeadGrid.querySelectorAll("select").forEach((select, index) => {
+      select.value = config.heads?.[index] || "Trawler";
+    });
+  }
+}
+
+function shipConfigurationLines(config) {
+  if (config?.type === "apollo") {
+    return [
+      { label: "Left module", value: apolloModuleLabels[config.leftModule] || apolloModuleLabels["tier-1"] },
+      { label: "Right module", value: apolloModuleLabels[config.rightModule] || apolloModuleLabels["tier-1"] },
+    ];
+  }
+
+  if (config?.type === "salvage") {
+    return (config.heads || []).map((head, index) => ({ label: `Salvage head ${index + 1}`, value: head }));
+  }
+
+  return [];
+}
+
+function getShipConfigurationType(vehicleOrName) {
+  const name = normalizeShipName(typeof vehicleOrName === "string" ? vehicleOrName : vehicleOrName?.name);
+  if (name === "apollo medivac" || name === "apollo triage") {
+    return "apollo";
+  }
+  return salvageHeadCounts.has(name) ? "salvage" : "";
+}
+
+function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
+  const configType = getShipConfigurationType(vehicle || ownerShipInput.value);
+  shipConfigFieldset.classList.toggle("is-hidden", !configType);
+  apolloConfig.classList.toggle("is-hidden", configType !== "apollo");
+  salvageConfig.classList.toggle("is-hidden", configType !== "salvage");
+
+  if (configType === "salvage") {
+    const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
+    const headCount = salvageHeadCounts.get(shipName) || 0;
+    salvageConfigDescription.textContent = `${headCount} salvage head${headCount === 1 ? "" : "s"}`;
+    salvageHeadGrid.innerHTML = Array.from({ length: headCount }, (_, index) => `
+      <label>
+        Salvage head ${index + 1}
+        <select name="salvageHead${index + 1}">
+          ${salvageHeadOptions.map((head) => `<option value="${head}">${head}</option>`).join("")}
+        </select>
+      </label>
+    `).join("");
+  } else {
+    salvageHeadGrid.innerHTML = "";
+  }
 }
 
 function normalizeVehicle(vehicle) {
@@ -1626,10 +1734,12 @@ function filteredVehicles(manufacturer) {
 function syncOwnerShipFields(value) {
   const vehicle = findVehicle(value, ownerManufacturerSelect.value);
   if (!vehicle) {
+    updateShipConfiguration();
     updateHangarEligibility();
     return;
   }
 
+  updateShipConfiguration(vehicle);
   updateHangarEligibility(vehicle);
 }
 
