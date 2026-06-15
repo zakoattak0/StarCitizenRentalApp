@@ -73,6 +73,37 @@ const miningModules = {
   ],
 };
 
+const idrisShips = new Set(["idris m", "idris p"]);
+
+const idrisS10NoseWeapons = [
+  "Exodus-10",
+  "Destroyer Mass Driver",
+  "HMF-12 Hammerfall Torpedo Launcher",
+];
+
+const idrisS7NoseTurrets = [
+  "IFR-BC7 (Conqueror-7 x2)",
+  "IFR-MS7 (Idris-5163 Missile Turret Viper III x32)",
+  "IFR-W57 Turret",
+];
+
+const idrisW57TurretOption = "IFR-W57 Turret";
+
+const size5WeaponOptions = [
+  "'WAR'",
+  "'WRATH'",
+  "Absolution Distortion Scattergun",
+  "AD5B Ballistic Gatling",
+  "Attrition-5 Repeater",
+  "CF-557 Galdereen Repeater",
+  "CF-557 Galdereen Repeater (Idris)",
+  "Deadbolt V Cannon",
+  "Echion Repeater",
+  "Leonids Cannon",
+  "Lightstrike V Cannon",
+  "M7A Cannon",
+];
+
 const hangarServiceEligibleShips = new Set(
   [
     "Origin 600i Explorer",
@@ -202,6 +233,11 @@ const miningConfig = document.querySelector("#mining-config");
 const miningConfigDescription = document.querySelector("#mining-config-description");
 const miningHeadGrid = document.querySelector("#mining-head-grid");
 const miningModuleGroups = document.querySelector("#mining-module-groups");
+const idrisConfig = document.querySelector("#idris-config");
+const idrisS10Group = document.querySelector("#idris-s10-group");
+const idrisS7Group = document.querySelector("#idris-s7-group");
+const idrisS5Field = document.querySelector("#idris-s5-field");
+const idrisS5WeaponSelect = document.querySelector("#idris-s5-weapon");
 const schedulePeriodLabel = document.querySelector("#schedule-period-label");
 const schedulePrev = document.querySelector("#schedule-prev");
 const scheduleToday = document.querySelector("#schedule-today");
@@ -382,6 +418,11 @@ ownerForm.elements.pilotRate.addEventListener("input", () => {
   updateHangarFeeSummary();
 });
 hangarLoadCostInput.addEventListener("input", () => formatCreditInput(hangarLoadCostInput));
+ownerForm.addEventListener("change", (event) => {
+  if (event.target?.name === "idrisS7Turrets") {
+    updateIdrisS5WeaponVisibility();
+  }
+});
 
 ownerForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1618,6 +1659,16 @@ function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
     };
   }
 
+  if (configType === "idris") {
+    const s7Turrets = checkedConfigValues("idrisS7Turrets");
+    return {
+      type: "idris",
+      s10NoseWeapons: checkedConfigValues("idrisS10NoseWeapons"),
+      s7NoseTurrets: s7Turrets,
+      ifrW57S5Weapon: s7Turrets.includes(idrisW57TurretOption) ? ownerForm.elements.idrisS5Weapon.value : "",
+    };
+  }
+
   return null;
 }
 
@@ -1640,6 +1691,13 @@ function applyShipConfiguration(config) {
   if (config.type === "mining") {
     setCheckedConfigValues("miningHeads", config.heads || []);
     setCheckedConfigValues("miningModules", config.modules || []);
+  }
+
+  if (config.type === "idris") {
+    setCheckedConfigValues("idrisS10NoseWeapons", config.s10NoseWeapons || []);
+    setCheckedConfigValues("idrisS7Turrets", config.s7NoseTurrets || []);
+    idrisS5WeaponSelect.value = config.ifrW57S5Weapon || "";
+    updateIdrisS5WeaponVisibility();
   }
 }
 
@@ -1668,6 +1726,17 @@ function shipConfigurationLines(config) {
     ];
   }
 
+  if (config?.type === "idris") {
+    const lines = [
+      { label: "S10 nose weapon", value: (config.s10NoseWeapons || []).join(", ") || "None selected" },
+      { label: "S7 nose turret", value: (config.s7NoseTurrets || []).join(", ") || "None selected" },
+    ];
+    if ((config.s7NoseTurrets || []).includes(idrisW57TurretOption)) {
+      lines.push({ label: "IFR-W57 S5 weapon", value: config.ifrW57S5Weapon || "None selected" });
+    }
+    return lines;
+  }
+
   return [];
 }
 
@@ -1694,7 +1763,10 @@ function getShipConfigurationType(vehicleOrName) {
   if (salvageHeadCounts.has(name)) {
     return "salvage";
   }
-  return miningShips.has(name) ? "mining" : "";
+  if (miningShips.has(name)) {
+    return "mining";
+  }
+  return idrisShips.has(name) ? "idris" : "";
 }
 
 function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
@@ -1703,6 +1775,7 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   apolloConfig.classList.toggle("is-hidden", configType !== "apollo");
   salvageConfig.classList.toggle("is-hidden", configType !== "salvage");
   miningConfig.classList.toggle("is-hidden", configType !== "mining");
+  idrisConfig.classList.toggle("is-hidden", configType !== "idris");
 
   if (configType === "salvage") {
     const shipName = normalizeShipName(typeof vehicle === "string" ? vehicle : vehicle?.name || ownerShipInput.value);
@@ -1747,6 +1820,45 @@ function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   } else {
     miningHeadGrid.innerHTML = "";
     miningModuleGroups.innerHTML = "";
+  }
+
+  if (configType === "idris") {
+    idrisS10Group.innerHTML = `
+      <strong>S10 nose weapon</strong>
+      ${idrisS10NoseWeapons.map((weapon) => `
+        <label class="check">
+          <input type="checkbox" name="idrisS10NoseWeapons" value="${escapeHtml(weapon)}" />
+          ${escapeHtml(weapon)}
+        </label>
+      `).join("")}
+    `;
+    idrisS7Group.innerHTML = `
+      <strong>S7 nose turret</strong>
+      ${idrisS7NoseTurrets.map((turret) => `
+        <label class="check">
+          <input type="checkbox" name="idrisS7Turrets" value="${escapeHtml(turret)}" />
+          ${escapeHtml(turret)}
+        </label>
+      `).join("")}
+    `;
+    idrisS5WeaponSelect.innerHTML = [
+      `<option value="">Select S5 weapon</option>`,
+      ...size5WeaponOptions.map((weapon) => `<option value="${escapeHtml(weapon)}">${escapeHtml(weapon)}</option>`),
+    ].join("");
+    updateIdrisS5WeaponVisibility();
+  } else {
+    idrisS10Group.innerHTML = `<strong>S10 nose weapon</strong>`;
+    idrisS7Group.innerHTML = `<strong>S7 nose turret</strong>`;
+    idrisS5WeaponSelect.value = "";
+    updateIdrisS5WeaponVisibility();
+  }
+}
+
+function updateIdrisS5WeaponVisibility() {
+  const hasW57Turret = checkedConfigValues("idrisS7Turrets").includes(idrisW57TurretOption);
+  idrisS5Field.classList.toggle("is-hidden", !hasW57Turret);
+  if (!hasW57Turret) {
+    idrisS5WeaponSelect.value = "";
   }
 }
 

@@ -678,6 +678,12 @@ h1 {
   padding: 12px;
 }
 
+.idris-s5-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
 .config-check-group {
   display: grid;
   align-content: start;
