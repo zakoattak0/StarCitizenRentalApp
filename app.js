@@ -189,6 +189,155 @@ const ships = [];
 
 const bookings = [];
 
+const demoShipListings = [
+  {
+    owner: "Northstar Logistics",
+    ship: "C2 Hercules Starlifter",
+    role: "Cargo",
+    manufacturer: "Crusader Industries",
+    rates: { hour: 18000, day: 340000, week: 1800000 },
+    offeredRates: ["hour", "day", "week"],
+    rating: 4.8,
+    completedJobs: 126,
+    availabilityStatus: "Available now",
+    cargoScu: 696,
+    medical: false,
+    hangarServices: [],
+    pilotIncluded: true,
+    capabilities: ["696 SCU", "Pilot optional", "Heavy cargo"],
+    dates: [dateToKey(new Date())],
+  },
+  {
+    owner: "Astra Medrunner",
+    ship: "Apollo Medivac",
+    role: "Medical",
+    manufacturer: "Roberts Space Industries",
+    rates: { hour: 14000, day: 250000, week: 1200000 },
+    offeredRates: ["hour", "day"],
+    rating: 4.9,
+    completedJobs: 88,
+    availabilityStatus: "Available today",
+    cargoScu: 0,
+    medical: true,
+    hangarServices: [],
+    pilotIncluded: true,
+    capabilities: ["Medical beds", "Pilot included", "Rescue ready"],
+    dates: [dateToKey(new Date())],
+  },
+  {
+    owner: "Redline Reclaimers",
+    ship: "Reclaimer",
+    role: "Salvage",
+    manufacturer: "Aegis Dynamics",
+    rates: { hour: 32000, day: 680000, week: 3900000 },
+    offeredRates: ["hour", "day", "week"],
+    rating: 4.6,
+    completedJobs: 64,
+    availabilityStatus: "Available tomorrow",
+    cargoScu: 420,
+    medical: false,
+    hangarServices: [],
+    pilotIncluded: false,
+    capabilities: ["Salvage heads", "420 SCU", "Crew slots open"],
+    dates: [dateToKey(new Date(Date.now() + 86400000))],
+  },
+  {
+    owner: "Jump Point Concierge",
+    ship: "890 Jump",
+    role: "Touring",
+    manufacturer: "Origin Jumpworks",
+    rates: { hour: 55000, day: 980000, week: 5200000 },
+    offeredRates: ["hour", "day", "week"],
+    rating: 5,
+    completedJobs: 41,
+    availabilityStatus: "Limited",
+    cargoScu: 484,
+    medical: true,
+    hangarServices: [{ label: "Hydrogen Fuel" }],
+    pilotIncluded: true,
+    capabilities: ["Hangar services", "Med bay", "VIP transport"],
+    dates: [dateToKey(new Date())],
+  },
+];
+
+const demoCrewListings = [
+  {
+    name: "Vega Actual",
+    role: "Pilot",
+    price: 9000,
+    rating: 4.9,
+    completedJobs: 212,
+    availabilityStatus: "Available now",
+    summary: "Combat drops, cargo routes, and high-risk station approaches.",
+  },
+  {
+    name: "Kastor Wrench",
+    role: "Engineer",
+    price: 7500,
+    rating: 4.7,
+    completedJobs: 97,
+    availabilityStatus: "Available today",
+    summary: "Keeps multicrew ships alive through component damage and long runs.",
+  },
+  {
+    name: "Blue Nine",
+    role: "FPS Ground Team",
+    price: 12000,
+    rating: 4.8,
+    completedJobs: 144,
+    availabilityStatus: "Scheduled",
+    summary: "Bunker clears, escort work, and site security for salvage crews.",
+  },
+  {
+    name: "Mara Quill",
+    role: "Medic",
+    price: 6500,
+    rating: 4.6,
+    completedJobs: 58,
+    availabilityStatus: "Available now",
+    summary: "Field rescue, triage support, and medical ship operations.",
+  },
+  {
+    name: "Deckhand Juno",
+    role: "Box Jockey",
+    price: 3500,
+    rating: 4.4,
+    completedJobs: 73,
+    availabilityStatus: "Available today",
+    summary: "Cargo loading, warehouse sorting, and hangar transfer support.",
+  },
+];
+
+const demoMaterialRequests = [
+  {
+    material: "Recycled Material Composite",
+    quantity: "120 SCU",
+    quality: "Standard or better",
+    price: "1,850 UEC / SCU",
+    location: "Seraphim Station",
+    neededBy: "Jun 18, 2026",
+    postedBy: "Redline Reclaimers",
+  },
+  {
+    material: "Ship Ammunition Size 3",
+    quantity: "40 SCU",
+    quality: "Any",
+    price: "Market + 12%",
+    location: "Area18",
+    neededBy: "Jun 17, 2026",
+    postedBy: "Vega Actual",
+  },
+  {
+    material: "Quantum Fuel",
+    quantity: "60 SCU",
+    quality: "Refined",
+    price: "Open bid",
+    location: "Orison",
+    neededBy: "Jun 20, 2026",
+    postedBy: "Jump Point Concierge",
+  },
+];
+
 const state = {
   activeDate: new Date(2026, 5, 1),
   calendarMode: "availability",
@@ -212,15 +361,18 @@ const calendarShipOptions = document.querySelector("#calendar-ship-options");
 const filterSummary = document.querySelector("#filter-summary");
 const generateRequestButton = document.querySelector("#generate-request-button");
 const fleetList = document.querySelector("#fleet-list");
-const rentalResults = document.querySelector("#rental-results");
+const shipMarketForm = document.querySelector("#ship-market-form");
+const shipMarketResults = document.querySelector("#ship-market-results");
+const shipRoleFilter = document.querySelector("#ship-role-filter");
+const shipMarketManufacturerSelect = document.querySelector("#ship-market-manufacturer");
+const crewMarketForm = document.querySelector("#crew-market-form");
+const crewMarketResults = document.querySelector("#crew-market-results");
+const materialRequestResults = document.querySelector("#material-request-results");
 const ownerForm = document.querySelector("#owner-form");
-const rentForm = document.querySelector("#rent-form");
 const ownerShipOptions = document.querySelector("#owner-ship-options");
-const rentShipOptions = document.querySelector("#rent-ship-options");
 const shipApiStatus = document.querySelector("#ship-api-status");
 const ownerShipInput = ownerForm.querySelector("[name='ship']");
 const ownerManufacturerSelect = document.querySelector("#owner-manufacturer");
-const rentManufacturerSelect = document.querySelector("#rent-manufacturer");
 const availabilityForm = document.querySelector("#availability-form");
 const availabilityShipSelect = document.querySelector("#availability-ship");
 const ownerCalendar = document.querySelector("#owner-calendar");
@@ -316,7 +468,14 @@ window.handleShipImageError = (image) => {
 };
 
 document.querySelectorAll(".tab").forEach((tab) => {
-  tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
+  tab.addEventListener("click", () => navigateToPanel(tab.dataset.tab));
+});
+
+document.querySelectorAll("[data-route]").forEach((control) => {
+  control.addEventListener("click", (event) => {
+    event.preventDefault();
+    navigateToPanel(control.dataset.route);
+  });
 });
 
 document.querySelectorAll(".sub-tab").forEach((tab) => {
@@ -392,11 +551,12 @@ ownerManufacturerSelect.addEventListener("change", () => {
   updateHangarEligibility();
 });
 
-rentManufacturerSelect.addEventListener("change", () => {
-  rentShipOptions.value = "";
-  renderShipOptions();
-  renderRentalResults();
-});
+shipMarketForm.addEventListener("input", renderShipMarketplace);
+shipMarketForm.addEventListener("change", renderShipMarketplace);
+shipMarketForm.addEventListener("submit", (event) => event.preventDefault());
+crewMarketForm.addEventListener("input", renderCrewMarketplace);
+crewMarketForm.addEventListener("change", renderCrewMarketplace);
+crewMarketForm.addEventListener("submit", (event) => event.preventDefault());
 
 rateBasePeriodSelect.addEventListener("change", updateRateCalculator);
 rateBaseInput.addEventListener("input", () => {
@@ -509,7 +669,7 @@ ownerForm.addEventListener("submit", (event) => {
   closeOwnerConfigurator();
   renderFleet();
   renderCalendar();
-  renderRentalResults();
+  renderShipMarketplace();
   renderOwnerSchedule();
   updateFilterSummary();
 });
@@ -546,7 +706,7 @@ removeShipConfirm.addEventListener("click", () => {
   resetOwnerForm();
   renderFleet();
   renderCalendar();
-  renderRentalResults();
+  renderShipMarketplace();
   renderOwnerSchedule();
   renderCalendarFilterOptions();
   updateFilterSummary();
@@ -716,11 +876,6 @@ hangarServiceRows.addEventListener("input", (event) => {
   }
 });
 
-rentForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  renderRentalResults();
-});
-
 availabilityForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const selectedIndex = availabilityShipSelect.value;
@@ -769,7 +924,9 @@ async function loadVehicles() {
 
   renderFleet();
   renderCalendar();
-  renderRentalResults();
+  renderShipMarketplace();
+  renderCrewMarketplace();
+  renderMaterialRequests();
   renderOwnerSchedule();
   renderCalendarFilterOptions();
   updateFilterSummary();
@@ -797,6 +954,41 @@ async function loadHangarServices() {
   updateHangarEligibility();
 }
 
+function navigateToPanel(tabName) {
+  const panelName = tabName || "home";
+  const route = panelRoute(panelName);
+  setActiveTab(panelName);
+  if (window.location.pathname !== route) {
+    window.history.pushState({ panel: panelName }, "", route);
+  }
+}
+
+function panelRoute(tabName) {
+  return {
+    home: "/",
+    ships: "/ships",
+    crew: "/crew",
+    materials: "/materials",
+    owners: "/owners",
+    calendar: "/calendar",
+  }[tabName] || "/";
+}
+
+function panelFromPath(pathname) {
+  return {
+    "/": "home",
+    "/ships": "ships",
+    "/crew": "crew",
+    "/materials": "materials",
+    "/owners": "owners",
+    "/calendar": "calendar",
+  }[pathname] || "home";
+}
+
+window.addEventListener("popstate", () => {
+  setActiveTab(panelFromPath(window.location.pathname));
+});
+
 function setActiveTab(tabName) {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.tab === tabName);
@@ -805,6 +997,14 @@ function setActiveTab(tabName) {
   document.querySelectorAll(".panel").forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.panel === tabName);
   });
+
+  if (tabName === "ships") {
+    renderShipMarketplace();
+  } else if (tabName === "crew") {
+    renderCrewMarketplace();
+  } else if (tabName === "materials") {
+    renderMaterialRequests();
+  }
 }
 
 function setOwnerView(viewName) {
@@ -948,47 +1148,185 @@ function renderFleet() {
     : `<div class="empty-state">No owner listings yet. Add a ship to start building the fleet.</div>`;
 }
 
-function renderRentalResults() {
-  const form = new FormData(rentForm);
-  const neededDate = form.get("date");
-  const budget = Number(form.get("budget") || Infinity);
-  const budgetPeriod = form.get("budgetPeriod") || "hour";
+function renderShipMarketplace() {
+  const form = new FormData(shipMarketForm);
+  const role = String(form.get("role") || "");
   const manufacturer = String(form.get("manufacturer") || "");
-  const selectedVehicleId = String(form.get("query") || "");
-  const results = ships.filter((ship) => {
-    const matchesDate = !neededDate || ship.dates.includes(neededDate);
-    const comparableRate = getShipRate(ship, budgetPeriod);
-    const matchesBudget = Number.isNaN(budget) || (comparableRate > 0 && comparableRate <= budget);
-    const matchesManufacturer = !manufacturer || ship.manufacturer === manufacturer || ship.vehicle?.company === manufacturer;
-    const matchesShip = !selectedVehicleId || String(ship.vehicle?.id || "") === selectedVehicleId;
-    return matchesDate && matchesBudget && matchesManufacturer && matchesShip;
-  });
+  const minCargo = Number(form.get("cargo") || 0);
+  const maxHourlyPrice = Number(form.get("price") || Infinity);
+  const minRating = Number(form.get("rating") || 0);
+  const needsMedical = form.has("medical");
+  const needsHangar = form.has("hangar");
+  const needsPilot = form.has("pilot");
 
-  rentalResults.innerHTML = results.length
-    ? results
-        .map(
-          (ship) => `
-            <article class="result-card">
-              ${shipImage(ship)}
-              <div class="card-top">
-                <h2>${escapeHtml(ship.ship)}</h2>
-                <span class="tag">${formatCredits(getShipRate(ship, budgetPeriod))} UEC/${ratePeriodLabel(budgetPeriod)}</span>
-              </div>
-              <ul class="meta-list">
-                <li>Owner: ${escapeHtml(ship.owner)}</li>
-                <li>Role: ${escapeHtml(ship.role)}</li>
-                ${rateFacts(ship)}
-                ${listingPriceFacts(ship)}
-                <li>Available: ${ship.dates.map(formatShortDate).join(", ")}</li>
-                ${vehicleFacts(ship)}
-              </ul>
-              ${configurationSummary(ship)}
-              ${hangarServicesSummary(ship)}
-            </article>
-          `,
-        )
-        .join("")
-    : `<div class="empty-state">No ships match that request yet. Try a wider budget or another date.</div>`;
+  const listings = marketplaceShipListings()
+    .filter((ship) => {
+      const hourlyRate = getShipRate(ship, "hour");
+      return (
+        (!role || ship.role === role) &&
+        (!manufacturer || ship.manufacturer === manufacturer || ship.vehicle?.company === manufacturer) &&
+        Number(ship.cargoScu || ship.vehicle?.scu || 0) >= minCargo &&
+        (!Number.isFinite(maxHourlyPrice) || (hourlyRate > 0 && hourlyRate <= maxHourlyPrice)) &&
+        Number(ship.rating || 0) >= minRating &&
+        (!needsMedical || hasMedicalCapability(ship)) &&
+        (!needsHangar || Boolean(ship.hangarServices?.length)) &&
+        (!needsPilot || Boolean(ship.pilotIncluded)) &&
+        isShipAvailable(ship)
+      );
+    })
+    .sort((first, second) => availabilityRank(first) - availabilityRank(second) || second.rating - first.rating);
+
+  shipMarketResults.innerHTML = listings.length
+    ? listings.map(shipMarketplaceCard).join("")
+    : `<div class="empty-state">No available ship providers match those filters yet.</div>`;
+}
+
+function renderCrewMarketplace() {
+  const form = new FormData(crewMarketForm);
+  const role = String(form.get("role") || "");
+  const maxPrice = Number(form.get("price") || Infinity);
+  const minRating = Number(form.get("rating") || 0);
+  const availability = String(form.get("availability") || "");
+  const listings = demoCrewListings.filter((crew) => (
+    (!role || crew.role === role) &&
+    (!Number.isFinite(maxPrice) || crew.price <= maxPrice) &&
+    crew.rating >= minRating &&
+    (!availability || crew.availabilityStatus === availability)
+  ));
+
+  crewMarketResults.innerHTML = listings.length
+    ? listings.map(crewMarketplaceCard).join("")
+    : `<div class="empty-state">No crew providers match those filters yet.</div>`;
+}
+
+function renderMaterialRequests() {
+  materialRequestResults.innerHTML = demoMaterialRequests.map(materialRequestCard).join("");
+}
+
+function marketplaceShipListings() {
+  const ownerListings = ships.map((ship) => ({
+    ...ship,
+    rating: ship.rating || 4.5,
+    completedJobs: ship.completedJobs || 0,
+    availabilityStatus: ship.dates?.length ? "Available" : "Schedule pending",
+    cargoScu: ship.vehicle?.scu || ship.cargoScu || 0,
+    medical: hasMedicalCapability(ship),
+    capabilities: marketplaceShipCapabilities(ship),
+  }));
+
+  return ownerListings.length ? ownerListings : demoShipListings;
+}
+
+function shipMarketplaceCard(ship) {
+  const hourlyRate = getShipRate(ship, "hour") || ship.rates?.hour || 0;
+  const capabilities = marketplaceShipCapabilities(ship);
+
+  return `
+    <article class="market-card">
+      ${shipImage(ship)}
+      <div class="card-top">
+        <h2>${escapeHtml(ship.ship)}</h2>
+        <span class="tag">${escapeHtml(ship.availabilityStatus || "Available")}</span>
+      </div>
+      <div class="price-line">
+        <strong>${formatCredits(hourlyRate)} UEC</strong>
+        <span>/ hour</span>
+      </div>
+      <ul class="meta-list">
+        <li>Provider: ${escapeHtml(ship.owner)}</li>
+        <li>${starRating(ship.rating)} ${Number(ship.rating || 0).toFixed(1)} / 5</li>
+        <li>${Number(ship.completedJobs || 0).toLocaleString()} completed contracts</li>
+        <li>${escapeHtml(ship.manufacturer || ship.vehicle?.company || "Independent")} · ${escapeHtml(ship.role || "General")}</li>
+      </ul>
+      <div class="capability-list">
+        ${capabilities.map((capability) => `<span>${escapeHtml(capability)}</span>`).join("")}
+      </div>
+      <button class="primary-button" type="button">Request Rental</button>
+    </article>
+  `;
+}
+
+function crewMarketplaceCard(crew) {
+  return `
+    <article class="market-card">
+      <div class="card-top">
+        <h2>${escapeHtml(crew.name)}</h2>
+        <span class="tag">${escapeHtml(crew.availabilityStatus)}</span>
+      </div>
+      <div class="price-line">
+        <strong>${formatCredits(crew.price)} UEC</strong>
+        <span>/ hour</span>
+      </div>
+      <ul class="meta-list">
+        <li>Role: ${escapeHtml(crew.role)}</li>
+        <li>${starRating(crew.rating)} ${crew.rating.toFixed(1)} / 5</li>
+        <li>${crew.completedJobs.toLocaleString()} completed contracts</li>
+      </ul>
+      <p class="market-summary">${escapeHtml(crew.summary)}</p>
+      <button class="primary-button" type="button">Request Crew</button>
+    </article>
+  `;
+}
+
+function materialRequestCard(request) {
+  return `
+    <article class="market-card procurement-card">
+      <div class="card-top">
+        <h2>${escapeHtml(request.material)}</h2>
+        <span class="tag">${escapeHtml(request.quantity)}</span>
+      </div>
+      <ul class="meta-list">
+        <li>Minimum quality: ${escapeHtml(request.quality)}</li>
+        <li>Offered price: ${escapeHtml(request.price)}</li>
+        <li>Delivery: ${escapeHtml(request.location || "Open")}</li>
+        <li>Needed by: ${escapeHtml(request.neededBy || "Flexible")}</li>
+        <li>Posted by: ${escapeHtml(request.postedBy)}</li>
+      </ul>
+      <div class="card-actions">
+        <button class="secondary-button" type="button">Offer Fulfillment</button>
+      </div>
+    </article>
+  `;
+}
+
+function marketplaceShipCapabilities(ship) {
+  const capabilities = [
+    ship.role,
+    Number(ship.cargoScu || ship.vehicle?.scu || 0) ? `${Number(ship.cargoScu || ship.vehicle?.scu).toLocaleString()} SCU` : "",
+    hasMedicalCapability(ship) ? "Medical" : "",
+    ship.hangarServices?.length ? "Hangar services" : "",
+    ship.pilotIncluded ? "Pilot included" : "",
+    ...(ship.capabilities || []),
+  ].filter(Boolean);
+
+  return uniqueSorted(capabilities).slice(0, 5);
+}
+
+function hasMedicalCapability(ship) {
+  return normalizeFilterValue(ship.role).includes("medical") || normalizeFilterValue(ship.ship).includes("apollo") || Boolean(ship.medical);
+}
+
+function isShipAvailable(ship) {
+  return (ship.dates?.length || demoShipListings.includes(ship)) && !normalizeFilterValue(ship.availabilityStatus).includes("unavailable");
+}
+
+function availabilityRank(ship) {
+  const status = normalizeFilterValue(ship.availabilityStatus);
+  if (status.includes("now")) {
+    return 0;
+  }
+  if (status.includes("today") || status === "available") {
+    return 1;
+  }
+  if (status.includes("tomorrow") || status.includes("limited")) {
+    return 2;
+  }
+  return 3;
+}
+
+function starRating(rating) {
+  const rounded = Math.round(Number(rating || 0));
+  return `${"★".repeat(Math.max(0, Math.min(5, rounded)))}${"☆".repeat(Math.max(0, 5 - rounded))}`;
 }
 
 function renderOwnerSchedule() {
@@ -1415,7 +1753,7 @@ function saveAvailabilityChanges() {
   closeAvailabilityModal();
   renderFleet();
   renderCalendar();
-  renderRentalResults();
+  renderShipMarketplace();
   renderOwnerSchedule();
 }
 
@@ -2223,16 +2561,11 @@ function inferVehicleRole(vehicle) {
 
 function renderShipOptions() {
   const selectedOwnerShip = ownerShipOptions.value;
-  const selectedRentShip = rentShipOptions.value;
+  const selectedShipMarketManufacturer = shipMarketManufacturerSelect.value;
+  const selectedShipRole = shipRoleFilter.value;
   ownerShipOptions.innerHTML = [
     `<option value="">Select ship</option>`,
     ...filteredVehicles(ownerManufacturerSelect.value).map(
-      (vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.name)}</option>`,
-    ),
-  ].join("");
-  rentShipOptions.innerHTML = [
-    `<option value="">All ships</option>`,
-    ...filteredVehicles(rentManufacturerSelect.value).map(
       (vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.name)}</option>`,
     ),
   ].join("");
@@ -2240,8 +2573,25 @@ function renderShipOptions() {
   if (Array.from(ownerShipOptions.options).some((option) => option.value === selectedOwnerShip)) {
     ownerShipOptions.value = selectedOwnerShip;
   }
-  if (Array.from(rentShipOptions.options).some((option) => option.value === selectedRentShip)) {
-    rentShipOptions.value = selectedRentShip;
+  if (Array.from(shipMarketManufacturerSelect.options).some((option) => option.value === selectedShipMarketManufacturer)) {
+    shipMarketManufacturerSelect.value = selectedShipMarketManufacturer;
+  }
+  renderShipRoleOptions(selectedShipRole);
+}
+
+function renderShipRoleOptions(selectedRole = shipRoleFilter.value) {
+  const roles = uniqueSorted([
+    ...vehicleCatalog.map((vehicle) => vehicle.role),
+    ...demoShipListings.map((ship) => ship.role),
+    ...ships.map((ship) => ship.role),
+  ]);
+
+  shipRoleFilter.innerHTML = [`<option value="">Any role</option>`]
+    .concat(roles.map((role) => `<option value="${escapeHtml(role)}">${escapeHtml(role)}</option>`))
+    .join("");
+
+  if (roles.includes(selectedRole)) {
+    shipRoleFilter.value = selectedRole;
   }
 }
 
@@ -2265,13 +2615,17 @@ function findVehicle(value, manufacturer = ownerManufacturerSelect.value) {
 }
 
 function renderManufacturerOptions() {
-  const manufacturers = uniqueSorted(vehicleCatalog.map((vehicle) => vehicle.company));
+  const manufacturers = uniqueSorted([
+    ...vehicleCatalog.map((vehicle) => vehicle.company),
+    ...demoShipListings.map((ship) => ship.manufacturer),
+    ...ships.map((ship) => ship.manufacturer),
+  ]);
   const options = [`<option value="">All manufacturers</option>`]
     .concat(manufacturers.map((manufacturer) => `<option value="${escapeHtml(manufacturer)}">${escapeHtml(manufacturer)}</option>`))
     .join("");
 
   ownerManufacturerSelect.innerHTML = options;
-  rentManufacturerSelect.innerHTML = options;
+  shipMarketManufacturerSelect.innerHTML = options;
 }
 
 function filteredVehicles(manufacturer) {
@@ -2588,9 +2942,12 @@ function cssEscape(value) {
 
 renderCalendar();
 renderFleet();
-renderRentalResults();
+renderShipMarketplace();
+renderCrewMarketplace();
+renderMaterialRequests();
 renderOwnerSchedule();
 renderCalendarFilterOptions();
 updateFilterSummary();
+setActiveTab(panelFromPath(window.location.pathname));
 loadVehicles();
 loadHangarServices();

@@ -18,7 +18,7 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <a class="brand" href="#calendar" aria-label="FSX Frontier Service Exchange home">
+        <a class="brand" href="/" aria-label="FSX Frontier Service Exchange home" data-route="home">
           <img src="fsx-frontier-service-exchange-logo.webp" alt="FSX Frontier Service Exchange" />
         </a>
 
@@ -31,14 +31,175 @@
         </div>
 
         <nav class="tabs" aria-label="Primary">
-          <button class="tab active" data-tab="calendar">Calendar</button>
+          <button class="tab active" data-tab="home">Home</button>
+          <button class="tab" data-tab="ships">Ships</button>
+          <button class="tab" data-tab="crew">Crew</button>
+          <button class="tab" data-tab="materials">Materials</button>
           <button class="tab" data-tab="owners">Owners</button>
-          <button class="tab" data-tab="rent">Want to Rent</button>
+          <button class="tab" data-tab="calendar">Calendar</button>
         </nav>
       </header>
 
       <main>
-        <section class="panel active" id="calendar-panel" data-panel="calendar">
+        <section class="panel active landing-panel" id="home-panel" data-panel="home">
+          <div class="hero">
+            <div class="hero-brand">
+              <img src="fsx-frontier-service-exchange-logo.webp" alt="FSX Frontier Service Exchange" />
+            </div>
+            <p class="eyebrow">Player service exchange</p>
+            <h1>Find ships, crew, and materials from players in the verse.</h1>
+            <p class="hero-copy">Search the services you need first, then send a request once the provider, price, and availability line up.</p>
+          </div>
+
+          <div class="entry-grid" aria-label="Service categories">
+            <button class="entry-card" type="button" data-route="ships">
+              <span>01</span>
+              <strong>Find Ships</strong>
+              <p>Compare available rentals by ship type, capability, price, and provider reputation.</p>
+            </button>
+            <button class="entry-card" type="button" data-route="crew">
+              <span>02</span>
+              <strong>Find Crew</strong>
+              <p>Hire pilots, gunners, engineers, medics, and ground teams for your next contract.</p>
+            </button>
+            <button class="entry-card" type="button" data-route="materials">
+              <span>03</span>
+              <strong>Request Materials</strong>
+              <p>Post or fulfill procurement requests for cargo, salvage, ammo, and support supplies.</p>
+            </button>
+          </div>
+        </section>
+
+        <section class="panel" id="ships-panel" data-panel="ships">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Ship marketplace</p>
+              <h1>Find ships that match your run</h1>
+            </div>
+          </div>
+
+          <details class="filter-drawer" open>
+            <summary>Ship filters</summary>
+            <form class="market-filter-grid" id="ship-market-form">
+              <label>
+                Ship type / role
+                <select name="role" id="ship-role-filter">
+                  <option value="">Any role</option>
+                </select>
+              </label>
+              <label>
+                Manufacturer
+                <select name="manufacturer" id="ship-market-manufacturer">
+                  <option value="">All manufacturers</option>
+                </select>
+              </label>
+              <label>
+                Cargo capacity
+                <select name="cargo">
+                  <option value="">Any cargo</option>
+                  <option value="1">At least 1 SCU</option>
+                  <option value="50">At least 50 SCU</option>
+                  <option value="200">At least 200 SCU</option>
+                  <option value="500">At least 500 SCU</option>
+                </select>
+              </label>
+              <label>
+                Price range
+                <select name="price">
+                  <option value="">Any price</option>
+                  <option value="10000">Under 10,000 UEC / hour</option>
+                  <option value="25000">Under 25,000 UEC / hour</option>
+                  <option value="50000">Under 50,000 UEC / hour</option>
+                  <option value="100000">Under 100,000 UEC / hour</option>
+                </select>
+              </label>
+              <label>
+                Minimum rating
+                <select name="rating">
+                  <option value="0">Any rating</option>
+                  <option value="3">3+ stars</option>
+                  <option value="4">4+ stars</option>
+                  <option value="4.5">4.5+ stars</option>
+                </select>
+              </label>
+              <label class="check"><input type="checkbox" name="medical" />Medical capability</label>
+              <label class="check"><input type="checkbox" name="hangar" />Hangar services</label>
+              <label class="check"><input type="checkbox" name="pilot" />Pilot included</label>
+            </form>
+          </details>
+
+          <div class="market-results" id="ship-market-results" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" id="crew-panel" data-panel="crew">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Crew marketplace</p>
+              <h1>Hire player services</h1>
+            </div>
+          </div>
+
+          <details class="filter-drawer" open>
+            <summary>Crew filters</summary>
+            <form class="market-filter-grid" id="crew-market-form">
+              <label>
+                Role
+                <select name="role">
+                  <option value="">Any role</option>
+                  <option value="Pilot">Pilot</option>
+                  <option value="Gunner">Gunner</option>
+                  <option value="Engineer">Engineer</option>
+                  <option value="Box Jockey">Box Jockey</option>
+                  <option value="FPS Ground Team">FPS Ground Team</option>
+                  <option value="Medic">Medic</option>
+                </select>
+              </label>
+              <label>
+                Price
+                <select name="price">
+                  <option value="">Any price</option>
+                  <option value="5000">Under 5,000 UEC / hour</option>
+                  <option value="10000">Under 10,000 UEC / hour</option>
+                  <option value="20000">Under 20,000 UEC / hour</option>
+                </select>
+              </label>
+              <label>
+                Minimum rating
+                <select name="rating">
+                  <option value="0">Any rating</option>
+                  <option value="3">3+ stars</option>
+                  <option value="4">4+ stars</option>
+                  <option value="4.5">4.5+ stars</option>
+                </select>
+              </label>
+              <label>
+                Availability
+                <select name="availability">
+                  <option value="">Any status</option>
+                  <option value="Available now">Available now</option>
+                  <option value="Available today">Available today</option>
+                  <option value="Scheduled">Scheduled</option>
+                </select>
+              </label>
+            </form>
+          </details>
+
+          <div class="market-results" id="crew-market-results" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" id="materials-panel" data-panel="materials">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Procurement board</p>
+              <h1>Request materials from players</h1>
+            </div>
+            <button class="primary-button" type="button">Post Material Request</button>
+          </div>
+
+          <div class="market-results" id="material-request-results" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" id="calendar-panel" data-panel="calendar">
           <div class="section-heading">
             <div>
               <p class="eyebrow">Live availability board</p>
@@ -390,48 +551,6 @@
           </div>
         </section>
 
-        <section class="panel" id="rent-panel" data-panel="rent">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Rental search</p>
-              <h1>Find ships that match your run</h1>
-            </div>
-          </div>
-
-          <form class="search-bar" id="rent-form">
-            <label>
-              Needed date
-              <input name="date" type="date" value="2026-06-14" />
-            </label>
-            <label>
-              Manufacturer
-              <select name="manufacturer" id="rent-manufacturer">
-                <option value="">All manufacturers</option>
-              </select>
-            </label>
-            <label>
-              Ship
-              <select name="query" id="rent-ship-options">
-                <option value="">All ships</option>
-              </select>
-            </label>
-            <label>
-              Max UEC
-              <input name="budget" type="number" min="0" value="25000" />
-            </label>
-            <label>
-              Rate period
-              <select name="budgetPeriod">
-                <option value="hour">Per hour</option>
-                <option value="day">Per day</option>
-                <option value="week">Per week</option>
-              </select>
-            </label>
-            <button class="primary-button" type="submit">Search</button>
-          </form>
-
-          <div class="results-grid" id="rental-results" aria-live="polite"></div>
-        </section>
       </main>
     </div>
 

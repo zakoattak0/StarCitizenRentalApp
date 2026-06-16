@@ -15,4 +15,10 @@ for (const filename of ["index.html", "app.js", "styles.css"]) {
 
 await fs.cp(path.join(rootDir, "public"), outputDir, { recursive: true });
 
+for (const route of ["ships", "crew", "materials", "owners", "calendar"]) {
+  const routeDir = path.join(outputDir, route);
+  await fs.mkdir(routeDir, { recursive: true });
+  await fs.copyFile(path.join(outputDir, "index.html"), path.join(routeDir, "index.html"));
+}
+
 console.log("Built static app in dist");
