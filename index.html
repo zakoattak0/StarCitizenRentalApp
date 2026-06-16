@@ -149,6 +149,10 @@
             <summary>Crew filters</summary>
             <form class="market-filter-grid" id="crew-market-form">
               <label>
+                Search by name
+                <input name="query" type="text" placeholder="Handle..." />
+              </label>
+              <label>
                 Role
                 <select name="role">
                   <option value="">Any role</option>
@@ -186,6 +190,10 @@
                   <option value="Available today">Available today</option>
                   <option value="Scheduled">Scheduled</option>
                 </select>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="myPostings" />
+                <span>My Postings</span>
               </label>
             </form>
           </details>

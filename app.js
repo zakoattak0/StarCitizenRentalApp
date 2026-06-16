@@ -1387,15 +1387,21 @@ function renderShipMarketplace() {
 
 function renderCrewMarketplace() {
   const form = new FormData(crewMarketForm);
+  const query = String(form.get("query") || "").trim().toLowerCase();
   const role = String(form.get("role") || "");
   const maxPrice = Number(form.get("price") || Infinity);
   const minRating = Number(form.get("rating") || 0);
   const availability = String(form.get("availability") || "");
+  const myPostings = form.has("myPostings");
+  const userHandle = (authState.user?.displayName || authState.user?.username || "").toLowerCase();
+
   const listings = demoCrewListings.filter((crew) => (
+    (!query || crew.name.toLowerCase().includes(query)) &&
     (!role || crew.role === role) &&
     (!Number.isFinite(maxPrice) || crew.price <= maxPrice) &&
     crew.rating >= minRating &&
-    (!availability || crew.availabilityStatus === availability)
+    (!availability || crew.availabilityStatus === availability) &&
+    (!myPostings || crew.name.toLowerCase() === userHandle)
   ));
 
   crewMarketResults.innerHTML = listings.length
