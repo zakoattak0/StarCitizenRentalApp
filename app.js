@@ -976,7 +976,7 @@ crewPostingForm.addEventListener("submit", (event) => {
   const listing = {
     name: data.get("name"),
     role: data.get("role"),
-    price: payType === "flat" ? parseCredits(rawValue) : rawValue,
+    price: parseCredits(rawValue),
     payType,
     rating: 5.0,
     completedJobs: 0,
@@ -1393,16 +1393,24 @@ function renderCrewMarketplace() {
   const minRating = Number(form.get("rating") || 0);
   const availability = String(form.get("availability") || "");
   const myPostings = form.has("myPostings");
+  const sort = String(form.get("sort") || "newest");
   const userHandle = (authState.user?.displayName || authState.user?.username || "").toLowerCase();
 
-  const listings = demoCrewListings.filter((crew) => (
-    (!query || crew.name.toLowerCase().includes(query)) &&
-    (!role || crew.role === role) &&
-    (!Number.isFinite(maxPrice) || crew.price <= maxPrice) &&
-    crew.rating >= minRating &&
-    (!availability || crew.availabilityStatus === availability) &&
-    (!myPostings || crew.name.toLowerCase() === userHandle)
-  ));
+  const listings = demoCrewListings
+    .filter((crew) => (
+      (!query || crew.name.toLowerCase().includes(query)) &&
+      (!role || crew.role === role) &&
+      (!Number.isFinite(maxPrice) || crew.price <= maxPrice) &&
+      crew.rating >= minRating &&
+      (!availability || crew.availabilityStatus === availability) &&
+      (!myPostings || crew.name.toLowerCase() === userHandle)
+    ))
+    .sort((a, b) => {
+      if (sort === "price-asc") return (a.price || 0) - (b.price || 0);
+      if (sort === "price-desc") return (b.price || 0) - (a.price || 0);
+      if (sort === "rating-desc") return (b.rating || 0) - (a.rating || 0);
+      return 0;
+    });
 
   crewMarketResults.innerHTML = listings.length
     ? listings.map(crewMarketplaceCard).join("")
