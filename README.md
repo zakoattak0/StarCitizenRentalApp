@@ -1,4 +1,4 @@
-# Frontier Fleet Exchange
+# FSX Frontier Service Exchange
 
 A Vercel-ready static prototype for scheduling Star Citizen ship rentals.
 

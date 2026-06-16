@@ -311,7 +311,7 @@ window.handleShipImageError = (image) => {
 
   const placeholder = document.createElement("div");
   placeholder.className = "ship-image placeholder";
-  placeholder.textContent = "FFE";
+  placeholder.textContent = "FSX";
   image.replaceWith(placeholder);
 };
 
@@ -2313,7 +2313,7 @@ function shipImage(ship) {
   const fallbackPhoto = ship.vehicle?.photo || "";
   const photo = localPhoto || fallbackPhoto;
   if (!photo) {
-    return `<div class="ship-image placeholder">FFE</div>`;
+    return `<div class="ship-image placeholder">FSX</div>`;
   }
 
   const fallbackAttr = localPhoto && fallbackPhoto ? ` data-fallback-src="${escapeHtml(fallbackPhoto)}"` : "";
