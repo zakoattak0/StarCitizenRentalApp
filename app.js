@@ -746,7 +746,7 @@ async function loadVehicles() {
     const payload = await response.json();
     vehicleCatalog = payload.data
       .map(normalizeVehicle)
-      .filter((vehicle) => vehicle.nameFull && !vehicle.isAddon)
+      .filter((vehicle) => vehicle.nameFull && !vehicle.isAddon && !vehicle.isConcept)
       .sort((a, b) => a.name.localeCompare(b.name));
 
     enrichSeedShips();
@@ -2185,6 +2185,7 @@ function normalizeVehicle(vehicle) {
     padType: vehicle.pad_type || "",
     photo: vehicle.url_photo || "",
     isAddon: Boolean(Number(vehicle.is_addon || 0)),
+    isConcept: Boolean(Number(vehicle.is_concept || 0)),
     searchText: [
       modelName,
       vehicle.name_full,
