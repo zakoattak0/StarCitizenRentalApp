@@ -89,6 +89,25 @@ const idrisS7NoseTurrets = [
 
 const idrisW57TurretOption = "IFR-W57 Turret";
 
+const oreOptions = [
+  "Quantainium",
+  "Bexalite",
+  "Taranite",
+  "Laranite",
+  "Agricium",
+  "Hephaestanite",
+  "Titanium",
+  "Gold",
+  "Diamond",
+  "Recycled Material Composite (RMC)",
+  "Construction Materials",
+  "Hydrogen Fuel",
+  "Quantum Fuel",
+  "Iron",
+  "Copper",
+  "Aluminum",
+];
+
 const size5WeaponOptions = [
   "'WAR'",
   "'WRATH'",
@@ -488,6 +507,18 @@ const crewPostingPayType = document.querySelector("#crew-posting-pay-type");
 const crewPostingPayValue = document.querySelector("#crew-posting-pay-value");
 const crewPostingPayValueLabel = document.querySelector("#crew-posting-pay-value-label");
 const crewPostingName = document.querySelector("#crew-posting-name");
+
+const postMaterialRequestButton = document.querySelector("#post-material-request-button");
+const materialRequestModal = document.querySelector("#material-request-modal");
+const materialRequestForm = document.querySelector("#material-request-form");
+const materialRequestClose = document.querySelector("#material-request-close");
+const materialRequestCancel = document.querySelector("#material-request-cancel");
+const materialRequestName = document.querySelector("#material-request-name");
+const materialLineItemsContainer = document.querySelector("#material-line-items");
+const addMaterialLineButton = document.querySelector("#add-material-line");
+const materialPaymentType = document.querySelector("#material-payment-type");
+const materialPaymentValue = document.querySelector("#material-payment-value");
+const materialPaymentValueLabel = document.querySelector("#material-payment-value-label");
 
 window.handleShipImageError = (image) => {
   const fallback = image.dataset.fallbackSrc;
@@ -989,6 +1020,54 @@ crewPostingForm.addEventListener("submit", (event) => {
   renderCrewMarketplace();
 });
 
+postMaterialRequestButton.addEventListener("click", openMaterialRequestModal);
+materialRequestClose.addEventListener("click", closeMaterialRequestModal);
+materialRequestCancel.addEventListener("click", closeMaterialRequestModal);
+materialRequestModal.addEventListener("click", (event) => {
+  if (event.target === materialRequestModal) {
+    closeMaterialRequestModal();
+  }
+});
+
+addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
+
+materialPaymentType.addEventListener("change", updateMaterialPaymentUI);
+materialPaymentValue.addEventListener("input", () => formatCreditInput(materialPaymentValue));
+
+materialRequestForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const formData = new FormData(materialRequestForm);
+  const payType = formData.get("paymentType");
+  const payValue = formData.get("paymentValue");
+  
+  const lineItems = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item")).map((row) => ({
+    material: row.querySelector("[name='material']").value,
+    quantity: row.querySelector("[name='quantity']").value,
+    quality: row.querySelector("[name='quality']").value,
+  }));
+
+  if (lineItems.length === 0) {
+    alert("Please add at least one material.");
+    return;
+  }
+
+  const request = {
+    postedBy: formData.get("postedBy"),
+    location: formData.get("location"),
+    neededBy: formData.get("neededBy"),
+    materials: lineItems,
+    price: payType === "perscu" ? `${payValue} UEC / SCU` : `${payValue} UEC Total`,
+    // For backwards compatibility/rendering single item if only one
+    material: lineItems[0].material,
+    quantity: lineItems[0].quantity + " SCU",
+    quality: lineItems[0].quality,
+  };
+
+  demoMaterialRequests.unshift(request);
+  closeMaterialRequestModal();
+  renderMaterialRequests();
+});
+
 async function loadVehicles() {
   shipApiStatus.textContent = "Loading UEX ship list...";
 
@@ -1488,15 +1567,27 @@ function crewMarketplaceCard(crew) {
 }
 
 function materialRequestCard(request) {
+  const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
+  const multiMaterial = materials.length > 1;
+
   return `
     <article class="market-card procurement-card">
       <div class="card-top">
-        <h2>${escapeHtml(request.material)}</h2>
-        <span class="tag">${escapeHtml(request.quantity)}</span>
+        <h2>${multiMaterial ? "Multi-Material Request" : escapeHtml(materials[0].material)}</h2>
+        <span class="tag">${multiMaterial ? `${materials.length} Items` : escapeHtml(materials[0].quantity)}</span>
+      </div>
+      <div class="price-line">
+        <strong>${escapeHtml(request.price)}</strong>
+      </div>
+      <div class="config-summary">
+        ${materials.map((m) => `
+          <div class="config-summary-line">
+            <strong>${escapeHtml(m.material)}</strong>
+            <span>${escapeHtml(m.quantity)}${String(m.quantity).includes("SCU") ? "" : " SCU"} (${escapeHtml(m.quality || "Any")})</span>
+          </div>
+        `).join("")}
       </div>
       <ul class="meta-list">
-        <li>Minimum quality: ${escapeHtml(request.quality)}</li>
-        <li>Offered price: ${escapeHtml(request.price)}</li>
         <li>Delivery: ${escapeHtml(request.location || "Open")}</li>
         <li>Needed by: ${escapeHtml(request.neededBy || "Flexible")}</li>
         <li>Posted by: ${escapeHtml(request.postedBy)}</li>
@@ -1999,6 +2090,75 @@ function updateCrewPostingPayUI() {
   } else {
     crewPostingPayValue.value = crewPostingPayValue.value.replace(/[^0-9]/g, "");
   }
+}
+
+function openMaterialRequestModal() {
+  if (!authState.user) {
+    authPromptMessage.textContent = "Sign in with Discord to post a material request.";
+    authPromptModal.classList.remove("is-hidden");
+    document.body.classList.add("modal-open");
+    return;
+  }
+
+  materialRequestForm.reset();
+  materialRequestName.value = authState.user.displayName || authState.user.username || "";
+  materialLineItemsContainer.innerHTML = "";
+  addMaterialLineItem();
+  updateMaterialPaymentUI();
+  materialRequestModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeMaterialRequestModal() {
+  materialRequestModal.classList.add("is-hidden");
+  if (
+    ownerConfiguratorModal.classList.contains("is-hidden") &&
+    removeShipModal.classList.contains("is-hidden") &&
+    availabilityModal.classList.contains("is-hidden") &&
+    crewPostingModal.classList.contains("is-hidden")
+  ) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function addMaterialLineItem() {
+  const row = document.createElement("div");
+  row.className = "material-line-item";
+  row.innerHTML = `
+    <label>
+      Ore / Material
+      <select name="material" required>
+        ${oreOptions.map((opt) => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join("")}
+      </select>
+    </label>
+    <label>
+      Qty (SCU)
+      <input name="quantity" type="number" min="1" step="0.1" required placeholder="10" />
+    </label>
+    <label>
+      Quality
+      <input name="quality" type="text" placeholder="+/- %" />
+    </label>
+    <button class="icon-button remove-line" type="button" aria-label="Remove material line">&times;</button>
+  `;
+
+  row.querySelector(".remove-line").addEventListener("click", () => {
+    if (materialLineItemsContainer.children.length > 1) {
+      row.remove();
+    }
+  });
+
+  materialLineItemsContainer.appendChild(row);
+}
+
+function updateMaterialPaymentUI() {
+  const isPerScu = materialPaymentType.value === "perscu";
+  const labelText = materialPaymentValueLabel.querySelector(".label-text");
+  if (labelText) {
+    labelText.textContent = isPerScu ? "Payment / SCU (UEC)" : "Total Payment (UEC)";
+  }
+  materialPaymentValue.placeholder = isPerScu ? "1,500" : "50,000";
+  formatCreditInput(materialPaymentValue);
 }
 
 function saveAvailabilityChanges() {
