@@ -359,6 +359,9 @@ const accountRating = document.querySelector("#account-rating");
 const accountContracts = document.querySelector("#account-contracts");
 const accountListings = document.querySelector("#account-listings");
 const accountOrg = document.querySelector("#account-org");
+const accountServicesList = document.querySelector("#account-services-list");
+const accountListingsList = document.querySelector("#account-listings-list");
+const accountCreateServiceButton = document.querySelector("#account-create-service-button");
 const authPromptModal = document.querySelector("#auth-prompt-modal");
 const authPromptMessage = document.querySelector("#auth-prompt-message");
 const authPromptCancel = document.querySelector("#auth-prompt-cancel");
@@ -422,7 +425,16 @@ document.addEventListener("click", (event) => {
 }, true);
 
 document.querySelectorAll(".sub-tab").forEach((tab) => {
-  tab.addEventListener("click", () => setOwnerView(tab.dataset.ownerView));
+  if (tab.dataset.ownerView) {
+    tab.addEventListener("click", () => setOwnerView(tab.dataset.ownerView));
+  }
+  if (tab.dataset.accountView) {
+    tab.addEventListener("click", () => setAccountView(tab.dataset.accountView));
+  }
+});
+
+document.querySelectorAll("[data-account-target]").forEach((control) => {
+  control.addEventListener("click", () => setAccountView(control.dataset.accountTarget));
 });
 
 document.querySelector("#prev-month").addEventListener("click", () => {
@@ -623,6 +635,7 @@ ownerForm.addEventListener("submit", async (event) => {
     renderOwnerSchedule();
     renderCalendarFilterOptions();
     updateFilterSummary();
+    renderAccountListings();
   } catch (error) {
     showFormError(error instanceof Error ? error.message : "Ship listing could not be saved");
   } finally {
@@ -677,6 +690,7 @@ removeShipConfirm.addEventListener("click", async () => {
     renderOwnerSchedule();
     renderCalendarFilterOptions();
     updateFilterSummary();
+    renderAccountListings();
   } catch (error) {
     dataStatus.shipListings.error = error instanceof Error ? error.message : "Ship listing could not be removed";
     renderFleet();
@@ -727,6 +741,49 @@ fleetList.addEventListener("click", (event) => {
 
   if (actionButton.dataset.fleetAction === "remove") {
     openRemoveConfirmation(index);
+  }
+});
+
+accountServicesList.addEventListener("click", async (event) => {
+  const actionButton = event.target.closest("[data-account-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  if (actionButton.dataset.accountAction === "delete-crew") {
+    await removeCrewListing(actionButton.dataset.listingId);
+  }
+});
+
+accountListingsList.addEventListener("click", async (event) => {
+  const actionButton = event.target.closest("[data-account-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  const action = actionButton.dataset.accountAction;
+  const id = actionButton.dataset.listingId;
+
+  if (action === "edit-ship" || action === "delete-ship") {
+    const index = ships.findIndex((ship) => ship.id === id);
+    if (index < 0) {
+      return;
+    }
+    if (action === "edit-ship") {
+      setAccountView("fleet");
+      populateOwnerForm(index);
+      openOwnerConfigurator("modify");
+    } else {
+      openRemoveConfirmation(index);
+    }
+  }
+
+  if (action === "delete-crew") {
+    await removeCrewListing(id);
+  }
+
+  if (action === "delete-material") {
+    await removeMaterialRequest(id);
   }
 });
 
@@ -873,6 +930,7 @@ availabilityShipSelect.addEventListener("change", () => {
 });
 
 createCrewPostingButton.addEventListener("click", openCrewPostingModal);
+accountCreateServiceButton.addEventListener("click", openCrewPostingModal);
 crewPostingClose.addEventListener("click", closeCrewPostingModal);
 crewPostingCancel.addEventListener("click", closeCrewPostingModal);
 crewPostingModal.addEventListener("click", (event) => {
@@ -913,6 +971,8 @@ crewPostingForm.addEventListener("submit", async (event) => {
     crewListings.unshift(savedListing);
     closeCrewPostingModal();
     renderCrewMarketplace();
+    renderAccountServices();
+    renderAccountListings();
   } catch (error) {
     dataStatus.crewListings.error = error instanceof Error ? error.message : "Crew listing could not be saved";
     renderCrewMarketplace();
@@ -972,6 +1032,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
     materialRequests.unshift(savedRequest);
     closeMaterialRequestModal();
     renderMaterialRequests();
+    renderAccountListings();
   } catch (error) {
     dataStatus.materialRequests.error = error instanceof Error ? error.message : "Material request could not be saved";
     renderMaterialRequests();
@@ -1060,7 +1121,6 @@ function panelRoute(tabName) {
     ships: "/ships",
     crew: "/crew",
     materials: "/materials",
-    owners: "/owners",
     calendar: "/calendar",
     account: "/account",
   }[tabName] || "/";
@@ -1072,7 +1132,6 @@ function panelFromPath(pathname) {
     "/ships": "ships",
     "/crew": "crew",
     "/materials": "materials",
-    "/owners": "owners",
     "/calendar": "calendar",
     "/account": "account",
   }[pathname] || "home";
@@ -1116,6 +1175,27 @@ function setOwnerView(viewName) {
   }
 }
 
+function setAccountView(viewName) {
+  document.querySelectorAll("[data-account-view]").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.accountView === viewName);
+  });
+
+  document.querySelectorAll("[data-account-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.accountPanel === viewName);
+  });
+
+  if (viewName === "fleet") {
+    renderFleet();
+    renderOwnerSchedule();
+  }
+  if (viewName === "services") {
+    renderAccountServices();
+  }
+  if (viewName === "listings") {
+    renderAccountListings();
+  }
+}
+
 async function loadSession() {
   authState.loading = true;
   updateAuthUI();
@@ -1136,7 +1216,6 @@ function updateAuthUI() {
   const user = authState.user;
   authLogin.classList.toggle("is-hidden", Boolean(user));
   authUser.classList.toggle("is-hidden", !user);
-  accountTab.classList.toggle("is-hidden", !user);
 
   if (user) {
     authDisplayName.textContent = user.displayName || user.username || "Account";
@@ -1168,6 +1247,145 @@ function renderAccountPanel() {
   accountListings.textContent = Number(user.stats?.activeListings || marketplaceUserListingCount(user)).toLocaleString();
   accountOrg.textContent = user.stats?.orgAffiliation || "None";
   setAvatar(accountAvatar, accountAvatarPlaceholder, user.avatarUrl);
+  renderAccountServices();
+  renderAccountListings();
+}
+
+function isOwnedByCurrentUser(item, fallbackNameKey = "owner") {
+  const user = authState.user;
+  if (!user) {
+    return false;
+  }
+
+  const displayName = user.displayName || user.username || "";
+  return item.ownerId === user.id || item.requesterId === user.id || item[fallbackNameKey] === displayName;
+}
+
+function ownedShips() {
+  return ships.filter((ship) => isOwnedByCurrentUser(ship, "owner"));
+}
+
+function ownedCrewListings() {
+  return crewListings.filter((listing) => isOwnedByCurrentUser(listing, "name"));
+}
+
+function ownedMaterialRequests() {
+  return materialRequests.filter((request) => isOwnedByCurrentUser(request, "postedBy"));
+}
+
+function renderAccountServices() {
+  if (!accountServicesList) {
+    return;
+  }
+
+  const listings = ownedCrewListings();
+  accountServicesList.innerHTML = listings.length
+    ? listings.map(accountServiceCard).join("")
+    : `<div class="empty-state">No service listings yet. Create a service listing to offer pilot, gunner, engineer, medic, ground team, escort, salvage, or support work.</div>`;
+}
+
+function renderAccountListings() {
+  if (!accountListingsList) {
+    return;
+  }
+
+  const listingCards = [
+    ...ownedShips().map(accountShipListingCard),
+    ...ownedCrewListings().map(accountCrewListingCard),
+    ...ownedMaterialRequests().map(accountMaterialListingCard),
+  ];
+
+  accountListingsList.innerHTML = listingCards.length
+    ? listingCards.join("")
+    : `<div class="empty-state">No active marketplace listings yet. Add a ship, create a service, or post a material request.</div>`;
+}
+
+function listingStatusBadge(status = "Active") {
+  return `<span class="status-badge">${escapeHtml(status)}</span>`;
+}
+
+function accountServiceCard(listing) {
+  return `
+    <article class="account-listing-card">
+      <div>
+        <p class="eyebrow">Service listing</p>
+        <h3>${escapeHtml(listing.role || "Service")}</h3>
+        <p>${escapeHtml(listing.summary || "No service summary provided.")}</p>
+      </div>
+      <div class="account-listing-meta">
+        ${listingStatusBadge(listing.availabilityStatus || "Active")}
+        <strong>${listing.payType === "cut" ? `${formatCredits(listing.price)}% cut` : `${formatCredits(listing.price)} UEC / hour`}</strong>
+      </div>
+      <div class="card-actions">
+        <button class="secondary-button" type="button" disabled>Edit</button>
+        <button class="secondary-button" type="button" disabled>Pause</button>
+        <button class="secondary-button danger-button" type="button" data-account-action="delete-crew" data-listing-id="${escapeHtml(listing.id)}">Delete</button>
+      </div>
+    </article>
+  `;
+}
+
+function accountShipListingCard(ship) {
+  return `
+    <article class="account-listing-card">
+      <div>
+        <p class="eyebrow">Ship listing</p>
+        <h3>${escapeHtml(ship.ship)}</h3>
+        <p>${escapeHtml(ship.manufacturer || ship.vehicle?.company || "Independent")} / ${escapeHtml(ship.role || "General")}</p>
+      </div>
+      <div class="account-listing-meta">
+        ${listingStatusBadge(ship.dates?.length ? "Active" : "Unavailable")}
+        <strong>${formatCredits(getShipRate(ship, "hour") || 0)} UEC / hour</strong>
+      </div>
+      <div class="card-actions">
+        <button class="secondary-button" type="button" data-account-action="edit-ship" data-listing-id="${escapeHtml(ship.id)}">Edit</button>
+        <button class="secondary-button" type="button" disabled>Pause</button>
+        <button class="secondary-button danger-button" type="button" data-account-action="delete-ship" data-listing-id="${escapeHtml(ship.id)}">Delete</button>
+      </div>
+    </article>
+  `;
+}
+
+function accountCrewListingCard(listing) {
+  return `
+    <article class="account-listing-card">
+      <div>
+        <p class="eyebrow">Crew/service listing</p>
+        <h3>${escapeHtml(listing.role || "Service")}</h3>
+        <p>${escapeHtml(listing.summary || "No service summary provided.")}</p>
+      </div>
+      <div class="account-listing-meta">
+        ${listingStatusBadge(listing.availabilityStatus || "Active")}
+        <strong>${listing.payType === "cut" ? `${formatCredits(listing.price)}% cut` : `${formatCredits(listing.price)} UEC / hour`}</strong>
+      </div>
+      <div class="card-actions">
+        <button class="secondary-button" type="button" disabled>Edit</button>
+        <button class="secondary-button" type="button" disabled>Pause</button>
+        <button class="secondary-button danger-button" type="button" data-account-action="delete-crew" data-listing-id="${escapeHtml(listing.id)}">Delete</button>
+      </div>
+    </article>
+  `;
+}
+
+function accountMaterialListingCard(request) {
+  return `
+    <article class="account-listing-card">
+      <div>
+        <p class="eyebrow">Material listing</p>
+        <h3>${escapeHtml(request.material || "Material request")}</h3>
+        <p>${escapeHtml(request.quantity || "Open quantity")} / ${escapeHtml(request.location || "No location set")}</p>
+      </div>
+      <div class="account-listing-meta">
+        ${listingStatusBadge("Active")}
+        <strong>${escapeHtml(request.price || "Open bid")}</strong>
+      </div>
+      <div class="card-actions">
+        <button class="secondary-button" type="button" disabled>Edit</button>
+        <button class="secondary-button" type="button" disabled>Pause</button>
+        <button class="secondary-button danger-button" type="button" data-account-action="delete-material" data-listing-id="${escapeHtml(request.id)}">Delete</button>
+      </div>
+    </article>
+  `;
 }
 
 function replaceCollection(target, source) {
@@ -1242,6 +1460,8 @@ async function loadCrewListings() {
   } finally {
     dataStatus.crewListings.loading = false;
     renderCrewMarketplace();
+    renderAccountServices();
+    renderAccountListings();
   }
 }
 
@@ -1258,6 +1478,7 @@ async function loadMaterialRequests() {
   } finally {
     dataStatus.materialRequests.loading = false;
     renderMaterialRequests();
+    renderAccountListings();
   }
 }
 
@@ -1279,6 +1500,61 @@ async function deleteShipListing(listing) {
   await fetch(`${SHIP_LISTINGS_URL}?id=${encodeURIComponent(listing.id)}`, {
     method: "DELETE",
   }).then(readJson);
+}
+
+async function deleteCrewListing(id) {
+  if (!id) {
+    throw new Error("Crew listing id is required");
+  }
+
+  await fetch(`${CREW_LISTINGS_URL}?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  }).then(readJson);
+}
+
+async function deleteMaterialRequest(id) {
+  if (!id) {
+    throw new Error("Material request id is required");
+  }
+
+  await fetch(`${MATERIAL_REQUESTS_URL}?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  }).then(readJson);
+}
+
+async function removeCrewListing(id) {
+  const listing = crewListings.find((item) => item.id === id);
+  if (!listing || !window.confirm(`Delete ${listing.role || "this service listing"}?`)) {
+    return;
+  }
+
+  try {
+    await deleteCrewListing(id);
+    crewListings.splice(crewListings.indexOf(listing), 1);
+    renderCrewMarketplace();
+    renderAccountServices();
+    renderAccountListings();
+  } catch (error) {
+    dataStatus.crewListings.error = error instanceof Error ? error.message : "Crew listing could not be deleted";
+    renderAccountServices();
+  }
+}
+
+async function removeMaterialRequest(id) {
+  const request = materialRequests.find((item) => item.id === id);
+  if (!request || !window.confirm(`Delete ${request.material || "this material request"}?`)) {
+    return;
+  }
+
+  try {
+    await deleteMaterialRequest(id);
+    materialRequests.splice(materialRequests.indexOf(request), 1);
+    renderMaterialRequests();
+    renderAccountListings();
+  } catch (error) {
+    dataStatus.materialRequests.error = error instanceof Error ? error.message : "Material request could not be deleted";
+    renderAccountListings();
+  }
 }
 
 async function saveCrewListing(listing) {

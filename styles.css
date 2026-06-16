@@ -453,6 +453,113 @@ main {
   gap: 14px;
 }
 
+.account-management {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 16px;
+}
+
+.account-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-tile {
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  border: 1px solid var(--line);
+  background: #101010;
+  color: var(--text);
+  text-align: left;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.account-tile:hover {
+  border-color: var(--red);
+}
+
+.account-tile span {
+  color: var(--red);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.account-tile strong {
+  font-size: 1.05rem;
+}
+
+.account-tile p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.account-view {
+  display: none;
+}
+
+.account-view.active {
+  display: grid;
+  gap: 14px;
+}
+
+.compact-heading {
+  margin-bottom: 0;
+}
+
+.compact-heading h2,
+.account-listing-card h3 {
+  margin: 0;
+}
+
+.account-list {
+  display: grid;
+  gap: 10px;
+}
+
+.account-listing-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, auto) auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 14px;
+}
+
+.account-listing-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.account-listing-meta {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.status-badge {
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.08);
+  color: var(--green);
+  padding: 4px 7px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.contract-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .account-card {
   display: grid;
   gap: 16px;
@@ -1669,6 +1776,7 @@ legend {
 
   .split-layout,
   .account-dashboard,
+  .account-dashboard-grid,
   .entry-grid,
   .market-results,
   .fleet-list,
@@ -1677,6 +1785,10 @@ legend {
   .market-filter-grid,
   .search-bar,
   .schedule-form {
+    grid-template-columns: 1fr;
+  }
+
+  .account-listing-card {
     grid-template-columns: 1fr;
   }
 

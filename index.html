@@ -23,13 +23,10 @@
         </a>
 
         <nav class="tabs" aria-label="Primary">
-          <button class="tab active" data-tab="home">Home</button>
           <button class="tab" data-tab="ships">Ships</button>
           <button class="tab" data-tab="crew">Crew</button>
           <button class="tab" data-tab="materials">Materials</button>
-          <button class="tab" data-tab="owners">Owners</button>
-          <button class="tab" data-tab="calendar">Calendar</button>
-          <button class="tab auth-account-tab is-hidden" data-tab="account">Account</button>
+          <button class="tab auth-account-tab" data-tab="account">Account</button>
         </nav>
 
         <div class="auth-controls" id="auth-controls">
@@ -285,6 +282,126 @@
               </div>
               <p class="account-note">Listing data is now shared through Supabase. Editable profile fields, persisted stats, and org membership are planned next.</p>
             </section>
+
+            <section class="account-management">
+              <div class="account-dashboard-grid" aria-label="Account management sections">
+                <button class="account-tile" type="button" data-account-target="fleet">
+                  <span>Fleet</span>
+                  <strong>My Fleet</strong>
+                  <p>Manage owned ships, pricing, services, and availability.</p>
+                </button>
+                <button class="account-tile" type="button" data-account-target="services">
+                  <span>Services</span>
+                  <strong>My Services</strong>
+                  <p>Create and manage crew or service offerings.</p>
+                </button>
+                <button class="account-tile" type="button" data-account-target="listings">
+                  <span>Listings</span>
+                  <strong>My Listings</strong>
+                  <p>Review all active ship, crew, and material postings.</p>
+                </button>
+                <button class="account-tile" type="button" data-account-target="contracts">
+                  <span>Contracts</span>
+                  <strong>My Contracts</strong>
+                  <p>Track incoming, submitted, active, and completed work.</p>
+                </button>
+              </div>
+
+              <div class="sub-tabs account-sub-tabs" aria-label="Account management views">
+                <button class="sub-tab active" data-account-view="overview">Overview</button>
+                <button class="sub-tab" data-account-view="fleet">My Fleet</button>
+                <button class="sub-tab" data-account-view="services">My Services</button>
+                <button class="sub-tab" data-account-view="listings">My Listings</button>
+                <button class="sub-tab" data-account-view="contracts">My Contracts</button>
+              </div>
+
+              <section class="account-view active" data-account-panel="overview">
+                <div class="empty-state">Choose a management section above to work on your fleet, services, listings, or contracts.</div>
+              </section>
+
+              <section class="account-view" data-account-panel="fleet">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="eyebrow">My Fleet</p>
+                    <h2>Manage owned ships</h2>
+                  </div>
+                </div>
+                <div class="sub-tabs" aria-label="Fleet management views">
+                  <button class="sub-tab active" data-owner-view="fleet">Fleet List</button>
+                  <button class="sub-tab" data-owner-view="schedule">Schedule</button>
+                </div>
+                <div class="owner-workspace">
+                  <section class="owner-view active" data-owner-panel="fleet">
+                    <div class="fleet-toolbar">
+                      <button class="primary-button" id="add-fleet-ship" type="button" data-auth-action="create a ship listing">Add ship</button>
+                    </div>
+                    <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
+                  </section>
+                  <section class="owner-view" data-owner-panel="schedule">
+                    <form class="schedule-form" id="availability-form">
+                      <label>
+                        Fleet ship
+                        <select name="shipIndex" id="availability-ship"></select>
+                      </label>
+                      <button class="primary-button" type="submit">Update availability</button>
+                    </form>
+                    <div class="schedule-calendar-toolbar">
+                      <div class="schedule-calendar-view">
+                        <div class="segmented-control" aria-label="Schedule calendar view">
+                          <button class="segment" type="button" data-schedule-view="week">Week</button>
+                          <button class="segment active" type="button" data-schedule-view="month">Month</button>
+                        </div>
+                        <div class="availability-navigation">
+                          <button class="secondary-button" id="schedule-prev" type="button" aria-label="Previous schedule period">&lsaquo;</button>
+                          <button class="secondary-button" id="schedule-today" type="button">Today</button>
+                          <button class="secondary-button" id="schedule-next" type="button" aria-label="Next schedule period">&rsaquo;</button>
+                        </div>
+                        <strong id="schedule-period-label"></strong>
+                      </div>
+                    </div>
+                    <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>
+                  </section>
+                </div>
+              </section>
+
+              <section class="account-view" data-account-panel="services">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="eyebrow">My Services</p>
+                    <h2>Manage crew and service offerings</h2>
+                  </div>
+                  <button class="primary-button" id="account-create-service-button" type="button" data-auth-action="create a service listing">Create service listing</button>
+                </div>
+                <div class="account-list" id="account-services-list" aria-live="polite"></div>
+              </section>
+
+              <section class="account-view" data-account-panel="listings">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="eyebrow">My Listings</p>
+                    <h2>All active marketplace listings</h2>
+                  </div>
+                </div>
+                <div class="account-list" id="account-listings-list" aria-live="polite"></div>
+              </section>
+
+              <section class="account-view" data-account-panel="contracts">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="eyebrow">My Contracts</p>
+                    <h2>Contract pipeline</h2>
+                  </div>
+                </div>
+                <div class="contract-tabs" aria-label="Contract states">
+                  <button class="sub-tab active" type="button">Incoming Requests</button>
+                  <button class="sub-tab" type="button">Submitted Requests</button>
+                  <button class="sub-tab" type="button">Active Contracts</button>
+                  <button class="sub-tab" type="button">Completed Contracts</button>
+                  <button class="sub-tab" type="button">Cancelled Contracts</button>
+                </div>
+                <div class="empty-state">Contracts will show customer, provider, agreed price, scheduled time, and completion status once request workflows are connected.</div>
+              </section>
+            </section>
           </div>
         </section>
 
@@ -356,19 +473,6 @@
             </div>
           </form>
         </div>
-
-        <section class="panel" id="owners-panel" data-panel="owners">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Owner console</p>
-              <h1>Manage your fleet</h1>
-            </div>
-          </div>
-
-          <div class="sub-tabs" aria-label="Owner views">
-            <button class="sub-tab active" data-owner-view="fleet">Fleet</button>
-            <button class="sub-tab" data-owner-view="schedule">Schedule</button>
-          </div>
 
           <div class="modal-backdrop is-hidden" id="owner-configurator-modal">
             <div class="owner-configurator" role="dialog" aria-modal="true" aria-labelledby="owner-configurator-title">
@@ -557,39 +661,6 @@
             </div>
           </div>
 
-          <div class="owner-workspace">
-              <section class="owner-view active" data-owner-panel="fleet">
-                <div class="fleet-toolbar">
-                  <button class="primary-button" id="add-fleet-ship" type="button" data-auth-action="create a ship listing">Add ship</button>
-                </div>
-                <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
-              </section>
-              <section class="owner-view" data-owner-panel="schedule">
-                <form class="schedule-form" id="availability-form">
-                  <label>
-                    Fleet ship
-                    <select name="shipIndex" id="availability-ship"></select>
-                  </label>
-                  <button class="primary-button" type="submit">Update availability</button>
-                </form>
-                <div class="schedule-calendar-toolbar">
-                  <div class="schedule-calendar-view">
-                    <div class="segmented-control" aria-label="Schedule calendar view">
-                      <button class="segment" type="button" data-schedule-view="week">Week</button>
-                      <button class="segment active" type="button" data-schedule-view="month">Month</button>
-                    </div>
-                    <div class="availability-navigation">
-                      <button class="secondary-button" id="schedule-prev" type="button" aria-label="Previous schedule period">&lsaquo;</button>
-                      <button class="secondary-button" id="schedule-today" type="button">Today</button>
-                      <button class="secondary-button" id="schedule-next" type="button" aria-label="Next schedule period">&rsaquo;</button>
-                    </div>
-                    <strong id="schedule-period-label"></strong>
-                  </div>
-                </div>
-                <div class="owner-calendar" id="owner-calendar" aria-live="polite"></div>
-              </section>
-          </div>
-
           <div class="modal-backdrop is-hidden" id="remove-ship-modal">
             <div class="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="remove-ship-title" aria-describedby="remove-ship-message">
               <h2 id="remove-ship-title">Remove ship?</h2>
@@ -638,7 +709,6 @@
               </div>
             </div>
           </div>
-        </section>
 
       </main>
 

@@ -7,7 +7,6 @@
     { "source": "/ships", "destination": "/index.html" },
     { "source": "/crew", "destination": "/index.html" },
     { "source": "/materials", "destination": "/index.html" },
-    { "source": "/owners", "destination": "/index.html" },
     { "source": "/calendar", "destination": "/index.html" },
     { "source": "/account", "destination": "/index.html" }
   ]
