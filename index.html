@@ -29,7 +29,20 @@
           <button class="tab" data-tab="materials">Materials</button>
           <button class="tab" data-tab="owners">Owners</button>
           <button class="tab" data-tab="calendar">Calendar</button>
+          <button class="tab auth-account-tab is-hidden" data-tab="account">Account</button>
         </nav>
+
+        <div class="auth-controls" id="auth-controls">
+          <a class="secondary-button auth-login" href="/api/auth/discord">Sign in with Discord</a>
+          <div class="auth-user is-hidden" id="auth-user">
+            <button class="auth-profile" type="button" data-route="account">
+              <span class="auth-avatar-placeholder" id="auth-avatar-placeholder">FSX</span>
+              <img class="auth-avatar is-hidden" id="auth-avatar" alt="" />
+              <span id="auth-display-name">Account</span>
+            </button>
+            <a class="secondary-button" href="/api/auth/logout">Sign out</a>
+          </div>
+        </div>
       </header>
 
       <main>
@@ -185,10 +198,76 @@
               <p class="eyebrow">Procurement board</p>
               <h1>Request materials from players</h1>
             </div>
-            <button class="primary-button" type="button">Post Material Request</button>
+            <button class="primary-button" type="button" data-auth-action="post a material request">Post Material Request</button>
           </div>
 
           <div class="market-results" id="material-request-results" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" id="account-panel" data-panel="account">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Account tools</p>
+              <h1>Your FSX profile</h1>
+            </div>
+          </div>
+
+          <div class="account-gate" id="account-signed-out">
+            <h2>Sign in to manage your account</h2>
+            <p>Discord login connects future listings, rental requests, crew services, material requests, ratings, and org tools to a real player account.</p>
+            <a class="primary-button" href="/api/auth/discord">Sign in with Discord</a>
+          </div>
+
+          <div class="account-dashboard is-hidden" id="account-dashboard">
+            <section class="account-card">
+              <div class="account-identity">
+                <span class="auth-avatar-placeholder account-avatar-placeholder" id="account-avatar-placeholder">FSX</span>
+                <img class="account-avatar is-hidden" id="account-avatar" alt="" />
+                <div>
+                  <p class="eyebrow">Discord account</p>
+                  <h2 id="account-display-name">Signed in</h2>
+                  <p id="account-username"></p>
+                </div>
+              </div>
+              <dl class="account-detail-list">
+                <div>
+                  <dt>Account created</dt>
+                  <dd id="account-created-at">Session only for now</dd>
+                </div>
+                <div>
+                  <dt>RSI handle</dt>
+                  <dd id="account-rsi-handle">Not set yet</dd>
+                </div>
+                <div>
+                  <dt>Public profile name</dt>
+                  <dd id="account-public-name">Not set yet</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="account-card">
+              <p class="eyebrow">Profile stats</p>
+              <div class="account-stats">
+                <div>
+                  <span>Rating</span>
+                  <strong id="account-rating">0.0</strong>
+                </div>
+                <div>
+                  <span>Completed contracts</span>
+                  <strong id="account-contracts">0</strong>
+                </div>
+                <div>
+                  <span>Active listings</span>
+                  <strong id="account-listings">0</strong>
+                </div>
+                <div>
+                  <span>Org affiliation</span>
+                  <strong id="account-org">None</strong>
+                </div>
+              </div>
+              <p class="account-note">Editable profile fields, persisted stats, and org membership will connect here once the database layer is added.</p>
+            </section>
+          </div>
         </section>
 
         <section class="panel" id="calendar-panel" data-panel="calendar">
@@ -463,7 +542,7 @@
           <div class="owner-workspace">
               <section class="owner-view active" data-owner-panel="fleet">
                 <div class="fleet-toolbar">
-                  <button class="primary-button" id="add-fleet-ship" type="button">Add ship</button>
+                  <button class="primary-button" id="add-fleet-ship" type="button" data-auth-action="create a ship listing">Add ship</button>
                 </div>
                 <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
               </section>
@@ -544,6 +623,17 @@
         </section>
 
       </main>
+
+      <div class="modal-backdrop is-hidden" id="auth-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title">
+        <div class="confirm-modal">
+          <h2 id="auth-prompt-title">Sign in required</h2>
+          <p id="auth-prompt-message">Sign in with Discord to use this action.</p>
+          <div class="modal-actions">
+            <button class="secondary-button" id="auth-prompt-cancel" type="button">Not now</button>
+            <a class="primary-button" href="/api/auth/discord">Sign in with Discord</a>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="app.js"></script>

@@ -53,7 +53,7 @@ select {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(220px, 330px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 330px) minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
   position: sticky;
@@ -157,6 +157,58 @@ legend {
   min-height: 44px;
   padding: 0 16px;
   font-weight: 800;
+}
+
+.auth-controls,
+.auth-user,
+.auth-profile,
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-login,
+.auth-user .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.auth-profile {
+  border: 1px solid var(--line);
+  background: #101010;
+  color: var(--text);
+  min-height: 44px;
+  padding: 5px 10px 5px 6px;
+  cursor: pointer;
+}
+
+.auth-profile:hover {
+  border-color: var(--cyan);
+}
+
+.auth-avatar,
+.account-avatar,
+.auth-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: #090909;
+}
+
+.auth-avatar,
+.account-avatar {
+  object-fit: cover;
+}
+
+.auth-avatar-placeholder {
+  display: inline-grid;
+  place-items: center;
+  color: var(--cyan);
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
 .is-hidden {
@@ -366,6 +418,89 @@ main {
 
 .procurement-card {
   min-height: 240px;
+}
+
+.account-gate,
+.account-card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 16px;
+}
+
+.account-gate {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.account-gate h2,
+.account-card h2 {
+  margin: 0;
+}
+
+.account-gate p,
+.account-note,
+#account-username {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.account-dashboard {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(300px, 1.1fr);
+  gap: 14px;
+}
+
+.account-card {
+  display: grid;
+  gap: 16px;
+}
+
+.account-avatar,
+.account-avatar-placeholder {
+  width: 76px;
+  height: 76px;
+}
+
+.account-detail-list,
+.account-stats {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.account-detail-list div,
+.account-stats div {
+  border-left: 2px solid var(--cyan);
+  background: #121212;
+  padding: 9px 11px;
+}
+
+.account-detail-list dt,
+.account-stats span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.account-detail-list dd {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.account-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-stats strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 1.35rem;
 }
 
 .section-heading {
@@ -1481,6 +1616,7 @@ legend {
     grid-template-columns: 1fr;
   }
 
+  .auth-controls,
   .tabs,
   .sub-tabs,
   .calendar-controls {
@@ -1488,6 +1624,7 @@ legend {
   }
 
   .split-layout,
+  .account-dashboard,
   .entry-grid,
   .market-results,
   .fleet-list,
@@ -1501,6 +1638,10 @@ legend {
 
   .service-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-stats {
+    grid-template-columns: 1fr;
   }
 
   .adjusted-rental-totals {

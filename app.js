@@ -348,6 +348,11 @@ const state = {
   },
 };
 
+const authState = {
+  loading: true,
+  user: null,
+};
+
 const monthLabel = document.querySelector("#month-label");
 const calendarGrid = document.querySelector("#calendar-grid");
 const calendarModeSelect = document.querySelector("#calendar-mode");
@@ -452,6 +457,28 @@ const rateAdjustmentInputs = {
 const rateError = document.querySelector("#rate-error");
 const pilotIncludedInput = document.querySelector("#pilot-included");
 const pilotRateField = document.querySelector("#pilot-rate-field");
+const authLogin = document.querySelector(".auth-login");
+const authUser = document.querySelector("#auth-user");
+const authDisplayName = document.querySelector("#auth-display-name");
+const authAvatar = document.querySelector("#auth-avatar");
+const authAvatarPlaceholder = document.querySelector("#auth-avatar-placeholder");
+const accountTab = document.querySelector(".auth-account-tab");
+const accountSignedOut = document.querySelector("#account-signed-out");
+const accountDashboard = document.querySelector("#account-dashboard");
+const accountAvatar = document.querySelector("#account-avatar");
+const accountAvatarPlaceholder = document.querySelector("#account-avatar-placeholder");
+const accountDisplayName = document.querySelector("#account-display-name");
+const accountUsername = document.querySelector("#account-username");
+const accountCreatedAt = document.querySelector("#account-created-at");
+const accountRsiHandle = document.querySelector("#account-rsi-handle");
+const accountPublicName = document.querySelector("#account-public-name");
+const accountRating = document.querySelector("#account-rating");
+const accountContracts = document.querySelector("#account-contracts");
+const accountListings = document.querySelector("#account-listings");
+const accountOrg = document.querySelector("#account-org");
+const authPromptModal = document.querySelector("#auth-prompt-modal");
+const authPromptMessage = document.querySelector("#auth-prompt-message");
+const authPromptCancel = document.querySelector("#auth-prompt-cancel");
 
 window.handleShipImageError = (image) => {
   const fallback = image.dataset.fallbackSrc;
@@ -477,6 +504,18 @@ document.querySelectorAll("[data-route]").forEach((control) => {
     navigateToPanel(control.dataset.route);
   });
 });
+
+document.addEventListener("click", (event) => {
+  const protectedAction = event.target.closest("[data-auth-action]");
+  if (!protectedAction || authState.user) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation();
+  showAuthPrompt(protectedAction.dataset.authAction || "continue");
+}, true);
 
 document.querySelectorAll(".sub-tab").forEach((tab) => {
   tab.addEventListener("click", () => setOwnerView(tab.dataset.ownerView));
@@ -637,7 +676,8 @@ ownerForm.addEventListener("submit", (event) => {
   }
 
   const listing = {
-    owner: data.get("owner"),
+    ownerId: authState.user?.id || existingShip?.ownerId || "",
+    owner: data.get("owner") || authState.user?.displayName || "",
     ship: selectedVehicle?.name || data.get("ship"),
     role: selectedVehicle?.role || existingShip?.role || "General",
     rates,
@@ -675,6 +715,10 @@ ownerForm.addEventListener("submit", (event) => {
 });
 
 addFleetShipButton.addEventListener("click", () => {
+  if (!authState.user) {
+    return;
+  }
+
   resetOwnerForm();
   openOwnerConfigurator("add");
 });
@@ -719,10 +763,19 @@ document.addEventListener("keydown", (event) => {
 
   if (!availabilityModal.classList.contains("is-hidden")) {
     closeAvailabilityModal();
+  } else if (!authPromptModal.classList.contains("is-hidden")) {
+    closeAuthPrompt();
   } else if (!removeShipModal.classList.contains("is-hidden")) {
     closeRemoveConfirmation();
   } else if (!ownerConfiguratorModal.classList.contains("is-hidden")) {
     closeOwnerConfigurator();
+  }
+});
+
+authPromptCancel.addEventListener("click", closeAuthPrompt);
+authPromptModal.addEventListener("click", (event) => {
+  if (event.target === authPromptModal) {
+    closeAuthPrompt();
   }
 });
 
@@ -971,6 +1024,7 @@ function panelRoute(tabName) {
     materials: "/materials",
     owners: "/owners",
     calendar: "/calendar",
+    account: "/account",
   }[tabName] || "/";
 }
 
@@ -982,6 +1036,7 @@ function panelFromPath(pathname) {
     "/materials": "materials",
     "/owners": "owners",
     "/calendar": "calendar",
+    "/account": "account",
   }[pathname] || "home";
 }
 
@@ -1004,6 +1059,8 @@ function setActiveTab(tabName) {
     renderCrewMarketplace();
   } else if (tabName === "materials") {
     renderMaterialRequests();
+  } else if (tabName === "account") {
+    renderAccountPanel();
   }
 }
 
@@ -1019,6 +1076,106 @@ function setOwnerView(viewName) {
   if (viewName === "schedule") {
     renderOwnerSchedule();
   }
+}
+
+async function loadSession() {
+  authState.loading = true;
+  updateAuthUI();
+
+  try {
+    const response = await fetch("/api/auth/session", { cache: "no-store" });
+    const session = await response.json();
+    authState.user = session.authenticated ? session.user : null;
+  } catch (error) {
+    authState.user = null;
+  } finally {
+    authState.loading = false;
+    updateAuthUI();
+  }
+}
+
+function updateAuthUI() {
+  const user = authState.user;
+  authLogin.classList.toggle("is-hidden", Boolean(user));
+  authUser.classList.toggle("is-hidden", !user);
+  accountTab.classList.toggle("is-hidden", !user);
+
+  if (user) {
+    authDisplayName.textContent = user.displayName || user.username || "Account";
+    setAvatar(authAvatar, authAvatarPlaceholder, user.avatarUrl);
+  } else {
+    authDisplayName.textContent = "Account";
+    setAvatar(authAvatar, authAvatarPlaceholder, "");
+  }
+
+  renderAccountPanel();
+}
+
+function renderAccountPanel() {
+  const user = authState.user;
+  accountSignedOut.classList.toggle("is-hidden", Boolean(user));
+  accountDashboard.classList.toggle("is-hidden", !user);
+
+  if (!user) {
+    return;
+  }
+
+  accountDisplayName.textContent = user.displayName || user.username || "Discord user";
+  accountUsername.textContent = user.username ? `@${user.username}` : "Discord connected";
+  accountCreatedAt.textContent = user.createdAt ? formatDateTime(user.createdAt) : "Available after database setup";
+  accountRsiHandle.textContent = user.profile?.rsiHandle || "Not set yet";
+  accountPublicName.textContent = user.profile?.publicName || user.displayName || "Not set yet";
+  accountRating.textContent = Number(user.stats?.rating || 0).toFixed(1);
+  accountContracts.textContent = Number(user.stats?.completedContracts || 0).toLocaleString();
+  accountListings.textContent = Number(user.stats?.activeListings || marketplaceUserListingCount(user)).toLocaleString();
+  accountOrg.textContent = user.stats?.orgAffiliation || "None";
+  setAvatar(accountAvatar, accountAvatarPlaceholder, user.avatarUrl);
+}
+
+function setAvatar(image, placeholder, avatarUrl) {
+  if (avatarUrl) {
+    image.src = avatarUrl;
+    image.classList.remove("is-hidden");
+    placeholder.classList.add("is-hidden");
+    return;
+  }
+
+  image.removeAttribute("src");
+  image.classList.add("is-hidden");
+  placeholder.classList.remove("is-hidden");
+}
+
+function marketplaceUserListingCount(user) {
+  return ships.filter((ship) => ship.ownerId === user.id || ship.owner === user.displayName).length;
+}
+
+function showAuthPrompt(action) {
+  authPromptMessage.textContent = `Sign in with Discord to ${action}. You can still browse public listings without an account.`;
+  authPromptModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeAuthPrompt() {
+  authPromptModal.classList.add("is-hidden");
+  if (
+    ownerConfiguratorModal.classList.contains("is-hidden") &&
+    removeShipModal.classList.contains("is-hidden") &&
+    availabilityModal.classList.contains("is-hidden")
+  ) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function showAuthErrorFromUrl() {
+  const error = new URLSearchParams(window.location.search).get("auth_error");
+  if (!error) {
+    return;
+  }
+
+  authPromptMessage.textContent = `Discord sign-in could not finish: ${error}`;
+  authPromptModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+  window.history.replaceState({}, "", "/");
 }
 
 function renderCalendar() {
@@ -1241,7 +1398,7 @@ function shipMarketplaceCard(ship) {
       <div class="capability-list">
         ${capabilities.map((capability) => `<span>${escapeHtml(capability)}</span>`).join("")}
       </div>
-      <button class="primary-button" type="button">Request Rental</button>
+      <button class="primary-button" type="button" data-auth-action="request a ship rental">Request Rental</button>
     </article>
   `;
 }
@@ -1263,7 +1420,7 @@ function crewMarketplaceCard(crew) {
         <li>${crew.completedJobs.toLocaleString()} completed contracts</li>
       </ul>
       <p class="market-summary">${escapeHtml(crew.summary)}</p>
-      <button class="primary-button" type="button">Request Crew</button>
+      <button class="primary-button" type="button" data-auth-action="request crew services">Request Crew</button>
     </article>
   `;
 }
@@ -1283,7 +1440,7 @@ function materialRequestCard(request) {
         <li>Posted by: ${escapeHtml(request.postedBy)}</li>
       </ul>
       <div class="card-actions">
-        <button class="secondary-button" type="button">Offer Fulfillment</button>
+        <button class="secondary-button" type="button" data-auth-action="offer material fulfillment">Offer Fulfillment</button>
       </div>
     </article>
   `;
@@ -1672,6 +1829,9 @@ function resetHangarRows() {
 function resetOwnerForm() {
   editingShipIndex = null;
   ownerForm.reset();
+  if (authState.user) {
+    ownerForm.elements.owner.value = authState.user.displayName || authState.user.username || "";
+  }
   rateBasePeriodSelect.value = "hour";
   rateBaseInput.value = "";
   Object.values(rateOfferInputs).forEach((input) => {
@@ -2920,6 +3080,19 @@ function formatShortDate(value) {
   });
 }
 
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function parseDateList(value) {
   return String(value || "")
     .split(",")
@@ -2949,5 +3122,7 @@ renderOwnerSchedule();
 renderCalendarFilterOptions();
 updateFilterSummary();
 setActiveTab(panelFromPath(window.location.pathname));
+showAuthErrorFromUrl();
 loadVehicles();
 loadHangarServices();
+loadSession();
