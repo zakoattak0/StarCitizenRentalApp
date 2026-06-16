@@ -479,6 +479,15 @@ const accountOrg = document.querySelector("#account-org");
 const authPromptModal = document.querySelector("#auth-prompt-modal");
 const authPromptMessage = document.querySelector("#auth-prompt-message");
 const authPromptCancel = document.querySelector("#auth-prompt-cancel");
+const createCrewPostingButton = document.querySelector("#create-crew-posting-button");
+const crewPostingModal = document.querySelector("#crew-posting-modal");
+const crewPostingForm = document.querySelector("#crew-posting-form");
+const crewPostingClose = document.querySelector("#crew-posting-close");
+const crewPostingCancel = document.querySelector("#crew-posting-cancel");
+const crewPostingPayType = document.querySelector("#crew-posting-pay-type");
+const crewPostingPayValue = document.querySelector("#crew-posting-pay-value");
+const crewPostingPayValueLabel = document.querySelector("#crew-posting-pay-value-label");
+const crewPostingName = document.querySelector("#crew-posting-name");
 
 window.handleShipImageError = (image) => {
   const fallback = image.dataset.fallbackSrc;
@@ -940,6 +949,44 @@ availabilityForm.addEventListener("submit", (event) => {
 availabilityShipSelect.addEventListener("change", () => {
   availabilityForm.querySelector("button[type='submit']").disabled = availabilityShipSelect.value === "all";
   renderOwnerSchedule();
+});
+
+createCrewPostingButton.addEventListener("click", openCrewPostingModal);
+crewPostingClose.addEventListener("click", closeCrewPostingModal);
+crewPostingCancel.addEventListener("click", closeCrewPostingModal);
+crewPostingModal.addEventListener("click", (event) => {
+  if (event.target === crewPostingModal) {
+    closeCrewPostingModal();
+  }
+});
+
+crewPostingPayType.addEventListener("change", updateCrewPostingPayUI);
+crewPostingPayValue.addEventListener("input", () => {
+  if (crewPostingPayType.value === "flat") {
+    formatCreditInput(crewPostingPayValue);
+  }
+});
+
+crewPostingForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(crewPostingForm);
+  const payType = data.get("payType");
+  const rawValue = data.get("payValue");
+
+  const listing = {
+    name: data.get("name"),
+    role: data.get("role"),
+    price: payType === "flat" ? parseCredits(rawValue) : rawValue,
+    payType,
+    rating: 5.0,
+    completedJobs: 0,
+    availabilityStatus: "Available now",
+    summary: data.get("summary"),
+  };
+
+  demoCrewListings.unshift(listing);
+  closeCrewPostingModal();
+  renderCrewMarketplace();
 });
 
 async function loadVehicles() {
@@ -1404,6 +1451,8 @@ function shipMarketplaceCard(ship) {
 }
 
 function crewMarketplaceCard(crew) {
+  const payLabel = crew.payType === "cut" ? `${crew.price}% Cut` : `${formatCredits(crew.price)} UEC / hour`;
+  
   return `
     <article class="market-card">
       <div class="card-top">
@@ -1411,8 +1460,7 @@ function crewMarketplaceCard(crew) {
         <span class="tag">${escapeHtml(crew.availabilityStatus)}</span>
       </div>
       <div class="price-line">
-        <strong>${formatCredits(crew.price)} UEC</strong>
-        <span>/ hour</span>
+        <strong>${payLabel}</strong>
       </div>
       <ul class="meta-list">
         <li>Role: ${escapeHtml(crew.role)}</li>
@@ -1895,6 +1943,47 @@ function closeAvailabilityModal() {
   availabilityModal.classList.add("is-hidden");
   if (ownerConfiguratorModal.classList.contains("is-hidden") && removeShipModal.classList.contains("is-hidden")) {
     document.body.classList.remove("modal-open");
+  }
+}
+
+function openCrewPostingModal() {
+  if (!authState.user) {
+    authPromptMessage.textContent = "Sign in with Discord to create a crew posting.";
+    authPromptModal.classList.remove("is-hidden");
+    document.body.classList.add("modal-open");
+    return;
+  }
+
+  crewPostingForm.reset();
+  crewPostingName.value = authState.user.displayName || authState.user.username || "";
+  updateCrewPostingPayUI();
+  crewPostingModal.classList.remove("is-hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeCrewPostingModal() {
+  crewPostingModal.classList.add("is-hidden");
+  if (
+    ownerConfiguratorModal.classList.contains("is-hidden") &&
+    removeShipModal.classList.contains("is-hidden") &&
+    availabilityModal.classList.contains("is-hidden")
+  ) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+function updateCrewPostingPayUI() {
+  const isFlat = crewPostingPayType.value === "flat";
+  const labelText = crewPostingPayValueLabel.querySelector(".label-text");
+  if (labelText) {
+    labelText.textContent = isFlat ? "Rate (UEC / hour)" : "Pay Cut (%)";
+  }
+  crewPostingPayValue.placeholder = isFlat ? "5,000" : "15";
+  
+  if (isFlat) {
+    formatCreditInput(crewPostingPayValue);
+  } else {
+    crewPostingPayValue.value = crewPostingPayValue.value.replace(/[^0-9]/g, "");
   }
 }
 

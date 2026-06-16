@@ -142,6 +142,7 @@
               <p class="eyebrow">Crew marketplace</p>
               <h1>Hire player services</h1>
             </div>
+            <button class="primary-button" id="create-crew-posting-button" type="button">Create Posting</button>
           </div>
 
           <details class="filter-drawer" open>
@@ -632,6 +633,53 @@
             <button class="secondary-button" id="auth-prompt-cancel" type="button">Not now</button>
             <a class="primary-button" href="/api/auth/discord">Sign in with Discord</a>
           </div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop is-hidden" id="crew-posting-modal" role="dialog" aria-modal="true" aria-labelledby="crew-posting-title">
+        <div class="confirm-modal">
+          <div class="modal-heading">
+            <h2 id="crew-posting-title">Create Crew Posting</h2>
+            <button class="icon-button" id="crew-posting-close" type="button" aria-label="Close crew posting modal">&times;</button>
+          </div>
+          <form class="data-form" id="crew-posting-form">
+            <label>
+              Handle
+              <input name="name" id="crew-posting-name" readonly placeholder="Sign in to post" />
+            </label>
+            <label>
+              Desired Role
+              <select name="role" required>
+                <option value="Pilot">Pilot</option>
+                <option value="Gunner">Gunner</option>
+                <option value="Engineer">Engineer</option>
+                <option value="Box Jockey">Box Jockey</option>
+                <option value="FPS Ground Team">FPS Ground Team</option>
+                <option value="Medic">Medic</option>
+              </select>
+            </label>
+            <div class="form-grid">
+              <label>
+                Pay Type
+                <select name="payType" id="crew-posting-pay-type">
+                  <option value="flat">Flat Rate</option>
+                  <option value="cut">Percentage Cut</option>
+                </select>
+              </label>
+              <label id="crew-posting-pay-value-label">
+                <span class="label-text">Rate (UEC / hour)</span>
+                <input name="payValue" id="crew-posting-pay-value" type="text" inputmode="numeric" required placeholder="5,000" />
+              </label>
+            </div>
+            <label>
+              Summary
+              <textarea name="summary" rows="3" required placeholder="Briefly describe your services..."></textarea>
+            </label>
+            <div class="modal-actions">
+              <button class="secondary-button" id="crew-posting-cancel" type="button">Cancel</button>
+              <button class="primary-button" type="submit">Post Services</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
