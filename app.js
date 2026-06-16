@@ -1,5 +1,8 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
 const HANGAR_SERVICES_URL = "/api/hangar-services";
+const SHIP_LISTINGS_URL = "/api/ship-listings";
+const CREW_LISTINGS_URL = "/api/crew-listings";
+const MATERIAL_REQUESTS_URL = "/api/material-requests";
 
 const hangarServiceOptions = [
   { key: "size-1-ammo", label: "Size 1 Ammo", uexNames: ["Ship Ammunition - Size 1"] },
@@ -208,154 +211,15 @@ const ships = [];
 
 const bookings = [];
 
-const demoShipListings = [
-  {
-    owner: "Northstar Logistics",
-    ship: "C2 Hercules Starlifter",
-    role: "Cargo",
-    manufacturer: "Crusader Industries",
-    rates: { hour: 18000, day: 340000, week: 1800000 },
-    offeredRates: ["hour", "day", "week"],
-    rating: 4.8,
-    completedJobs: 126,
-    availabilityStatus: "Available now",
-    cargoScu: 696,
-    medical: false,
-    hangarServices: [],
-    pilotIncluded: true,
-    capabilities: ["696 SCU", "Pilot optional", "Heavy cargo"],
-    dates: [dateToKey(new Date())],
-  },
-  {
-    owner: "Astra Medrunner",
-    ship: "Apollo Medivac",
-    role: "Medical",
-    manufacturer: "Roberts Space Industries",
-    rates: { hour: 14000, day: 250000, week: 1200000 },
-    offeredRates: ["hour", "day"],
-    rating: 4.9,
-    completedJobs: 88,
-    availabilityStatus: "Available today",
-    cargoScu: 0,
-    medical: true,
-    hangarServices: [],
-    pilotIncluded: true,
-    capabilities: ["Medical beds", "Pilot included", "Rescue ready"],
-    dates: [dateToKey(new Date())],
-  },
-  {
-    owner: "Redline Reclaimers",
-    ship: "Reclaimer",
-    role: "Salvage",
-    manufacturer: "Aegis Dynamics",
-    rates: { hour: 32000, day: 680000, week: 3900000 },
-    offeredRates: ["hour", "day", "week"],
-    rating: 4.6,
-    completedJobs: 64,
-    availabilityStatus: "Available tomorrow",
-    cargoScu: 420,
-    medical: false,
-    hangarServices: [],
-    pilotIncluded: false,
-    capabilities: ["Salvage heads", "420 SCU", "Crew slots open"],
-    dates: [dateToKey(new Date(Date.now() + 86400000))],
-  },
-  {
-    owner: "Jump Point Concierge",
-    ship: "890 Jump",
-    role: "Touring",
-    manufacturer: "Origin Jumpworks",
-    rates: { hour: 55000, day: 980000, week: 5200000 },
-    offeredRates: ["hour", "day", "week"],
-    rating: 5,
-    completedJobs: 41,
-    availabilityStatus: "Limited",
-    cargoScu: 484,
-    medical: true,
-    hangarServices: [{ label: "Hydrogen Fuel" }],
-    pilotIncluded: true,
-    capabilities: ["Hangar services", "Med bay", "VIP transport"],
-    dates: [dateToKey(new Date())],
-  },
-];
+const crewListings = [];
 
-const demoCrewListings = [
-  {
-    name: "Vega Actual",
-    role: "Pilot",
-    price: 9000,
-    rating: 4.9,
-    completedJobs: 212,
-    availabilityStatus: "Available now",
-    summary: "Combat drops, cargo routes, and high-risk station approaches.",
-  },
-  {
-    name: "Kastor Wrench",
-    role: "Engineer",
-    price: 7500,
-    rating: 4.7,
-    completedJobs: 97,
-    availabilityStatus: "Available today",
-    summary: "Keeps multicrew ships alive through component damage and long runs.",
-  },
-  {
-    name: "Blue Nine",
-    role: "FPS Ground Team",
-    price: 12000,
-    rating: 4.8,
-    completedJobs: 144,
-    availabilityStatus: "Scheduled",
-    summary: "Bunker clears, escort work, and site security for salvage crews.",
-  },
-  {
-    name: "Mara Quill",
-    role: "Medic",
-    price: 6500,
-    rating: 4.6,
-    completedJobs: 58,
-    availabilityStatus: "Available now",
-    summary: "Field rescue, triage support, and medical ship operations.",
-  },
-  {
-    name: "Deckhand Juno",
-    role: "Box Jockey",
-    price: 3500,
-    rating: 4.4,
-    completedJobs: 73,
-    availabilityStatus: "Available today",
-    summary: "Cargo loading, warehouse sorting, and hangar transfer support.",
-  },
-];
+const materialRequests = [];
 
-const demoMaterialRequests = [
-  {
-    material: "Recycled Material Composite",
-    quantity: "120 SCU",
-    quality: "Standard or better",
-    price: "1,850 UEC / SCU",
-    location: "Seraphim Station",
-    neededBy: "Jun 18, 2026",
-    postedBy: "Redline Reclaimers",
-  },
-  {
-    material: "Ship Ammunition Size 3",
-    quantity: "40 SCU",
-    quality: "Any",
-    price: "Market + 12%",
-    location: "Area18",
-    neededBy: "Jun 17, 2026",
-    postedBy: "Vega Actual",
-  },
-  {
-    material: "Quantum Fuel",
-    quantity: "60 SCU",
-    quality: "Refined",
-    price: "Open bid",
-    location: "Orison",
-    neededBy: "Jun 20, 2026",
-    postedBy: "Jump Point Concierge",
-  },
-];
+const dataStatus = {
+  shipListings: { loading: false, saving: false, error: "" },
+  crewListings: { loading: false, saving: false, error: "" },
+  materialRequests: { loading: false, saving: false, error: "" },
+};
 
 const state = {
   activeDate: new Date(2026, 5, 1),
@@ -700,7 +564,7 @@ ownerForm.addEventListener("input", (event) => {
   }
 });
 
-ownerForm.addEventListener("submit", (event) => {
+ownerForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(ownerForm);
   const selectedVehicle = findVehicle(data.get("ship"));
@@ -716,6 +580,7 @@ ownerForm.addEventListener("submit", (event) => {
   }
 
   const listing = {
+    id: existingShip?.id || "",
     ownerId: authState.user?.id || existingShip?.ownerId || "",
     owner: data.get("owner") || authState.user?.displayName || "",
     ship: selectedVehicle?.name || data.get("ship"),
@@ -739,19 +604,30 @@ ownerForm.addEventListener("submit", (event) => {
     vehicle: selectedVehicle,
   };
 
-  if (editingShipIndex === null) {
-    ships.unshift(listing);
-  } else {
-    ships[editingShipIndex] = listing;
-  }
+  setListingSaving("shipListings", true);
+  clearFormError();
 
-  resetOwnerForm();
-  closeOwnerConfigurator();
-  renderFleet();
-  renderCalendar();
-  renderShipMarketplace();
-  renderOwnerSchedule();
-  updateFilterSummary();
+  try {
+    const savedListing = await saveShipListing(listing);
+    if (editingShipIndex === null) {
+      ships.unshift(savedListing);
+    } else {
+      ships[editingShipIndex] = savedListing;
+    }
+
+    resetOwnerForm();
+    closeOwnerConfigurator();
+    renderFleet();
+    renderCalendar();
+    renderShipMarketplace();
+    renderOwnerSchedule();
+    renderCalendarFilterOptions();
+    updateFilterSummary();
+  } catch (error) {
+    showFormError(error instanceof Error ? error.message : "Ship listing could not be saved");
+  } finally {
+    setListingSaving("shipListings", false);
+  }
 });
 
 addFleetShipButton.addEventListener("click", () => {
@@ -779,21 +655,35 @@ removeShipModal.addEventListener("click", (event) => {
   }
 });
 
-removeShipConfirm.addEventListener("click", () => {
+removeShipConfirm.addEventListener("click", async () => {
   if (pendingRemoveShipIndex === null || !ships[pendingRemoveShipIndex]) {
     closeRemoveConfirmation();
     return;
   }
 
-  ships.splice(pendingRemoveShipIndex, 1);
-  closeRemoveConfirmation();
-  resetOwnerForm();
-  renderFleet();
-  renderCalendar();
-  renderShipMarketplace();
-  renderOwnerSchedule();
-  renderCalendarFilterOptions();
-  updateFilterSummary();
+  const removeIndex = pendingRemoveShipIndex;
+  const listing = ships[removeIndex];
+  removeShipConfirm.disabled = true;
+  removeShipConfirm.textContent = "Removing...";
+
+  try {
+    await deleteShipListing(listing);
+    ships.splice(removeIndex, 1);
+    closeRemoveConfirmation();
+    resetOwnerForm();
+    renderFleet();
+    renderCalendar();
+    renderShipMarketplace();
+    renderOwnerSchedule();
+    renderCalendarFilterOptions();
+    updateFilterSummary();
+  } catch (error) {
+    dataStatus.shipListings.error = error instanceof Error ? error.message : "Ship listing could not be removed";
+    renderFleet();
+  } finally {
+    removeShipConfirm.disabled = false;
+    removeShipConfirm.textContent = "Remove ship";
+  }
 });
 
 document.addEventListener("keydown", (event) => {
@@ -998,13 +888,14 @@ crewPostingPayValue.addEventListener("input", () => {
   }
 });
 
-crewPostingForm.addEventListener("submit", (event) => {
+crewPostingForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(crewPostingForm);
   const payType = data.get("payType");
   const rawValue = data.get("payValue");
 
   const listing = {
+    ownerId: authState.user?.id || "",
     name: data.get("name"),
     role: data.get("role"),
     price: parseCredits(rawValue),
@@ -1015,9 +906,19 @@ crewPostingForm.addEventListener("submit", (event) => {
     summary: data.get("summary"),
   };
 
-  demoCrewListings.unshift(listing);
-  closeCrewPostingModal();
-  renderCrewMarketplace();
+  setListingSaving("crewListings", true);
+
+  try {
+    const savedListing = await saveCrewListing(listing);
+    crewListings.unshift(savedListing);
+    closeCrewPostingModal();
+    renderCrewMarketplace();
+  } catch (error) {
+    dataStatus.crewListings.error = error instanceof Error ? error.message : "Crew listing could not be saved";
+    renderCrewMarketplace();
+  } finally {
+    setListingSaving("crewListings", false);
+  }
 });
 
 postMaterialRequestButton.addEventListener("click", openMaterialRequestModal);
@@ -1034,7 +935,7 @@ addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
 materialPaymentType.addEventListener("change", updateMaterialPaymentUI);
 materialPaymentValue.addEventListener("input", () => formatCreditInput(materialPaymentValue));
 
-materialRequestForm.addEventListener("submit", (event) => {
+materialRequestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(materialRequestForm);
   const payType = formData.get("paymentType");
@@ -1052,6 +953,7 @@ materialRequestForm.addEventListener("submit", (event) => {
   }
 
   const request = {
+    requesterId: authState.user?.id || "",
     postedBy: formData.get("postedBy"),
     location: formData.get("location"),
     neededBy: formData.get("neededBy"),
@@ -1063,9 +965,19 @@ materialRequestForm.addEventListener("submit", (event) => {
     quality: lineItems[0].quality,
   };
 
-  demoMaterialRequests.unshift(request);
-  closeMaterialRequestModal();
-  renderMaterialRequests();
+  setListingSaving("materialRequests", true);
+
+  try {
+    const savedRequest = await saveMaterialRequest(request);
+    materialRequests.unshift(savedRequest);
+    closeMaterialRequestModal();
+    renderMaterialRequests();
+  } catch (error) {
+    dataStatus.materialRequests.error = error instanceof Error ? error.message : "Material request could not be saved";
+    renderMaterialRequests();
+  } finally {
+    setListingSaving("materialRequests", false);
+  }
 });
 
 async function loadVehicles() {
@@ -1258,6 +1170,137 @@ function renderAccountPanel() {
   setAvatar(accountAvatar, accountAvatarPlaceholder, user.avatarUrl);
 }
 
+function replaceCollection(target, source) {
+  target.splice(0, target.length, ...(Array.isArray(source) ? source : []));
+}
+
+function setListingSaving(statusKey, isSaving) {
+  dataStatus[statusKey].saving = isSaving;
+
+  if (statusKey === "shipListings") {
+    ownerSubmitButton.disabled = isSaving;
+    ownerSubmitButton.textContent = isSaving
+      ? "Saving..."
+      : editingShipIndex === null
+        ? "Add ship"
+        : "Update ship";
+  }
+}
+
+function clearFormError() {
+  rateError.textContent = "Enter a base price and offer at least one rate.";
+  rateError.classList.add("is-hidden");
+}
+
+function showFormError(message) {
+  rateError.textContent = message;
+  rateError.classList.remove("is-hidden");
+}
+
+async function readJson(response) {
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed with ${response.status}`);
+  }
+  return payload;
+}
+
+async function loadShipListings() {
+  dataStatus.shipListings.loading = true;
+  dataStatus.shipListings.error = "";
+  renderFleet();
+  renderShipMarketplace();
+
+  try {
+    const payload = await fetch(SHIP_LISTINGS_URL, { cache: "no-store" }).then(readJson);
+    replaceCollection(ships, payload.listings);
+    enrichSeedShips();
+  } catch (error) {
+    dataStatus.shipListings.error = error instanceof Error ? error.message : "Unable to load ship listings";
+  } finally {
+    dataStatus.shipListings.loading = false;
+    renderFleet();
+    renderCalendar();
+    renderShipMarketplace();
+    renderOwnerSchedule();
+    renderCalendarFilterOptions();
+    updateFilterSummary();
+    renderAccountPanel();
+  }
+}
+
+async function loadCrewListings() {
+  dataStatus.crewListings.loading = true;
+  dataStatus.crewListings.error = "";
+  renderCrewMarketplace();
+
+  try {
+    const payload = await fetch(CREW_LISTINGS_URL, { cache: "no-store" }).then(readJson);
+    replaceCollection(crewListings, payload.listings);
+  } catch (error) {
+    dataStatus.crewListings.error = error instanceof Error ? error.message : "Unable to load crew listings";
+  } finally {
+    dataStatus.crewListings.loading = false;
+    renderCrewMarketplace();
+  }
+}
+
+async function loadMaterialRequests() {
+  dataStatus.materialRequests.loading = true;
+  dataStatus.materialRequests.error = "";
+  renderMaterialRequests();
+
+  try {
+    const payload = await fetch(MATERIAL_REQUESTS_URL, { cache: "no-store" }).then(readJson);
+    replaceCollection(materialRequests, payload.requests);
+  } catch (error) {
+    dataStatus.materialRequests.error = error instanceof Error ? error.message : "Unable to load material requests";
+  } finally {
+    dataStatus.materialRequests.loading = false;
+    renderMaterialRequests();
+  }
+}
+
+async function saveShipListing(listing) {
+  const payload = await fetch(SHIP_LISTINGS_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ listing }),
+  }).then(readJson);
+
+  return payload.listing;
+}
+
+async function deleteShipListing(listing) {
+  if (!listing?.id) {
+    throw new Error("This listing was not saved to Supabase yet. Reload the page and try again.");
+  }
+
+  await fetch(`${SHIP_LISTINGS_URL}?id=${encodeURIComponent(listing.id)}`, {
+    method: "DELETE",
+  }).then(readJson);
+}
+
+async function saveCrewListing(listing) {
+  const payload = await fetch(CREW_LISTINGS_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ listing }),
+  }).then(readJson);
+
+  return payload.listing;
+}
+
+async function saveMaterialRequest(request) {
+  const payload = await fetch(MATERIAL_REQUESTS_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ request }),
+  }).then(readJson);
+
+  return payload.request;
+}
+
 function setAvatar(image, placeholder, avatarUrl) {
   if (avatarUrl) {
     image.src = avatarUrl;
@@ -1401,6 +1444,16 @@ function availabilityPill(title, subtitle, status) {
 }
 
 function renderFleet() {
+  if (dataStatus.shipListings.loading && !ships.length) {
+    fleetList.innerHTML = `<div class="empty-state">Loading shared fleet listings...</div>`;
+    return;
+  }
+
+  if (dataStatus.shipListings.error && !ships.length) {
+    fleetList.innerHTML = `<div class="empty-state error-state">Supabase listings unavailable: ${escapeHtml(dataStatus.shipListings.error)}</div>`;
+    return;
+  }
+
   fleetList.innerHTML = ships.length
     ? ships
         .map(
@@ -1428,7 +1481,7 @@ function renderFleet() {
           `,
         )
         .join("")
-    : `<div class="empty-state">No owner listings yet. Add a ship to start building the fleet.</div>`;
+    : `<div class="empty-state">No shared fleet listings yet. Add a ship to start building the exchange.</div>`;
 }
 
 function renderShipMarketplace() {
@@ -1459,6 +1512,16 @@ function renderShipMarketplace() {
     })
     .sort((first, second) => availabilityRank(first) - availabilityRank(second) || second.rating - first.rating);
 
+  if (dataStatus.shipListings.loading && !ships.length) {
+    shipMarketResults.innerHTML = `<div class="empty-state">Loading shared ship providers...</div>`;
+    return;
+  }
+
+  if (dataStatus.shipListings.error && !ships.length) {
+    shipMarketResults.innerHTML = `<div class="empty-state error-state">Supabase ship listings unavailable: ${escapeHtml(dataStatus.shipListings.error)}</div>`;
+    return;
+  }
+
   shipMarketResults.innerHTML = listings.length
     ? listings.map(shipMarketplaceCard).join("")
     : `<div class="empty-state">No available ship providers match those filters yet.</div>`;
@@ -1475,7 +1538,17 @@ function renderCrewMarketplace() {
   const sort = String(form.get("sort") || "newest");
   const userHandle = (authState.user?.displayName || authState.user?.username || "").toLowerCase();
 
-  const listings = demoCrewListings
+  if (dataStatus.crewListings.loading && !crewListings.length) {
+    crewMarketResults.innerHTML = `<div class="empty-state">Loading shared crew providers...</div>`;
+    return;
+  }
+
+  if (dataStatus.crewListings.error && !crewListings.length) {
+    crewMarketResults.innerHTML = `<div class="empty-state error-state">Supabase crew listings unavailable: ${escapeHtml(dataStatus.crewListings.error)}</div>`;
+    return;
+  }
+
+  const listings = crewListings
     .filter((crew) => (
       (!query || crew.name.toLowerCase().includes(query)) &&
       (!role || crew.role === role) &&
@@ -1497,7 +1570,19 @@ function renderCrewMarketplace() {
 }
 
 function renderMaterialRequests() {
-  materialRequestResults.innerHTML = demoMaterialRequests.map(materialRequestCard).join("");
+  if (dataStatus.materialRequests.loading && !materialRequests.length) {
+    materialRequestResults.innerHTML = `<div class="empty-state">Loading shared material requests...</div>`;
+    return;
+  }
+
+  if (dataStatus.materialRequests.error && !materialRequests.length) {
+    materialRequestResults.innerHTML = `<div class="empty-state error-state">Supabase material requests unavailable: ${escapeHtml(dataStatus.materialRequests.error)}</div>`;
+    return;
+  }
+
+  materialRequestResults.innerHTML = materialRequests.length
+    ? materialRequests.map(materialRequestCard).join("")
+    : `<div class="empty-state">No material requests posted yet.</div>`;
 }
 
 function marketplaceShipListings() {
@@ -1511,7 +1596,7 @@ function marketplaceShipListings() {
     capabilities: marketplaceShipCapabilities(ship),
   }));
 
-  return ownerListings.length ? ownerListings : demoShipListings;
+  return ownerListings;
 }
 
 function shipMarketplaceCard(ship) {
@@ -1617,7 +1702,7 @@ function hasMedicalCapability(ship) {
 }
 
 function isShipAvailable(ship) {
-  return (ship.dates?.length || demoShipListings.includes(ship)) && !normalizeFilterValue(ship.availabilityStatus).includes("unavailable");
+  return Boolean(ship.dates?.length) && !normalizeFilterValue(ship.availabilityStatus).includes("unavailable");
 }
 
 function availabilityRank(ship) {
@@ -2161,23 +2246,39 @@ function updateMaterialPaymentUI() {
   formatCreditInput(materialPaymentValue);
 }
 
-function saveAvailabilityChanges() {
+async function saveAvailabilityChanges() {
   const ship = ships[availabilityShipIndex];
   if (!ship) {
     closeAvailabilityModal();
     return;
   }
 
-  ship.dates = uniqueSorted(
+  const dates = uniqueSorted(
     Array.from(availabilityDraft.entries())
       .filter(([, status]) => status === "available")
       .map(([date]) => date),
   );
-  closeAvailabilityModal();
-  renderFleet();
-  renderCalendar();
-  renderShipMarketplace();
-  renderOwnerSchedule();
+
+  availabilitySave.disabled = true;
+  availabilitySave.textContent = "Saving...";
+
+  try {
+    const savedListing = await saveShipListing({ ...ship, dates });
+    ships[availabilityShipIndex] = savedListing;
+    closeAvailabilityModal();
+    renderFleet();
+    renderCalendar();
+    renderShipMarketplace();
+    renderOwnerSchedule();
+    renderCalendarFilterOptions();
+    updateFilterSummary();
+  } catch (error) {
+    dataStatus.shipListings.error = error instanceof Error ? error.message : "Availability could not be saved";
+    renderFleet();
+  } finally {
+    availabilitySave.disabled = false;
+    availabilitySave.textContent = "Save availability";
+  }
 }
 
 function renderAvailabilityPicker() {
@@ -3005,7 +3106,6 @@ function renderShipOptions() {
 function renderShipRoleOptions(selectedRole = shipRoleFilter.value) {
   const roles = uniqueSorted([
     ...vehicleCatalog.map((vehicle) => vehicle.role),
-    ...demoShipListings.map((ship) => ship.role),
     ...ships.map((ship) => ship.role),
   ]);
 
@@ -3040,7 +3140,6 @@ function findVehicle(value, manufacturer = ownerManufacturerSelect.value) {
 function renderManufacturerOptions() {
   const manufacturers = uniqueSorted([
     ...vehicleCatalog.map((vehicle) => vehicle.company),
-    ...demoShipListings.map((ship) => ship.manufacturer),
     ...ships.map((ship) => ship.manufacturer),
   ]);
   const options = [`<option value="">All manufacturers</option>`]
@@ -3389,3 +3488,6 @@ showAuthErrorFromUrl();
 loadVehicles();
 loadHangarServices();
 loadSession();
+loadShipListings();
+loadCrewListings();
+loadMaterialRequests();
