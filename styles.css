@@ -207,6 +207,7 @@ main {
 .hero {
   display: grid;
   gap: 14px;
+  width: min(100%, 980px);
   max-width: 980px;
   min-height: 390px;
   align-content: center;
@@ -214,10 +215,18 @@ main {
   padding: 28px 0 34px;
 }
 
+.hero-brand {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .hero-brand img {
   display: block;
   width: min(420px, 100%);
   height: auto;
+  margin-inline: auto;
+  object-position: center;
 }
 
 .hero h1 {
