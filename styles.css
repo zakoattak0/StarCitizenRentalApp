@@ -816,8 +816,16 @@ h1 {
   border-color: var(--cyan);
 }
 
+.availability-date:disabled {
+  cursor: not-allowed;
+}
+
 .availability-date.is-muted {
   opacity: 0.38;
+}
+
+.availability-date.is-past {
+  opacity: 0.42;
 }
 
 .availability-date.is-today {
@@ -827,6 +835,16 @@ h1 {
 .availability-date.available {
   border-color: rgba(57, 217, 138, 0.75);
   background: rgba(57, 217, 138, 0.12);
+}
+
+.availability-date.rented {
+  border-color: rgba(255, 91, 112, 0.72);
+  background: rgba(255, 91, 112, 0.12);
+}
+
+.availability-date.unavailable {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #0b0b0b;
 }
 
 .availability-date strong {
@@ -840,6 +858,10 @@ h1 {
 
 .availability-date.available small {
   color: var(--green);
+}
+
+.availability-date.rented small {
+  color: var(--red);
 }
 
 .availability-legend {
@@ -859,6 +881,16 @@ h1 {
 .availability-legend i.available {
   border-color: var(--green);
   background: var(--green);
+}
+
+.availability-legend i.rented {
+  border-color: var(--red);
+  background: var(--red);
+}
+
+.availability-legend i.unavailable {
+  border-color: var(--muted);
+  background: #101010;
 }
 
 .availability-actions {

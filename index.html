@@ -517,17 +517,17 @@
                 <div class="rate-offers">
                   <div class="rate-offer-row" data-rate-period="hour">
                     <label class="check rate-enabled"><input type="checkbox" name="offerRateHour" checked />Offer hourly</label>
-                    <label>Final hourly rate<input name="rateHour" type="text" readonly /></label>
+                    <label>Final hourly rate<input name="rateHour" type="text" inputmode="numeric" /></label>
                     <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">Base</span><input name="adjustmentHour" type="range" min="-100" max="100" step="1" value="0" /></label>
                   </div>
                   <div class="rate-offer-row" data-rate-period="day">
                     <label class="check rate-enabled"><input type="checkbox" name="offerRateDay" checked />Offer daily</label>
-                    <label>Final daily rate<input name="rateDay" type="text" readonly /></label>
+                    <label>Final daily rate<input name="rateDay" type="text" inputmode="numeric" /></label>
                     <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">0%</span><input name="adjustmentDay" type="range" min="-100" max="100" step="1" value="0" /></label>
                   </div>
                   <div class="rate-offer-row" data-rate-period="week">
                     <label class="check rate-enabled"><input type="checkbox" name="offerRateWeek" checked />Offer weekly</label>
-                    <label>Final weekly rate<input name="rateWeek" type="text" readonly /></label>
+                    <label>Final weekly rate<input name="rateWeek" type="text" inputmode="numeric" /></label>
                     <label class="rate-adjustment">Adjustment <span class="rate-adjustment-value">0%</span><input name="adjustmentWeek" type="range" min="-100" max="100" step="1" value="0" /></label>
                   </div>
                 </div>
@@ -693,11 +693,12 @@
                 </div>
                 <strong id="availability-period-label"></strong>
               </div>
-              <p class="availability-instruction">Select each date the ship is available. Select it again to clear it.</p>
+              <p class="availability-instruction">Select future dates the ship is available. Contracted dates will show as rented later; all other dates are unavailable.</p>
               <div class="availability-picker" id="availability-picker" aria-label="Choose ship availability dates"></div>
               <div class="availability-legend" aria-label="Availability legend">
                 <span><i class="available"></i> Available</span>
-                <span><i class="unchanged"></i> Not set</span>
+                <span><i class="rented"></i> Rented</span>
+                <span><i class="unavailable"></i> Unavailable</span>
               </div>
               <div class="modal-actions availability-actions">
                 <div class="availability-bulk-actions">

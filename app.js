@@ -463,12 +463,6 @@ calendarFilterClose.addEventListener("click", () => {
   calendarFilterModal.classList.add("is-hidden");
 });
 
-calendarFilterModal.addEventListener("click", (event) => {
-  if (event.target === calendarFilterModal) {
-    calendarFilterModal.classList.add("is-hidden");
-  }
-});
-
 calendarFilterClear.addEventListener("click", () => {
   state.calendarFilters = {
     owner: "",
@@ -523,6 +517,9 @@ Object.values(rateOfferInputs).forEach((input) => {
 });
 Object.values(rateAdjustmentInputs).forEach((input) => {
   input.addEventListener("input", updateRateCalculator);
+});
+Object.entries(rateInputs).forEach(([period, input]) => {
+  input.addEventListener("input", () => syncManualRateInput(period));
 });
 
 pilotIncludedInput.addEventListener("change", () => {
@@ -654,19 +651,7 @@ addFleetShipButton.addEventListener("click", () => {
 
 ownerConfiguratorClose.addEventListener("click", closeOwnerConfigurator);
 
-ownerConfiguratorModal.addEventListener("click", (event) => {
-  if (event.target === ownerConfiguratorModal) {
-    closeOwnerConfigurator();
-  }
-});
-
 removeShipCancel.addEventListener("click", closeRemoveConfirmation);
-
-removeShipModal.addEventListener("click", (event) => {
-  if (event.target === removeShipModal) {
-    closeRemoveConfirmation();
-  }
-});
 
 removeShipConfirm.addEventListener("click", async () => {
   if (pendingRemoveShipIndex === null || !ships[pendingRemoveShipIndex]) {
@@ -717,11 +702,6 @@ document.addEventListener("keydown", (event) => {
 });
 
 authPromptCancel.addEventListener("click", closeAuthPrompt);
-authPromptModal.addEventListener("click", (event) => {
-  if (event.target === authPromptModal) {
-    closeAuthPrompt();
-  }
-});
 
 fleetList.addEventListener("click", (event) => {
   const actionButton = event.target.closest("[data-fleet-action]");
@@ -790,12 +770,6 @@ accountListingsList.addEventListener("click", async (event) => {
 availabilityModalClose.addEventListener("click", closeAvailabilityModal);
 availabilityCancel.addEventListener("click", closeAvailabilityModal);
 
-availabilityModal.addEventListener("click", (event) => {
-  if (event.target === availabilityModal) {
-    closeAvailabilityModal();
-  }
-});
-
 document.querySelectorAll("[data-availability-view]").forEach((button) => {
   button.addEventListener("click", () => {
     availabilityView = button.dataset.availabilityView;
@@ -823,10 +797,20 @@ availabilityPicker.addEventListener("click", (event) => {
   if (!dateButton) {
     return;
   }
+  if (dateButton.disabled) {
+    return;
+  }
 
   const dateKey = dateButton.dataset.availabilityDate;
-  const currentStatus = availabilityDraft.get(dateKey) || "unset";
-  availabilityDraft.set(dateKey, currentStatus === "available" ? "unset" : "available");
+  const currentStatus = availabilityDraft.get(dateKey) || "unavailable";
+  if (currentStatus === "rented") {
+    return;
+  }
+  if (currentStatus === "available") {
+    availabilityDraft.delete(dateKey);
+  } else {
+    availabilityDraft.set(dateKey, "available");
+  }
   renderAvailabilityPicker();
 });
 
@@ -933,11 +917,6 @@ createCrewPostingButton.addEventListener("click", openCrewPostingModal);
 accountCreateServiceButton.addEventListener("click", openCrewPostingModal);
 crewPostingClose.addEventListener("click", closeCrewPostingModal);
 crewPostingCancel.addEventListener("click", closeCrewPostingModal);
-crewPostingModal.addEventListener("click", (event) => {
-  if (event.target === crewPostingModal) {
-    closeCrewPostingModal();
-  }
-});
 
 crewPostingPayType.addEventListener("change", updateCrewPostingPayUI);
 crewPostingPayValue.addEventListener("input", () => {
@@ -984,11 +963,6 @@ crewPostingForm.addEventListener("submit", async (event) => {
 postMaterialRequestButton.addEventListener("click", openMaterialRequestModal);
 materialRequestClose.addEventListener("click", closeMaterialRequestModal);
 materialRequestCancel.addEventListener("click", closeMaterialRequestModal);
-materialRequestModal.addEventListener("click", (event) => {
-  if (event.target === materialRequestModal) {
-    closeMaterialRequestModal();
-  }
-});
 
 addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
 
@@ -2417,7 +2391,9 @@ function openAvailabilityModal(index) {
   availabilityView = "week";
   availabilityCursor = startOfDay(new Date());
   availabilityDraft = new Map();
-  (ship.dates || []).forEach((date) => availabilityDraft.set(date, "available"));
+  (ship.dates || [])
+    .filter((date) => !isPastAvailabilityKey(date))
+    .forEach((date) => availabilityDraft.set(date, "available"));
   availabilityModalTitle.textContent = `${ship.ship} availability`;
   availabilityModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
@@ -2574,7 +2550,8 @@ async function saveAvailabilityChanges() {
   const dates = uniqueSorted(
     Array.from(availabilityDraft.entries())
       .filter(([, status]) => status === "available")
-      .map(([date]) => date),
+      .map(([date]) => date)
+      .filter((date) => !isPastAvailabilityKey(date)),
   );
 
   availabilitySave.disabled = true;
@@ -2617,12 +2594,15 @@ function renderAvailabilityPicker() {
   const dateButtons = days
     .map((date) => {
       const dateKey = dateToKey(date);
-      const status = availabilityDraft.get(dateKey) || "unset";
-      const statusLabel = status === "available" ? "Available" : "Not set";
+      const isPast = isPastAvailabilityDate(date);
+      const status = isPast ? "unavailable" : getAvailabilityDateStatus(dateKey);
+      const statusLabel = availabilityStatusLabel(status);
       const mutedClass = availabilityView === "month" && date.getMonth() !== visibleMonth ? " is-muted" : "";
       const todayClass = dateKey === todayKey ? " is-today" : "";
+      const pastClass = isPast ? " is-past" : "";
+      const disabledAttribute = isPast || status === "rented" ? " disabled" : "";
       return `
-        <button class="availability-date ${status}${mutedClass}${todayClass}" type="button" data-availability-date="${dateKey}" aria-label="${escapeHtml(date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}: ${statusLabel}">
+        <button class="availability-date ${status}${mutedClass}${todayClass}${pastClass}" type="button" data-availability-date="${dateKey}" aria-label="${escapeHtml(date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}: ${statusLabel}"${disabledAttribute}>
           <strong>${date.getDate()}</strong>
           <small>${statusLabel}</small>
         </button>
@@ -2637,9 +2617,41 @@ function getSelectableAvailabilityDays() {
   const days = availabilityView === "month"
     ? availabilityMonthDays(availabilityCursor)
     : availabilityWeekDays(availabilityCursor);
-  return availabilityView === "month"
+  const visibleDays = availabilityView === "month"
     ? days.filter((date) => date.getMonth() === availabilityCursor.getMonth())
     : days;
+  return visibleDays.filter((date) => !isPastAvailabilityDate(date) && getAvailabilityDateStatus(dateToKey(date)) !== "rented");
+}
+
+function getAvailabilityDateStatus(dateKey) {
+  if (isAvailabilityDateRented(dateKey)) {
+    return "rented";
+  }
+  return availabilityDraft.get(dateKey) === "available" ? "available" : "unavailable";
+}
+
+function availabilityStatusLabel(status) {
+  return {
+    available: "Available",
+    rented: "Rented",
+    unavailable: "Unavailable",
+  }[status] || "Unavailable";
+}
+
+function isAvailabilityDateRented(dateKey) {
+  const ship = ships[availabilityShipIndex];
+  if (!ship) {
+    return false;
+  }
+  return bookings.some((booking) => booking.date === dateKey && booking.ship === ship.ship);
+}
+
+function isPastAvailabilityDate(date) {
+  return startOfDay(date).getTime() < startOfDay(new Date()).getTime();
+}
+
+function isPastAvailabilityKey(dateKey) {
+  return isPastAvailabilityDate(parseDateKey(dateKey));
 }
 
 function updateAvailabilityControls() {
@@ -3589,6 +3601,38 @@ function updateRateCalculator() {
   updateHangarFeeSummary();
 }
 
+function syncManualRateInput(period) {
+  const input = rateInputs[period];
+  formatCreditInput(input);
+  const manualRate = parseCredits(input.value);
+  if (!manualRate) {
+    updateRateCalculator();
+    return;
+  }
+
+  rateOfferInputs[period].checked = true;
+  const basePeriod = rateBasePeriodSelect.value;
+  const baseRate = parseCredits(rateBaseInput.value);
+
+  if (!baseRate || period === basePeriod) {
+    rateBasePeriodSelect.value = period;
+    rateBaseInput.value = formatCreditInputValue(manualRate);
+    updateRateCalculator();
+    return;
+  }
+
+  const convertedRate = convertPeriodRate(baseRate, basePeriod, period);
+  if (convertedRate > 0) {
+    const rawAdjustment = Math.round((manualRate / convertedRate - 1) * 100);
+    const slider = rateAdjustmentInputs[period];
+    const min = Number(slider.min || -100);
+    const max = Number(slider.max || 100);
+    slider.value = String(Math.min(max, Math.max(min, rawAdjustment)));
+  }
+
+  updateRateCalculator();
+}
+
 function calculateRates() {
   const basePeriod = rateBasePeriodSelect.value;
   const baseRate = parseCredits(rateBaseInput.value);
@@ -3746,6 +3790,11 @@ function toDateKey(year, month, day) {
 
 function dateToKey(date) {
   return toDateKey(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseDateKey(value) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 function startOfDay(date) {
