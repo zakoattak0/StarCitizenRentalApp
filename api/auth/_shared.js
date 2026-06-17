@@ -82,16 +82,22 @@ function publicUser(session) {
     return null;
   }
 
+  const profile = {
+    rsiHandle: "",
+    rsiStatus: "not_linked",
+    rsiVerificationCode: "",
+    publicName: session.user.displayName || session.user.username,
+    ...(session.user.profile || {}),
+  };
+
   return {
     id: session.user.id,
+    discordId: session.user.discordId,
     username: session.user.username,
     displayName: session.user.displayName || session.user.username,
     avatarUrl: session.user.avatarUrl,
     createdAt: session.user.createdAt,
-    profile: session.user.profile || {
-      rsiHandle: "",
-      publicName: session.user.displayName || session.user.username,
-    },
+    profile,
     stats: session.user.stats || {
       rating: 0,
       completedContracts: 0,

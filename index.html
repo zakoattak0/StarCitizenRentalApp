@@ -147,7 +147,7 @@
             <form class="market-filter-grid" id="crew-market-form">
               <label>
                 Search by name
-                <input name="query" type="text" placeholder="Handle..." />
+                <input name="query" type="text" placeholder="RSI or Discord handle..." />
               </label>
               <label>
                 Role
@@ -229,7 +229,7 @@
 
           <div class="account-gate" id="account-signed-out">
             <h2>Sign in to manage your account</h2>
-            <p>Discord login connects future listings, rental requests, crew services, material requests, ratings, and org tools to a real player account.</p>
+            <p>Discord login is required to post listings, services, contracts, or offers. RSI linking is optional and helps prove your in-game identity.</p>
             <a class="primary-button" href="/api/auth/discord">Sign in with Discord</a>
           </div>
 
@@ -250,14 +250,35 @@
                   <dd id="account-created-at">Session only for now</dd>
                 </div>
                 <div>
-                  <dt>RSI handle</dt>
-                  <dd id="account-rsi-handle">Not set yet</dd>
+                  <dt>Discord linked</dt>
+                  <dd id="account-discord-status">Linked</dd>
                 </div>
                 <div>
-                  <dt>Public profile name</dt>
-                  <dd id="account-public-name">Not set yet</dd>
+                  <dt>RSI handle status</dt>
+                  <dd id="account-rsi-status">Not linked</dd>
+                </div>
+                <div>
+                  <dt>Public identity</dt>
+                  <dd id="account-public-name">Discord username</dd>
                 </div>
               </dl>
+              <form class="rsi-link-form" id="rsi-link-form">
+                <label>
+                  RSI handle
+                  <input name="rsiHandle" id="account-rsi-handle" placeholder="Optional in-game handle" />
+                </label>
+                <div class="rsi-verification-code is-hidden" id="rsi-verification-code"></div>
+                <label class="is-hidden" id="rsi-code-field">
+                  Verification code
+                  <input name="rsiCode" id="account-rsi-code" placeholder="FSX-123ABC" />
+                </label>
+                <div class="modal-actions">
+                  <button class="secondary-button" id="rsi-start-button" type="submit">Link RSI handle</button>
+                  <button class="primary-button is-hidden" id="rsi-verify-button" type="button">Verify RSI</button>
+                  <button class="secondary-button is-hidden" id="rsi-clear-button" type="button">Remove RSI</button>
+                </div>
+                <p class="api-status" id="rsi-status-message">RSI verification is optional and never required to post.</p>
+              </form>
             </section>
 
             <section class="account-card">
@@ -280,7 +301,7 @@
                   <strong id="account-org">None</strong>
                 </div>
               </div>
-              <p class="account-note">Listing data is now shared through Supabase. Editable profile fields, persisted stats, and org membership are planned next.</p>
+              <p class="account-note">Discord is the required account identity for business activity. RSI handle linking is optional and improves trust for in-game transactions.</p>
             </section>
 
             <section class="account-management">

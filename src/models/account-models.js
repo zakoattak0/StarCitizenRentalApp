@@ -6,12 +6,15 @@
  * @property {string} displayName
  * @property {string} avatarUrl
  * @property {string} createdAt
+ * @property {boolean} discordLinked
  */
 
 /**
  * @typedef {Object} AccountProfile
  * @property {string} userId
  * @property {string} rsiHandle
+ * @property {"not_linked" | "pending" | "verified"} rsiStatus
+ * @property {string} rsiVerificationCode
  * @property {string} publicName
  * @property {number} rating
  * @property {number} completedContracts

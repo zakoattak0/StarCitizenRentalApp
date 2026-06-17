@@ -67,6 +67,8 @@ module.exports = async function handler(request, response) {
         createdAt: now.toISOString(),
         profile: {
           rsiHandle: "",
+          rsiStatus: "not_linked",
+          rsiVerificationCode: "",
           publicName: displayName,
         },
         stats: {

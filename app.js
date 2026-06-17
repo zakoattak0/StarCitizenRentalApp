@@ -354,7 +354,17 @@ const accountDisplayName = document.querySelector("#account-display-name");
 const accountUsername = document.querySelector("#account-username");
 const accountCreatedAt = document.querySelector("#account-created-at");
 const accountRsiHandle = document.querySelector("#account-rsi-handle");
+const accountDiscordStatus = document.querySelector("#account-discord-status");
+const accountRsiStatus = document.querySelector("#account-rsi-status");
 const accountPublicName = document.querySelector("#account-public-name");
+const rsiLinkForm = document.querySelector("#rsi-link-form");
+const rsiCodeField = document.querySelector("#rsi-code-field");
+const rsiCodeInput = document.querySelector("#account-rsi-code");
+const rsiVerificationCode = document.querySelector("#rsi-verification-code");
+const rsiStartButton = document.querySelector("#rsi-start-button");
+const rsiVerifyButton = document.querySelector("#rsi-verify-button");
+const rsiClearButton = document.querySelector("#rsi-clear-button");
+const rsiStatusMessage = document.querySelector("#rsi-status-message");
 const accountRating = document.querySelector("#account-rating");
 const accountContracts = document.querySelector("#account-contracts");
 const accountListings = document.querySelector("#account-listings");
@@ -414,14 +424,14 @@ document.querySelectorAll("[data-route]").forEach((control) => {
 
 document.addEventListener("click", (event) => {
   const protectedAction = event.target.closest("[data-auth-action]");
-  if (!protectedAction || authState.user) {
+  if (!protectedAction || canCreatePosting(authState.user)) {
     return;
   }
 
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation();
-  showAuthPrompt(protectedAction.dataset.authAction || "continue");
+  showAuthPrompt();
 }, true);
 
 document.querySelectorAll(".sub-tab").forEach((tab) => {
@@ -591,7 +601,7 @@ ownerForm.addEventListener("submit", async (event) => {
   const listing = {
     id: existingShip?.id || "",
     ownerId: authState.user?.id || existingShip?.ownerId || "",
-    owner: data.get("owner") || authState.user?.displayName || "",
+    owner: data.get("owner") || preferredDisplayName(authState.user),
     ship: selectedVehicle?.name || data.get("ship"),
     role: selectedVehicle?.role || existingShip?.role || "General",
     rates,
@@ -641,7 +651,8 @@ ownerForm.addEventListener("submit", async (event) => {
 });
 
 addFleetShipButton.addEventListener("click", () => {
-  if (!authState.user) {
+  if (!canCreatePosting(authState.user)) {
+    showAuthPrompt();
     return;
   }
 
@@ -702,6 +713,23 @@ document.addEventListener("keydown", (event) => {
 });
 
 authPromptCancel.addEventListener("click", closeAuthPrompt);
+
+rsiLinkForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await updateRsiProfile("start-rsi", {
+    rsiHandle: accountRsiHandle.value,
+  });
+});
+
+rsiVerifyButton.addEventListener("click", async () => {
+  await updateRsiProfile("verify-rsi", {
+    code: rsiCodeInput.value,
+  });
+});
+
+rsiClearButton.addEventListener("click", async () => {
+  await updateRsiProfile("clear-rsi");
+});
 
 fleetList.addEventListener("click", (event) => {
   const actionButton = event.target.closest("[data-fleet-action]");
@@ -1205,7 +1233,7 @@ function updateAuthUI() {
   authUser.classList.toggle("is-hidden", !user);
 
   if (user) {
-    authDisplayName.textContent = user.displayName || user.username || "Account";
+    authDisplayName.textContent = preferredDisplayName(user);
     setAvatar(authAvatar, authAvatarPlaceholder, user.avatarUrl);
   } else {
     authDisplayName.textContent = "Account";
@@ -1224,18 +1252,98 @@ function renderAccountPanel() {
     return;
   }
 
-  accountDisplayName.textContent = user.displayName || user.username || "Discord user";
-  accountUsername.textContent = user.username ? `@${user.username}` : "Discord connected";
+  accountDisplayName.textContent = preferredDisplayName(user);
+  accountUsername.textContent = user.username ? `Discord: @${user.username}` : "Discord connected";
   accountCreatedAt.textContent = user.createdAt ? formatDateTime(user.createdAt) : "Available after database setup";
-  accountRsiHandle.textContent = user.profile?.rsiHandle || "Not set yet";
-  accountPublicName.textContent = user.profile?.publicName || user.displayName || "Not set yet";
+  accountDiscordStatus.textContent = user.discordId ? "Linked" : "Not linked";
+  accountRsiHandle.value = user.profile?.rsiHandle || "";
+  accountRsiStatus.textContent = rsiStatusLabel(user.profile);
+  accountPublicName.textContent = preferredDisplayName(user);
   accountRating.textContent = Number(user.stats?.rating || 0).toFixed(1);
   accountContracts.textContent = Number(user.stats?.completedContracts || 0).toLocaleString();
   accountListings.textContent = Number(user.stats?.activeListings || marketplaceUserListingCount(user)).toLocaleString();
   accountOrg.textContent = user.stats?.orgAffiliation || "None";
   setAvatar(accountAvatar, accountAvatarPlaceholder, user.avatarUrl);
+  renderRsiLinkControls(user.profile);
   renderAccountServices();
   renderAccountListings();
+}
+
+function canCreatePosting(userProfile) {
+  return Boolean(userProfile?.discordId || userProfile?.id?.startsWith("discord:"));
+}
+
+function preferredDisplayName(user = authState.user) {
+  const verifiedRsi = verifiedRsiHandle(user);
+  return verifiedRsi || user?.username || user?.displayName || user?.email || "Account";
+}
+
+function verifiedRsiHandle(user = authState.user) {
+  return user?.profile?.rsiStatus === "verified" ? user.profile.rsiHandle : "";
+}
+
+function identitySearchValues(user = authState.user) {
+  return [
+    verifiedRsiHandle(user),
+    user?.username,
+    user?.displayName,
+    user?.email,
+  ]
+    .map(normalizeFilterValue)
+    .filter(Boolean);
+}
+
+function listingSearchValues(item, fields = []) {
+  return fields
+    .flatMap((field) => [item?.[field]])
+    .concat([item?.rsiHandle, item?.discordUsername, item?.providerName])
+    .map(normalizeFilterValue)
+    .filter(Boolean);
+}
+
+function rsiStatusLabel(profile) {
+  if (profile?.rsiStatus === "verified") {
+    return `Verified: ${profile.rsiHandle}`;
+  }
+  if (profile?.rsiStatus === "pending") {
+    return `Pending verification: ${profile.rsiHandle}`;
+  }
+  return "Not linked";
+}
+
+function renderRsiLinkControls(profile = {}) {
+  const status = profile.rsiStatus || "not_linked";
+  const pending = status === "pending";
+  const verified = status === "verified";
+
+  rsiCodeField.classList.toggle("is-hidden", !pending);
+  rsiVerifyButton.classList.toggle("is-hidden", !pending);
+  rsiClearButton.classList.toggle("is-hidden", !profile.rsiHandle);
+  rsiStartButton.textContent = profile.rsiHandle ? "Update RSI handle" : "Link RSI handle";
+  rsiVerificationCode.classList.toggle("is-hidden", !pending);
+  rsiVerificationCode.textContent = pending
+    ? `Verification code: ${profile.rsiVerificationCode}. Add this code to your RSI profile/bio, then enter it here.`
+    : "";
+  rsiStatusMessage.textContent = verified
+    ? "RSI handle verified. This handle will display publicly before your Discord username."
+    : "RSI verification is optional and never required to post.";
+}
+
+async function updateRsiProfile(action, payload = {}) {
+  rsiStatusMessage.textContent = "Saving RSI profile...";
+  try {
+    const response = await fetch("/api/auth/profile", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    const result = await readJson(response);
+    authState.user = result.user;
+    rsiCodeInput.value = "";
+    updateAuthUI();
+  } catch (error) {
+    rsiStatusMessage.textContent = error instanceof Error ? error.message : "RSI profile could not be updated.";
+  }
 }
 
 function isOwnedByCurrentUser(item, fallbackNameKey = "owner") {
@@ -1244,8 +1352,11 @@ function isOwnedByCurrentUser(item, fallbackNameKey = "owner") {
     return false;
   }
 
-  const displayName = user.displayName || user.username || "";
-  return item.ownerId === user.id || item.requesterId === user.id || item[fallbackNameKey] === displayName;
+  return (
+    item.ownerId === user.id ||
+    item.requesterId === user.id ||
+    identitySearchValues(user).includes(normalizeFilterValue(item[fallbackNameKey]))
+  );
 }
 
 function ownedShips() {
@@ -1578,11 +1689,12 @@ function setAvatar(image, placeholder, avatarUrl) {
 }
 
 function marketplaceUserListingCount(user) {
-  return ships.filter((ship) => ship.ownerId === user.id || ship.owner === user.displayName).length;
+  const identities = identitySearchValues(user);
+  return ships.filter((ship) => ship.ownerId === user.id || identities.includes(normalizeFilterValue(ship.owner))).length;
 }
 
-function showAuthPrompt(action) {
-  authPromptMessage.textContent = `Sign in with Discord to ${action}. You can still browse public listings without an account.`;
+function showAuthPrompt() {
+  authPromptMessage.textContent = "Posting requires a linked Discord account.";
   authPromptModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
 }
@@ -1799,7 +1911,7 @@ function renderCrewMarketplace() {
   const availability = String(form.get("availability") || "");
   const myPostings = form.has("myPostings");
   const sort = String(form.get("sort") || "newest");
-  const userHandle = (authState.user?.displayName || authState.user?.username || "").toLowerCase();
+  const userIdentities = identitySearchValues(authState.user);
 
   if (dataStatus.crewListings.loading && !crewListings.length) {
     crewMarketResults.innerHTML = `<div class="empty-state">Loading shared crew providers...</div>`;
@@ -1813,12 +1925,12 @@ function renderCrewMarketplace() {
 
   const listings = crewListings
     .filter((crew) => (
-      (!query || crew.name.toLowerCase().includes(query)) &&
+      (!query || listingSearchValues(crew, ["name"]).some((value) => value.includes(query))) &&
       (!role || crew.role === role) &&
       (!Number.isFinite(maxPrice) || crew.price <= maxPrice) &&
       crew.rating >= minRating &&
       (!availability || crew.availabilityStatus === availability) &&
-      (!myPostings || crew.name.toLowerCase() === userHandle)
+      (!myPostings || listingSearchValues(crew, ["name"]).some((value) => userIdentities.includes(value)))
     ))
     .sort((a, b) => {
       if (sort === "price-asc") return (a.price || 0) - (b.price || 0);
@@ -2340,7 +2452,7 @@ function resetOwnerForm() {
   editingShipIndex = null;
   ownerForm.reset();
   if (authState.user) {
-    ownerForm.elements.owner.value = authState.user.displayName || authState.user.username || "";
+    ownerForm.elements.owner.value = preferredDisplayName(authState.user);
   }
   rateBasePeriodSelect.value = "hour";
   rateBaseInput.value = "";
@@ -2411,15 +2523,13 @@ function closeAvailabilityModal() {
 }
 
 function openCrewPostingModal() {
-  if (!authState.user) {
-    authPromptMessage.textContent = "Sign in with Discord to create a crew posting.";
-    authPromptModal.classList.remove("is-hidden");
-    document.body.classList.add("modal-open");
+  if (!canCreatePosting(authState.user)) {
+    showAuthPrompt();
     return;
   }
 
   crewPostingForm.reset();
-  crewPostingName.value = authState.user.displayName || authState.user.username || "";
+  crewPostingName.value = preferredDisplayName(authState.user);
   updateCrewPostingPayUI();
   crewPostingModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
@@ -2452,15 +2562,13 @@ function updateCrewPostingPayUI() {
 }
 
 function openMaterialRequestModal() {
-  if (!authState.user) {
-    authPromptMessage.textContent = "Sign in with Discord to post a material request.";
-    authPromptModal.classList.remove("is-hidden");
-    document.body.classList.add("modal-open");
+  if (!canCreatePosting(authState.user)) {
+    showAuthPrompt();
     return;
   }
 
   materialRequestForm.reset();
-  materialRequestName.value = authState.user.displayName || authState.user.username || "";
+  materialRequestName.value = preferredDisplayName(authState.user);
   materialLineItemsContainer.innerHTML = "";
   addMaterialLineItem();
   updateMaterialPaymentUI();
