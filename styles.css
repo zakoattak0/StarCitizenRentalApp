@@ -1253,12 +1253,17 @@ h1 {
 
 .material-line-item {
   display: grid;
-  grid-template-columns: 1fr 100px 100px auto;
+  grid-template-columns: 1fr 100px 120px 100px auto;
   gap: 8px;
   align-items: end;
   border-bottom: 1px solid var(--line-soft);
   padding-bottom: 12px;
   margin-bottom: 12px;
+}
+
+.material-any-quantity-label {
+  min-height: 38px;
+  align-content: center;
 }
 
 .material-line-item:last-child {
@@ -1852,6 +1857,7 @@ legend {
 
   .rate-base-grid,
   .rate-offer-row,
+  .material-line-item,
   .salvage-head-grid,
   .apollo-module-grid,
   .equipment-check-grid,

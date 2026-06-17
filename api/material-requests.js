@@ -3,6 +3,11 @@ const { requestBody, sendJson, supabaseRequest } = require("./_supabase");
 function toClient(row) {
   const materials = row.materials || [];
   const firstMaterial = materials[0] || {};
+  const quantity = firstMaterial.anyQuantity || firstMaterial.quantity === "Any quantity"
+    ? "Any quantity"
+    : firstMaterial.quantity
+      ? `${firstMaterial.quantity} SCU`
+      : row.quantity || "";
 
   return {
     id: row.id,
@@ -13,7 +18,7 @@ function toClient(row) {
     price: row.price || "",
     materials,
     material: firstMaterial.material || row.material || "",
-    quantity: firstMaterial.quantity ? `${firstMaterial.quantity} SCU` : row.quantity || "",
+    quantity,
     quality: firstMaterial.quality || row.quality || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,

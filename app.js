@@ -995,17 +995,30 @@ addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
 materialPaymentType.addEventListener("change", updateMaterialPaymentUI);
 materialPaymentValue.addEventListener("input", () => formatCreditInput(materialPaymentValue));
 
+materialLineItemsContainer.addEventListener("change", (event) => {
+  if (!event.target.matches(".material-any-quantity")) {
+    return;
+  }
+
+  updateMaterialQuantityMode(event.target.closest(".material-line-item"));
+});
+
 materialRequestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(materialRequestForm);
   const payType = formData.get("paymentType");
   const payValue = formData.get("paymentValue");
   
-  const lineItems = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item")).map((row) => ({
-    material: row.querySelector("[name='material']").value,
-    quantity: row.querySelector("[name='quantity']").value,
-    quality: row.querySelector("[name='quality']").value,
-  }));
+  const lineItems = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item")).map((row) => {
+    const anyQuantity = row.querySelector(".material-any-quantity").checked;
+    const quantity = anyQuantity ? "Any quantity" : row.querySelector("[name='quantity']").value;
+    return {
+      material: row.querySelector("[name='material']").value,
+      quantity,
+      anyQuantity,
+      quality: row.querySelector("[name='quality']").value,
+    };
+  });
 
   if (lineItems.length === 0) {
     alert("Please add at least one material.");
@@ -1021,7 +1034,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
     price: payType === "perscu" ? `${payValue} UEC / SCU` : `${payValue} UEC Total`,
     // For backwards compatibility/rendering single item if only one
     material: lineItems[0].material,
-    quantity: lineItems[0].quantity + " SCU",
+    quantity: formatMaterialQuantity(lineItems[0]),
     quality: lineItems[0].quality,
   };
 
@@ -1373,7 +1386,7 @@ function accountMaterialListingCard(request) {
       <div>
         <p class="eyebrow">Material listing</p>
         <h3>${escapeHtml(request.material || "Material request")}</h3>
-        <p>${escapeHtml(request.quantity || "Open quantity")} / ${escapeHtml(request.location || "No location set")}</p>
+        <p>${escapeHtml(formatMaterialQuantity(request))} / ${escapeHtml(request.location || "No location set")}</p>
       </div>
       <div class="account-listing-meta">
         ${listingStatusBadge("Active")}
@@ -1930,12 +1943,13 @@ function crewMarketplaceCard(crew) {
 function materialRequestCard(request) {
   const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
   const multiMaterial = materials.length > 1;
+  const primaryQuantity = formatMaterialQuantity(materials[0] || request);
 
   return `
     <article class="market-card procurement-card">
       <div class="card-top">
         <h2>${multiMaterial ? "Multi-Material Request" : escapeHtml(materials[0].material)}</h2>
-        <span class="tag">${multiMaterial ? `${materials.length} Items` : escapeHtml(materials[0].quantity)}</span>
+        <span class="tag">${multiMaterial ? `${materials.length} Items` : escapeHtml(primaryQuantity)}</span>
       </div>
       <div class="price-line">
         <strong>${escapeHtml(request.price)}</strong>
@@ -1944,7 +1958,7 @@ function materialRequestCard(request) {
         ${materials.map((m) => `
           <div class="config-summary-line">
             <strong>${escapeHtml(m.material)}</strong>
-            <span>${escapeHtml(m.quantity)}${String(m.quantity).includes("SCU") ? "" : " SCU"} (${escapeHtml(m.quality || "Any")})</span>
+            <span>${escapeHtml(formatMaterialQuantity(m))} (${escapeHtml(m.quality || "Any")})</span>
           </div>
         `).join("")}
       </div>
@@ -1958,6 +1972,14 @@ function materialRequestCard(request) {
       </div>
     </article>
   `;
+}
+
+function formatMaterialQuantity(item) {
+  const rawQuantity = String(item?.quantity || "").trim();
+  if (item?.anyQuantity || normalizeFilterValue(rawQuantity) === "any quantity" || !rawQuantity) {
+    return "Any quantity";
+  }
+  return rawQuantity.includes("SCU") ? rawQuantity : `${rawQuantity} SCU`;
 }
 
 function marketplaceShipCapabilities(ship) {
@@ -2496,6 +2518,10 @@ function addMaterialLineItem() {
       Qty (SCU)
       <input name="quantity" type="number" min="1" step="0.1" required placeholder="10" />
     </label>
+    <label class="check material-any-quantity-label">
+      <input class="material-any-quantity" type="checkbox" name="anyQuantity" />
+      Any quantity
+    </label>
     <label>
       Quality
       <input name="quality" type="text" placeholder="+/- %" />
@@ -2510,6 +2536,22 @@ function addMaterialLineItem() {
   });
 
   materialLineItemsContainer.appendChild(row);
+  updateMaterialQuantityMode(row);
+}
+
+function updateMaterialQuantityMode(row) {
+  if (!row) {
+    return;
+  }
+
+  const anyQuantity = row.querySelector(".material-any-quantity").checked;
+  const quantityInput = row.querySelector("[name='quantity']");
+  quantityInput.disabled = anyQuantity;
+  quantityInput.required = !anyQuantity;
+  quantityInput.placeholder = anyQuantity ? "Any" : "10";
+  if (anyQuantity) {
+    quantityInput.value = "";
+  }
 }
 
 function updateMaterialPaymentUI() {
