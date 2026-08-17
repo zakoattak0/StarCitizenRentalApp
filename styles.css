@@ -495,6 +495,52 @@ main {
   min-height: 240px;
 }
 
+.material-stat-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.material-stat-panel {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) repeat(3, minmax(80px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+
+.material-stat-panel > strong,
+.material-stat-panel > div {
+  border: 1px solid var(--line-soft);
+  background: #090909;
+  padding: 8px 9px;
+}
+
+.material-stat-panel > strong {
+  display: grid;
+  align-content: center;
+  border-left: 2px solid var(--cyan);
+  color: #f8fbff;
+}
+
+.material-stat-panel > div {
+  display: grid;
+  gap: 3px;
+}
+
+.material-stat-panel span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.material-stat-panel b {
+  color: var(--green);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
 .account-gate,
 .account-card {
   border: 1px solid var(--line);
@@ -1375,7 +1421,9 @@ h1 {
 }
 
 .material-modal {
-  width: min(720px, 100%);
+  width: min(980px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
 .material-items-container {
@@ -1393,12 +1441,17 @@ h1 {
 
 .material-line-item {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 92px 116px 96px 126px auto;
+  grid-template-columns: minmax(170px, 1.4fr) minmax(96px, 0.7fr) minmax(118px, 0.9fr) minmax(110px, 0.8fr) minmax(130px, 0.9fr) 38px;
   gap: 8px;
   align-items: end;
   border-bottom: 1px solid var(--line-soft);
   padding-bottom: 12px;
   margin-bottom: 12px;
+}
+
+.material-line-item > label,
+.material-line-item input {
+  min-width: 0;
 }
 
 .material-any-quantity-label {
@@ -1927,6 +1980,24 @@ legend {
   text-align: center;
 }
 
+@media (max-width: 900px) {
+  .material-stat-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .material-stat-panel > strong {
+    grid-column: 1 / -1;
+  }
+
+  .material-line-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .material-line-item .remove-line {
+    justify-self: end;
+  }
+}
+
 @media (max-width: 1100px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -2017,7 +2088,6 @@ legend {
 
   .rate-base-grid,
   .rate-offer-row,
-  .material-line-item,
   .salvage-head-grid,
   .apollo-module-grid,
   .equipment-check-grid,
@@ -2099,5 +2169,11 @@ legend {
 
   .day-cell.is-muted {
     display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .material-line-item {
+    grid-template-columns: 1fr;
   }
 }

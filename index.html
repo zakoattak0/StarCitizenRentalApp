@@ -273,6 +273,63 @@
             <button class="sub-tab" type="button" data-material-filter="wtb">WTB</button>
           </div>
 
+          <details class="filter-drawer" open>
+            <summary>Material filters</summary>
+            <form class="market-filter-grid" id="material-market-form">
+              <label>
+                Search
+                <input name="query" type="text" placeholder="Material, location, poster..." />
+              </label>
+              <label>
+                Material
+                <input name="material" list="material-name-options" placeholder="Any material" />
+              </label>
+              <label>
+                Location
+                <input name="location" type="text" placeholder="System, planet, station..." />
+              </label>
+              <label>
+                Minimum quality
+                <select name="quality">
+                  <option value="">Any quality</option>
+                  <option value="400">400+</option>
+                  <option value="500">500+</option>
+                  <option value="600">600+</option>
+                  <option value="700">700+</option>
+                  <option value="750">750+</option>
+                  <option value="800">800+</option>
+                </select>
+              </label>
+              <label>
+                Max price / SCU
+                <select name="price">
+                  <option value="">Any price</option>
+                  <option value="5000">Under 5,000 UEC</option>
+                  <option value="10000">Under 10,000 UEC</option>
+                  <option value="25000">Under 25,000 UEC</option>
+                  <option value="50000">Under 50,000 UEC</option>
+                  <option value="100000">Under 100,000 UEC</option>
+                  <option value="200000">Under 200,000 UEC</option>
+                </select>
+              </label>
+              <label>
+                Sort by
+                <select name="sort">
+                  <option value="newest">Newest</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="quality-desc">Quality: High to Low</option>
+                  <option value="quantity-desc">Quantity: High to Low</option>
+                  <option value="material-asc">Material: A to Z</option>
+                </select>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="myPostings" />
+                <span>My Postings</span>
+              </label>
+            </form>
+          </details>
+
           <div class="market-results" id="material-request-results" aria-live="polite"></div>
         </section>
 

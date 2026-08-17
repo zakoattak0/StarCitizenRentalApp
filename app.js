@@ -518,6 +518,7 @@ const shipRoleFilter = document.querySelector("#ship-role-filter");
 const shipMarketManufacturerSelect = document.querySelector("#ship-market-manufacturer");
 const crewMarketForm = document.querySelector("#crew-market-form");
 const crewMarketResults = document.querySelector("#crew-market-results");
+const materialMarketForm = document.querySelector("#material-market-form");
 const materialRequestResults = document.querySelector("#material-request-results");
 const materialListingFilters = document.querySelector("#material-listing-filters");
 const ownerForm = document.querySelector("#owner-form");
@@ -883,6 +884,9 @@ shipMarketForm.addEventListener("submit", (event) => event.preventDefault());
 crewMarketForm.addEventListener("input", renderCrewMarketplace);
 crewMarketForm.addEventListener("change", renderCrewMarketplace);
 crewMarketForm.addEventListener("submit", (event) => event.preventDefault());
+materialMarketForm.addEventListener("input", renderMaterialRequests);
+materialMarketForm.addEventListener("change", renderMaterialRequests);
+materialMarketForm.addEventListener("submit", (event) => event.preventDefault());
 
 rateBasePeriodSelect.addEventListener("change", updateRateCalculator);
 rateBaseInput.addEventListener("input", () => {
@@ -2853,6 +2857,18 @@ function renderCrewMarketplace() {
 }
 
 function renderMaterialRequests() {
+  const form = new FormData(materialMarketForm);
+  const filters = {
+    query: normalizeFilterValue(form.get("query")),
+    material: normalizeMaterialName(form.get("material")),
+    location: normalizeFilterValue(form.get("location")),
+    minQuality: Number(form.get("quality") || 0),
+    maxPrice: Number(form.get("price") || Infinity),
+    sort: String(form.get("sort") || "newest"),
+    myPostings: form.has("myPostings"),
+  };
+  const userIdentities = identitySearchValues(authState.user);
+
   if (dataStatus.materialRequests.loading && !materialRequests.length) {
     materialRequestResults.innerHTML = `<div class="empty-state">Loading shared material listings...</div>`;
     return;
@@ -2863,10 +2879,9 @@ function renderMaterialRequests() {
     return;
   }
 
-  const listings = materialRequests.filter((request) => {
-    const listingType = materialListingType(request);
-    return activeMaterialListingFilter === "all" || listingType === activeMaterialListingFilter;
-  });
+  const listings = materialRequests
+    .filter((request) => materialListingMatchesFilters(request, filters, userIdentities))
+    .sort((first, second) => compareMaterialListings(first, second, filters.sort));
 
   materialRequestResults.innerHTML = listings.length
     ? listings.map(materialRequestCard).join("")
@@ -2964,6 +2979,7 @@ function materialRequestCard(request) {
   const listingLabel = materialListingLabel(listingType);
   const primaryQuantity = formatMaterialQuantity(materials[0] || request);
   const priceLabel = materialRequestPriceLabel(request, materials);
+  const locationLabel = simpleMaterialLocation(request.location);
 
   return `
     <article class="market-card procurement-card">
@@ -2978,16 +2994,11 @@ function materialRequestCard(request) {
       <div class="price-line">
         <strong>${escapeHtml(priceLabel)}</strong>
       </div>
-      <div class="config-summary">
-        ${materials.map((m) => `
-          <div class="config-summary-line">
-            <strong>${escapeHtml(m.material)}</strong>
-            <span>${escapeHtml(materialLineSummary(m))}</span>
-          </div>
-        `).join("")}
+      <div class="material-stat-grid">
+        ${materials.map((m) => materialStatPanel(m)).join("")}
       </div>
       <ul class="meta-list">
-        <li>${listingType === "wts" ? "Pickup" : "Delivery"}: ${escapeHtml(request.location || "Open")}</li>
+        <li>${listingType === "wts" ? "Pickup" : "Delivery"}: ${escapeHtml(locationLabel || "Open")}</li>
         <li>${listingType === "wts" ? "Available until" : "Needed by"}: ${escapeHtml(materialDateValueLabel(request))}</li>
         <li>Posted by: ${escapeHtml(request.postedBy)}</li>
       </ul>
@@ -2995,6 +3006,26 @@ function materialRequestCard(request) {
         ${request.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="secondary-button" type="button" data-auth-action="${listingType === "wts" ? "buy listed materials" : "offer material fulfillment"}" data-deal-request data-deal-type="material_order" data-listing-type="material" data-listing-id="${escapeHtml(request.id || "")}" data-listing-name="${escapeHtml(multiMaterial ? `Multi-Material ${listingLabel}` : materials[0].material || "Material listing")}" data-provider-id="${escapeHtml(request.requesterId || "")}" data-provider-name="${escapeHtml(request.postedBy || "Provider")}">${listingType === "wts" ? "Buy Materials" : "Offer Fulfillment"}</button>`}
       </div>
     </article>
+  `;
+}
+
+function materialStatPanel(item) {
+  return `
+    <div class="material-stat-panel">
+      <strong>${escapeHtml(item.material || "Material")}</strong>
+      <div>
+        <span>Qty</span>
+        <b>${escapeHtml(formatMaterialQuantity(item))}</b>
+      </div>
+      <div>
+        <span>Quality</span>
+        <b>${escapeHtml(item.quality || "Any")}</b>
+      </div>
+      <div>
+        <span>Price</span>
+        <b>${escapeHtml(materialItemPriceLabel(item) || "Open")}</b>
+      </div>
+    </div>
   `;
 }
 
@@ -3027,21 +3058,135 @@ function materialDateValueLabel(request) {
   return materialListingType(request) === "wts" ? "Until changed" : "Flexible";
 }
 
+function simpleMaterialLocation(location) {
+  const normalized = String(location || "").replace(/^FAKE DEMO trade -\s*/i, "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const parts = normalized
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length ? parts[parts.length - 1] : normalized;
+}
+
+function materialListingMatchesFilters(request, filters, userIdentities) {
+  const listingType = materialListingType(request);
+  const materials = materialRequestItems(request);
+
+  if (activeMaterialListingFilter !== "all" && listingType !== activeMaterialListingFilter) {
+    return false;
+  }
+
+  if (filters.query && !materialSearchValues(request).some((value) => value.includes(filters.query))) {
+    return false;
+  }
+
+  if (filters.location && !normalizeFilterValue(request.location).includes(filters.location)) {
+    return false;
+  }
+
+  if (filters.myPostings && !listingSearchValues(request, ["postedBy"]).some((value) => userIdentities.includes(value))) {
+    return false;
+  }
+
+  return materials.some((item) => materialItemMatchesFilters(request, item, filters));
+}
+
+function materialItemMatchesFilters(request, item, filters) {
+  if (filters.material && !normalizeMaterialName(item.material).includes(filters.material)) {
+    return false;
+  }
+
+  if (filters.minQuality && materialQualityValue(item.quality) < filters.minQuality) {
+    return false;
+  }
+
+  if (Number.isFinite(filters.maxPrice)) {
+    const price = materialRequestPricePerScu(request, item);
+    if (!price || price > filters.maxPrice) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function materialSearchValues(request) {
+  return [
+    materialListingLabel(materialListingType(request)),
+    request.postedBy,
+    request.location,
+    request.neededBy,
+    request.price,
+    ...materialRequestItems(request).flatMap((item) => [
+      item.material,
+      item.quantity,
+      item.quality,
+      item.price,
+      item.pricePerScu,
+    ]),
+  ]
+    .map(normalizeFilterValue)
+    .filter(Boolean);
+}
+
+function materialRequestItems(request) {
+  return request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
+}
+
+function compareMaterialListings(first, second, sort) {
+  if (sort === "price-asc") {
+    return materialListingSortPrice(first) - materialListingSortPrice(second);
+  }
+
+  if (sort === "price-desc") {
+    return materialListingSortPrice(second) - materialListingSortPrice(first);
+  }
+
+  if (sort === "quality-desc") {
+    return materialListingMaxQuality(second) - materialListingMaxQuality(first);
+  }
+
+  if (sort === "quantity-desc") {
+    return materialListingMaxQuantity(second) - materialListingMaxQuantity(first);
+  }
+
+  if (sort === "material-asc") {
+    return materialListingPrimaryName(first).localeCompare(materialListingPrimaryName(second));
+  }
+
+  return 0;
+}
+
+function materialListingSortPrice(request) {
+  const prices = materialRequestItems(request)
+    .map((item) => materialRequestPricePerScu(request, item))
+    .filter((price) => price > 0);
+
+  return prices.length ? Math.min(...prices) : Number.MAX_SAFE_INTEGER;
+}
+
+function materialListingMaxQuality(request) {
+  return Math.max(0, ...materialRequestItems(request).map((item) => materialQualityValue(item.quality)));
+}
+
+function materialListingMaxQuantity(request) {
+  return Math.max(0, ...materialRequestItems(request).map(parseMaterialQuantityValue));
+}
+
+function materialListingPrimaryName(request) {
+  return normalizeMaterialName(materialRequestItems(request)[0]?.material || "");
+}
+
 function materialRequestPriceLabel(request, materials) {
   if (materials.length > 1) {
     return "Per material pricing";
   }
 
   return request.price || materialItemPriceLabel(materials[0]) || "Price open";
-}
-
-function materialLineSummary(item) {
-  const details = [
-    `${formatMaterialQuantity(item)} (${item.quality || "Any"})`,
-    materialItemPriceLabel(item),
-  ].filter(Boolean);
-
-  return details.join(" - ");
 }
 
 function materialItemPriceLabel(item) {
@@ -3878,12 +4023,17 @@ function parseMaterialQuantityValue(item) {
 }
 
 function materialQualityBucket(quality) {
-  const match = String(quality || "").match(/\d+(?:\.\d+)?/);
-  if (!match) {
+  const value = materialQualityValue(quality);
+  if (!value) {
     return null;
   }
 
-  return Math.floor(Number(match[0]) / 50) * 50;
+  return Math.floor(value / 50) * 50;
+}
+
+function materialQualityValue(quality) {
+  const match = String(quality || "").match(/\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
 }
 
 function materialQualityBucketLabel(bucket) {
