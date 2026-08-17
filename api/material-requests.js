@@ -3,6 +3,7 @@ const { requestBody, requirePostingAccount, sendError, sendJson, supabaseRequest
 function toClient(row) {
   const materials = row.materials || [];
   const firstMaterial = materials[0] || {};
+  const listingType = firstMaterial.listingType === "wts" ? "wts" : "wtb";
   const quantity = firstMaterial.anyQuantity || firstMaterial.quantity === "Any quantity"
     ? "Any quantity"
     : firstMaterial.quantity
@@ -16,6 +17,7 @@ function toClient(row) {
     location: row.location || "",
     neededBy: row.needed_by || "",
     price: row.price || "",
+    listingType,
     materials,
     material: firstMaterial.material || row.material || "",
     quantity,
@@ -26,13 +28,19 @@ function toClient(row) {
 }
 
 function toRow(request) {
+  const listingType = request.listingType === "wts" ? "wts" : "wtb";
+  const materials = (request.materials || []).map((material) => ({
+    ...material,
+    listingType: material.listingType === "wts" ? "wts" : listingType,
+  }));
+
   return {
     requester_id: request.requesterId || "",
     posted_by: request.postedBy || "Independent requester",
     location: request.location || "",
-    needed_by: request.neededBy || "",
+    needed_by: request.neededBy || null,
     price: request.price || "",
-    materials: request.materials || [],
+    materials,
   };
 }
 

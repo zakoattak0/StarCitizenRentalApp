@@ -859,6 +859,19 @@ h1 {
   font-weight: 800;
 }
 
+.material-listing-type .segment {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.material-listing-type input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .availability-navigation .secondary-button {
   min-width: 42px;
   padding-inline: 10px;

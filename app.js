@@ -445,34 +445,36 @@ const demoMaterialRequests = [
   ["rmc-700-outlier", "Recycled Material Composite", 10, "740+", 99000, "Stanton / ArcCorp / Baijini Point"],
   ["rmc-750-01", "Recycled Material Composite", 120, "765+", 7600, "Stanton / ArcCorp / Area 18"],
   ["rmc-750-02", "Recycled Material Composite", 80, "790+", 8050, "Stanton / Hurston / Lorville"],
-  ["quant-700-01", "Quantainium", 32, "700+", 18200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station"],
-  ["quant-700-02", "Quantainium", 48, "735+", 19100, "Stanton / Hurston / HUR-L2 Faithful Dream Station"],
-  ["quant-750-01", "Quantainium", 24, "765+", 21400, "Stanton / MicroTech / MIC-L1 Shallow Frontier Station"],
-  ["quant-800-01", "Quantainium", 18, "820+", 24000, "Stanton / Crusader / CRU-L1 Ambitious Dream Station"],
-  ["bex-650-01", "Bexalite", 35, "650+", 8200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station"],
-  ["bex-650-02", "Bexalite", 44, "680+", 8700, "Stanton / Hurston / HUR-L1 Green Glade Station"],
-  ["bex-700-01", "Bexalite", 28, "710+", 9300, "Stanton / MicroTech / MIC-L2 Long Forest Station"],
-  ["bex-750-01", "Bexalite", 22, "760+", 10100, "Stanton / Crusader / CRU-L5 Beautiful Glen Station"],
-  ["gold-500-01", "Gold", 100, "500+", 7100, "Stanton / ArcCorp / Area 18"],
-  ["gold-500-02", "Gold", 64, "545+", 7600, "Stanton / Hurston / Lorville"],
-  ["taranite-700-01", "Taranite", 30, "735+", 7800, "Stanton / ArcCorp / ARC-L2 Lively Pathway Station"],
-  ["diamond-450-01", "Diamond", 200, "450+", 6200, "Stanton / MicroTech / New Babbage"],
-  ["agricium-750-01", "Agricium", 40, "750+", 9800, "Stanton / Crusader / Orison"],
-  ["laranite-600-01", "Laranite", 55, "600+", 6500, "Stanton / Hurston / Everus Harbor"],
-].map(([id, material, quantity, quality, price, location]) => markDemoPost({
+  ["quant-700-01", "Quantainium", 32, "700+", 18200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station", "wts"],
+  ["quant-700-02", "Quantainium", 48, "735+", 19100, "Stanton / Hurston / HUR-L2 Faithful Dream Station", "wts"],
+  ["quant-750-01", "Quantainium", 24, "765+", 21400, "Stanton / MicroTech / MIC-L1 Shallow Frontier Station", "wts"],
+  ["quant-800-01", "Quantainium", 18, "820+", 24000, "Stanton / Crusader / CRU-L1 Ambitious Dream Station", "wts"],
+  ["bex-650-01", "Bexalite", 35, "650+", 8200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station", "wts"],
+  ["bex-650-02", "Bexalite", 44, "680+", 8700, "Stanton / Hurston / HUR-L1 Green Glade Station", "wts"],
+  ["bex-700-01", "Bexalite", 28, "710+", 9300, "Stanton / MicroTech / MIC-L2 Long Forest Station", "wts"],
+  ["bex-750-01", "Bexalite", 22, "760+", 10100, "Stanton / Crusader / CRU-L5 Beautiful Glen Station", "wts"],
+  ["gold-500-01", "Gold", 100, "500+", 7100, "Stanton / ArcCorp / Area 18", "wts"],
+  ["gold-500-02", "Gold", 64, "545+", 7600, "Stanton / Hurston / Lorville", "wts"],
+  ["taranite-700-01", "Taranite", 30, "735+", 7800, "Stanton / ArcCorp / ARC-L2 Lively Pathway Station", "wts"],
+  ["diamond-450-01", "Diamond", 200, "450+", 6200, "Stanton / MicroTech / New Babbage", "wts"],
+  ["agricium-750-01", "Agricium", 40, "750+", 9800, "Stanton / Crusader / Orison", "wts"],
+  ["laranite-600-01", "Laranite", 55, "600+", 6500, "Stanton / Hurston / Everus Harbor", "wts"],
+].map(([id, material, quantity, quality, price, location, listingType = "wtb"]) => markDemoPost({
   id: `fake-demo-material-stileron-${id}`,
   requesterId: "fake-demo-material-requester-stileron",
   postedBy: `${demoOwnerPrefix}Stileron`,
   location: `FAKE DEMO trade - ${location}`,
   neededBy: "FAKE DEMO date - benchmark sample",
   price: `FAKE DEMO: ${price.toLocaleString("en-US")} UEC / SCU`,
-  materials: [{ material, quantity, quality }],
+  listingType,
+  materials: [{ material, quantity, quality, listingType }],
 }));
 
 const deals = [];
 
 let ratingStats = {};
 let activeDealFilter = "open";
+let activeMaterialListingFilter = "all";
 
 const dataStatus = {
   shipListings: { loading: false, saving: false, error: "" },
@@ -517,6 +519,7 @@ const shipMarketManufacturerSelect = document.querySelector("#ship-market-manufa
 const crewMarketForm = document.querySelector("#crew-market-form");
 const crewMarketResults = document.querySelector("#crew-market-results");
 const materialRequestResults = document.querySelector("#material-request-results");
+const materialListingFilters = document.querySelector("#material-listing-filters");
 const ownerForm = document.querySelector("#owner-form");
 const ownerShipOptions = document.querySelector("#owner-ship-options");
 const shipApiStatus = document.querySelector("#ship-api-status");
@@ -656,6 +659,7 @@ const postMaterialRequestMenuButton = document.querySelector("#post-material-req
 const postMaterialRequestButton = document.querySelector("#post-material-request-button");
 const materialRequestModal = document.querySelector("#material-request-modal");
 const materialRequestForm = document.querySelector("#material-request-form");
+const materialRequestTitle = document.querySelector("#material-request-title");
 const materialRequestClose = document.querySelector("#material-request-close");
 const materialRequestCancel = document.querySelector("#material-request-cancel");
 const materialRequestName = document.querySelector("#material-request-name");
@@ -665,11 +669,16 @@ const materialLocationInput = document.querySelector("#material-location-input")
 const materialLocationOptionsList = document.querySelector("#material-location-options");
 const materialNameOptionsList = document.querySelector("#material-name-options");
 const materialLineItemsContainer = document.querySelector("#material-line-items");
+const materialItemsLegend = document.querySelector("#material-items-legend");
 const addMaterialLineButton = document.querySelector("#add-material-line");
 const materialPaymentFieldset = document.querySelector("#material-payment-fieldset");
+const materialPaymentLegend = document.querySelector("#material-payment-legend");
 const materialPaymentType = document.querySelector("#material-payment-type");
 const materialPaymentValue = document.querySelector("#material-payment-value");
 const materialPaymentValueLabel = document.querySelector("#material-payment-value-label");
+const materialDateLabel = document.querySelector("#material-date-label");
+const materialNeededBy = document.querySelector("#material-needed-by");
+const materialSubmitButton = document.querySelector("#material-submit-button");
 
 window.handleShipImageError = (image) => {
   const fallback = image.dataset.fallbackSrc;
@@ -768,6 +777,19 @@ accountDealFilters?.addEventListener("click", (event) => {
     button.classList.toggle("active", button === filterButton);
   });
   renderAccountDeals();
+});
+
+materialListingFilters?.addEventListener("click", (event) => {
+  const filterButton = event.target.closest("[data-material-filter]");
+  if (!filterButton) {
+    return;
+  }
+
+  activeMaterialListingFilter = filterButton.dataset.materialFilter;
+  materialListingFilters.querySelectorAll("[data-material-filter]").forEach((button) => {
+    button.classList.toggle("active", button === filterButton);
+  });
+  renderMaterialRequests();
 });
 
 accountDealsList?.addEventListener("click", async (event) => {
@@ -1336,6 +1358,12 @@ postMaterialRequestButton.addEventListener("click", openPostMaterialRequestFlow)
 materialRequestClose.addEventListener("click", closeMaterialRequestModal);
 materialRequestCancel.addEventListener("click", closeMaterialRequestModal);
 
+materialRequestForm.addEventListener("change", (event) => {
+  if (event.target.matches("[name='listingType']")) {
+    updateMaterialListingTypeUI();
+  }
+});
+
 materialLocationSystemSelect.addEventListener("change", () => {
   materialLocationPlanetSelect.value = "";
   materialLocationInput.value = "";
@@ -1377,6 +1405,7 @@ materialLineItemsContainer.addEventListener("input", (event) => {
 materialRequestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(materialRequestForm);
+  const listingType = formData.get("listingType") === "wts" ? "wts" : "wtb";
   const payType = formData.get("paymentType");
   const payValue = formData.get("paymentValue");
   const lineRows = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item"));
@@ -1391,6 +1420,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
       quantity,
       anyQuantity,
       quality: row.querySelector("[name='quality']").value,
+      listingType,
     };
 
     if (hasPerMaterialPricing) {
@@ -1414,6 +1444,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
   const request = {
     requesterId: authState.user?.id || "",
     postedBy: formData.get("postedBy"),
+    listingType,
     location: formatMaterialRequestLocation(formData),
     neededBy: formData.get("neededBy"),
     materials: lineItems,
@@ -2168,16 +2199,20 @@ function accountCrewListingCard(listing) {
 }
 
 function accountMaterialListingCard(request) {
+  const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
+  const multiMaterial = materials.length > 1;
+  const listingType = materialListingType(request);
+
   return `
     <article class="account-listing-card">
       <div>
-        <p class="eyebrow">Material listing</p>
-        <h3>${escapeHtml(request.material || "Material request")}</h3>
-        <p>${escapeHtml(formatMaterialQuantity(request))} / ${escapeHtml(request.location || "No location set")}</p>
+        <p class="eyebrow">Material ${materialListingLabel(listingType)} listing</p>
+        <h3>${escapeHtml(multiMaterial ? "Multi-Material Listing" : materials[0].material || "Material listing")}</h3>
+        <p>${escapeHtml(multiMaterial ? `${materials.length} items` : formatMaterialQuantity(materials[0] || request))} / ${escapeHtml(request.location || "No location set")}</p>
       </div>
       <div class="account-listing-meta">
         ${listingStatusBadge("Active")}
-        <strong>${escapeHtml(request.price || "Open bid")}</strong>
+        <strong>${escapeHtml(materialRequestPriceLabel(request, materials))}</strong>
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" disabled>Edit</button>
@@ -2819,18 +2854,23 @@ function renderCrewMarketplace() {
 
 function renderMaterialRequests() {
   if (dataStatus.materialRequests.loading && !materialRequests.length) {
-    materialRequestResults.innerHTML = `<div class="empty-state">Loading shared material requests...</div>`;
+    materialRequestResults.innerHTML = `<div class="empty-state">Loading shared material listings...</div>`;
     return;
   }
 
   if (dataStatus.materialRequests.error && !materialRequests.length) {
-    materialRequestResults.innerHTML = `<div class="empty-state error-state">Supabase material requests unavailable: ${escapeHtml(dataStatus.materialRequests.error)}</div>`;
+    materialRequestResults.innerHTML = `<div class="empty-state error-state">Supabase material listings unavailable: ${escapeHtml(dataStatus.materialRequests.error)}</div>`;
     return;
   }
 
-  materialRequestResults.innerHTML = materialRequests.length
-    ? materialRequests.map(materialRequestCard).join("")
-    : `<div class="empty-state">No material requests posted yet.</div>`;
+  const listings = materialRequests.filter((request) => {
+    const listingType = materialListingType(request);
+    return activeMaterialListingFilter === "all" || listingType === activeMaterialListingFilter;
+  });
+
+  materialRequestResults.innerHTML = listings.length
+    ? listings.map(materialRequestCard).join("")
+    : `<div class="empty-state">No ${materialListingFilterLabel(activeMaterialListingFilter)} material listings posted yet.</div>`;
 }
 
 function marketplaceShipListings() {
@@ -2920,15 +2960,18 @@ function crewPayLabel(listing) {
 function materialRequestCard(request) {
   const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
   const multiMaterial = materials.length > 1;
+  const listingType = materialListingType(request);
+  const listingLabel = materialListingLabel(listingType);
   const primaryQuantity = formatMaterialQuantity(materials[0] || request);
   const priceLabel = materialRequestPriceLabel(request, materials);
 
   return `
     <article class="market-card procurement-card">
       <div class="card-top">
-        <h2>${multiMaterial ? "Multi-Material Request" : escapeHtml(materials[0].material)}</h2>
+        <h2>${multiMaterial ? `Multi-Material ${listingLabel}` : escapeHtml(materials[0].material)}</h2>
         <div class="card-tags">
           ${request.isDemo ? demoBadge() : ""}
+          <span class="tag">${listingLabel}</span>
           <span class="tag">${multiMaterial ? `${materials.length} Items` : escapeHtml(primaryQuantity)}</span>
         </div>
       </div>
@@ -2944,15 +2987,44 @@ function materialRequestCard(request) {
         `).join("")}
       </div>
       <ul class="meta-list">
-        <li>Delivery: ${escapeHtml(request.location || "Open")}</li>
-        <li>Needed by: ${escapeHtml(request.neededBy || "Flexible")}</li>
+        <li>${listingType === "wts" ? "Pickup" : "Delivery"}: ${escapeHtml(request.location || "Open")}</li>
+        <li>${listingType === "wts" ? "Available until" : "Needed by"}: ${escapeHtml(materialDateValueLabel(request))}</li>
         <li>Posted by: ${escapeHtml(request.postedBy)}</li>
       </ul>
       <div class="card-actions">
-        ${request.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="secondary-button" type="button" data-auth-action="offer material fulfillment" data-deal-request data-deal-type="material_order" data-listing-type="material" data-listing-id="${escapeHtml(request.id || "")}" data-listing-name="${escapeHtml(multiMaterial ? "Multi-Material Request" : materials[0].material || "Material request")}" data-provider-id="${escapeHtml(request.requesterId || "")}" data-provider-name="${escapeHtml(request.postedBy || "Requester")}">Offer Fulfillment</button>`}
+        ${request.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="secondary-button" type="button" data-auth-action="${listingType === "wts" ? "buy listed materials" : "offer material fulfillment"}" data-deal-request data-deal-type="material_order" data-listing-type="material" data-listing-id="${escapeHtml(request.id || "")}" data-listing-name="${escapeHtml(multiMaterial ? `Multi-Material ${listingLabel}` : materials[0].material || "Material listing")}" data-provider-id="${escapeHtml(request.requesterId || "")}" data-provider-name="${escapeHtml(request.postedBy || "Provider")}">${listingType === "wts" ? "Buy Materials" : "Offer Fulfillment"}</button>`}
       </div>
     </article>
   `;
+}
+
+function materialListingType(request) {
+  if (request?.listingType === "wts" || request?.listingType === "wtb") {
+    return request.listingType;
+  }
+
+  const materials = request?.materials || [];
+  return materials.some((item) => item.listingType === "wts") ? "wts" : "wtb";
+}
+
+function materialListingLabel(listingType) {
+  return listingType === "wts" ? "WTS" : "WTB";
+}
+
+function materialListingFilterLabel(filter) {
+  return {
+    all: "matching",
+    wts: "WTS",
+    wtb: "WTB",
+  }[filter] || "matching";
+}
+
+function materialDateValueLabel(request) {
+  if (request.neededBy) {
+    return request.neededBy;
+  }
+
+  return materialListingType(request) === "wts" ? "Until changed" : "Flexible";
 }
 
 function materialRequestPriceLabel(request, materials) {
@@ -3506,10 +3578,12 @@ function openMaterialRequestModal() {
   }
 
   materialRequestForm.reset();
+  materialRequestForm.elements.listingType.value = "wtb";
   materialRequestName.value = preferredDisplayName(authState.user);
   updateMaterialLocationFilters();
   materialLineItemsContainer.innerHTML = "";
   addMaterialLineItem();
+  updateMaterialListingTypeUI();
   updateMaterialPaymentUI();
   materialRequestModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
@@ -3529,6 +3603,26 @@ function closeMaterialRequestModal() {
 
 function updateMaterialNameOptions() {
   setDatalistOptions(materialNameOptionsList, materialNameOptions);
+}
+
+function currentMaterialListingType() {
+  return materialRequestForm.elements.listingType.value === "wts" ? "wts" : "wtb";
+}
+
+function updateMaterialListingTypeUI() {
+  const isSellListing = currentMaterialListingType() === "wts";
+  materialRequestForm.querySelectorAll(".material-listing-type .segment").forEach((label) => {
+    const input = label.querySelector("input");
+    label.classList.toggle("active", Boolean(input?.checked));
+  });
+  materialRequestTitle.textContent = isSellListing ? "Post Material Sale" : "Post Material Request";
+  materialItemsLegend.textContent = isSellListing ? "Materials Available" : "Materials Needed";
+  materialPaymentLegend.textContent = isSellListing ? "Asking Price" : "Payment Details";
+  materialDateLabel.textContent = isSellListing ? "Available Until" : "Needed By";
+  materialNeededBy.required = !isSellListing;
+  materialSubmitButton.textContent = isSellListing ? "Post Sale Listing" : "Post Request";
+  updateMaterialPricingMode();
+  updateMaterialPaymentUI();
 }
 
 function updateMaterialLocationFilters() {
@@ -3602,7 +3696,7 @@ function addMaterialLineItem() {
       <input name="quality" type="text" placeholder="e.g. 735+" />
     </label>
     <label class="material-line-price-field is-hidden">
-      Price / SCU
+      <span class="material-line-price-label">Price / SCU</span>
       <input name="linePrice" type="text" inputmode="numeric" placeholder="7,500" />
     </label>
     <button class="icon-button remove-line" type="button" aria-label="Remove material line">&times;</button>
@@ -3624,6 +3718,7 @@ function addMaterialLineItem() {
 function updateMaterialPricingMode() {
   const lineRows = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item"));
   const hasPerMaterialPricing = lineRows.length > 1;
+  const isSellListing = currentMaterialListingType() === "wts";
 
   materialPaymentFieldset.classList.toggle("is-hidden", hasPerMaterialPricing);
   materialPaymentType.disabled = hasPerMaterialPricing;
@@ -3632,8 +3727,10 @@ function updateMaterialPricingMode() {
 
   lineRows.forEach((row) => {
     const field = row.querySelector(".material-line-price-field");
+    const label = row.querySelector(".material-line-price-label");
     const input = row.querySelector("[name='linePrice']");
 
+    label.textContent = isSellListing ? "Ask / SCU" : "Payment / SCU";
     field.classList.toggle("is-hidden", !hasPerMaterialPricing);
     input.disabled = !hasPerMaterialPricing;
     input.required = hasPerMaterialPricing;
@@ -3841,9 +3938,12 @@ function updateMaterialQuantityMode(row) {
 
 function updateMaterialPaymentUI() {
   const isPerScu = materialPaymentType.value === "perscu";
+  const isSellListing = currentMaterialListingType() === "wts";
   const labelText = materialPaymentValueLabel.querySelector(".label-text");
   if (labelText) {
-    labelText.textContent = isPerScu ? "Payment / SCU (UEC)" : "Total Payment (UEC)";
+    labelText.textContent = isPerScu
+      ? `${isSellListing ? "Ask" : "Payment"} / SCU (UEC)`
+      : `${isSellListing ? "Total Ask" : "Total Payment"} (UEC)`;
   }
   materialPaymentValue.placeholder = isPerScu ? "1,500" : "50,000";
   formatCreditInput(materialPaymentValue);

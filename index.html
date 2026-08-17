@@ -74,7 +74,7 @@
             </button>
             <div class="nav-dropdown-menu" id="materials-menu" role="menu" aria-labelledby="materials-menu-button">
               <button type="button" role="menuitem" data-route="materials">Browse Listings</button>
-              <button type="button" role="menuitem" id="post-material-request-menu-button" data-auth-action="post a material request">Post Material Request</button>
+              <button type="button" role="menuitem" id="post-material-request-menu-button" data-auth-action="post a material listing">Post Material Listing</button>
             </div>
           </div>
           <button class="tab auth-account-tab" data-tab="account">Account</button>
@@ -261,10 +261,16 @@
         <section class="panel" id="materials-panel" data-panel="materials">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Procurement board</p>
-              <h1>Request materials from players</h1>
+              <p class="eyebrow">Material exchange</p>
+              <h1>Buy and sell materials with players</h1>
             </div>
-            <button class="primary-button" id="post-material-request-button" type="button" data-auth-action="post a material request">Post Material Request</button>
+            <button class="primary-button" id="post-material-request-button" type="button" data-auth-action="post a material listing">Post Material Listing</button>
+          </div>
+
+          <div class="contract-tabs material-listing-filters" id="material-listing-filters" aria-label="Material listing filters">
+            <button class="sub-tab active" type="button" data-material-filter="all">All</button>
+            <button class="sub-tab" type="button" data-material-filter="wts">WTS</button>
+            <button class="sub-tab" type="button" data-material-filter="wtb">WTB</button>
           </div>
 
           <div class="market-results" id="material-request-results" aria-live="polite"></div>
@@ -869,10 +875,23 @@
       <div class="modal-backdrop is-hidden" id="material-request-modal" role="dialog" aria-modal="true" aria-labelledby="material-request-title">
         <div class="confirm-modal material-modal">
           <div class="modal-heading">
-            <h2 id="material-request-title">Post Material Request</h2>
+            <h2 id="material-request-title">Post Material Listing</h2>
             <button class="icon-button" id="material-request-close" type="button" aria-label="Close material request modal">&times;</button>
           </div>
           <form class="data-form" id="material-request-form">
+            <fieldset>
+              <legend>Listing Type</legend>
+              <div class="segmented-control material-listing-type" aria-label="Material listing type">
+                <label class="segment">
+                  <input type="radio" name="listingType" value="wtb" checked />
+                  <span>WTB</span>
+                </label>
+                <label class="segment">
+                  <input type="radio" name="listingType" value="wts" />
+                  <span>WTS</span>
+                </label>
+              </div>
+            </fieldset>
             <div class="form-grid">
               <label>
                 Posted By
@@ -895,7 +914,7 @@
             <datalist id="material-name-options"></datalist>
             
             <div class="material-items-container">
-              <legend>Materials Needed</legend>
+              <legend id="material-items-legend">Materials Needed</legend>
               <div id="material-line-items">
                 <!-- Line items injected here -->
               </div>
@@ -903,7 +922,7 @@
             </div>
 
             <fieldset id="material-payment-fieldset">
-              <legend>Payment Details</legend>
+              <legend id="material-payment-legend">Payment Details</legend>
               <div class="form-grid">
                 <label>
                   Payment Type
@@ -920,13 +939,13 @@
             </fieldset>
 
             <label>
-              Needed By
-              <input name="neededBy" type="date" required />
+              <span id="material-date-label">Needed By</span>
+              <input name="neededBy" id="material-needed-by" type="date" required />
             </label>
 
             <div class="modal-actions">
               <button class="secondary-button" id="material-request-cancel" type="button">Cancel</button>
-              <button class="primary-button" type="submit">Post Request</button>
+              <button class="primary-button" id="material-submit-button" type="submit">Post Listing</button>
             </div>
           </form>
         </div>
