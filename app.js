@@ -933,7 +933,7 @@ accountDealsList?.addEventListener("click", async (event) => {
     await handleDealAction(actionButton.dataset.dealAction, actionButton.dataset.dealId);
   }
   if (ratingButton) {
-    await handleDealRating(ratingButton.dataset.dealRate);
+    await handleDealRating(ratingButton.dataset.dealRate, ratingButton.dataset.dealRatingValue);
   }
 });
 
@@ -2122,6 +2122,7 @@ function accountDealCard(deal) {
       <div class="card-actions">
         ${dealActionButtons(deal)}
       </div>
+      ${dealRatingPanel(deal, otherParty)}
     </article>
   `;
 }
@@ -2161,6 +2162,36 @@ function completionWaitingText(deal) {
   return currentUserConfirmed ? "Waiting for the other party to confirm completion." : "The other party requested completion. Confirm only when the work is done.";
 }
 
+function dealRatingPanel(deal, otherParty) {
+  if (deal.status !== "completed") {
+    return "";
+  }
+
+  const escapedId = escapeHtml(deal.id);
+  const escapedOtherParty = escapeHtml(otherParty || "the other player");
+  const rating = Number(deal.myRating?.rating || 0);
+
+  if (rating) {
+    return `
+      <div class="deal-rating-panel is-rated">
+        <span>Deal finished</span>
+        <strong>You rated ${escapedOtherParty} ${escapeHtml(`${rating} / 5`)}</strong>
+        ${deal.myRating?.comment ? `<p>${escapeHtml(deal.myRating.comment)}</p>` : ""}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="deal-rating-panel">
+      <span>Deal finished</span>
+      <strong>Rate ${escapedOtherParty}</strong>
+      <div class="deal-rating-buttons" aria-label="Rate ${escapedOtherParty}">
+        ${[1, 2, 3, 4, 5].map((value) => `<button class="rating-button" type="button" data-deal-rate="${escapedId}" data-deal-rating-value="${value}">${value}</button>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function dealActionButtons(deal) {
   const userId = authState.user?.id;
   const buttons = [];
@@ -2192,10 +2223,9 @@ function dealActionButtons(deal) {
       buttons.push(`<button class="primary-button" type="button" data-deal-action="test_provider_complete" data-deal-id="${escapedId}">Test Confirm as John Doe</button>`);
     }
   }
-  if (deal.status === "completed" && !deal.myRating) {
-    buttons.push(`<button class="primary-button" type="button" data-deal-rate="${escapedId}">Rate User</button>`);
+  if (deal.status === "completed") {
+    return "";
   }
-
   return buttons.length ? buttons.join("") : `<button class="secondary-button" type="button" disabled>No actions</button>`;
 }
 
@@ -2248,12 +2278,12 @@ async function handleDealAction(action, dealId) {
   }
 }
 
-async function handleDealRating(dealId) {
+async function handleDealRating(dealId, selectedRating = "") {
   if (!dealId) {
     return;
   }
 
-  const rawRating = window.prompt("Rate the other user from 1 to 5 stars.");
+  const rawRating = selectedRating || window.prompt("Rate the other user from 1 to 5 stars.");
   if (rawRating === null) {
     return;
   }
