@@ -22,6 +22,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -32,6 +33,7 @@ body {
     linear-gradient(180deg, #101010 0%, var(--bg) 38%, #020202 100%);
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
 }
 
 body.modal-open {
@@ -76,6 +78,13 @@ select {
   height: 72px;
   object-fit: contain;
   object-position: left center;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 .eyebrow,
@@ -154,6 +163,13 @@ legend {
 .tab {
   min-height: 42px;
   padding: 0 16px;
+}
+
+.nav-dropdown,
+.tab,
+.secondary-button,
+.primary-button {
+  min-width: 0;
 }
 
 .tab:hover,
@@ -2420,7 +2436,100 @@ legend {
 
 @media (max-width: 760px) {
   .app-shell {
-    width: min(100% - 18px, 1620px);
+    width: 100%;
+    padding: 10px 8px 28px;
+  }
+
+  .topbar {
+    position: static;
+    gap: 10px;
+    padding: 6px 0 12px;
+  }
+
+  .brand {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .brand img {
+    width: min(260px, 100%);
+    height: auto;
+    max-height: 82px;
+    object-position: center;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .nav-dropdown {
+    width: 100%;
+  }
+
+  .tab,
+  .nav-dropdown-trigger {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0 10px;
+    font-size: 0.95rem;
+  }
+
+  .nav-dropdown-menu {
+    position: static;
+    left: 0;
+    right: 0;
+    min-width: 0;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .nav-dropdown-menu button {
+    min-height: 44px;
+    text-align: center;
+  }
+
+  .auth-controls,
+  .auth-user {
+    width: 100%;
+  }
+
+  .auth-login,
+  .auth-user .secondary-button,
+  .auth-profile {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .auth-profile span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel,
+  .site-footer {
+    padding: 12px;
+  }
+
+  .landing-panel {
+    text-align: left;
+  }
+
+  .landing-panel.active,
+  .hero {
+    justify-items: stretch;
+  }
+
+  .hero {
+    gap: 12px;
+    min-height: 0;
+    padding: 14px 0 18px;
+    text-align: center;
   }
 
   .section-heading {
@@ -2442,20 +2551,50 @@ legend {
   }
 
   h1 {
-    font-size: 2.35rem;
-  }
-
-  .hero {
-    min-height: 0;
-    padding-top: 18px;
+    font-size: 2.1rem;
+    line-height: 1.05;
   }
 
   .hero-brand img {
-    width: min(310px, 100%);
+    width: min(300px, 100%);
   }
 
   .entry-card {
     min-height: 160px;
+    padding: 14px;
+  }
+
+  .section-heading h1 {
+    font-size: 1.85rem;
+  }
+
+  .market-filter-grid,
+  .data-form,
+  .search-bar,
+  .schedule-form,
+  .filter-modal,
+  .confirm-modal {
+    padding: 12px;
+  }
+
+  .card-top,
+  .modal-heading,
+  .modal-actions,
+  .card-actions,
+  .config-summary-line {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modal-actions .secondary-button,
+  .modal-actions .primary-button,
+  .card-actions .secondary-button,
+  .card-actions .primary-button {
+    width: 100%;
+  }
+
+  .card-tags {
+    justify-content: start;
   }
 
   .player-profile-header {
@@ -2498,6 +2637,23 @@ legend {
 }
 
 @media (max-width: 640px) {
+  .tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-user {
+    flex-direction: column;
+  }
+
+  .auth-user .secondary-button,
+  .auth-profile {
+    width: 100%;
+  }
+
+  .footer-link {
+    width: 100%;
+  }
+
   .player-stat-grid {
     grid-template-columns: 1fr;
   }
