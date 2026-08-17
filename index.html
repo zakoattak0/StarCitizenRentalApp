@@ -440,11 +440,6 @@
                   <strong>My Deals</strong>
                   <p>Accept requests, track active work, confirm completion, and rate completed deals.</p>
                 </button>
-                <button class="account-tile" type="button" data-account-target="contracts">
-                  <span>Contracts</span>
-                  <strong>My Contracts</strong>
-                  <p>Track incoming, submitted, active, and completed work.</p>
-                </button>
               </div>
 
               <div class="sub-tabs account-sub-tabs" aria-label="Account management views">
@@ -453,11 +448,10 @@
                 <button class="sub-tab" data-account-view="services">My Services</button>
                 <button class="sub-tab" data-account-view="listings">My Listings</button>
                 <button class="sub-tab" data-account-view="deals">My Deals</button>
-                <button class="sub-tab" data-account-view="contracts">My Contracts</button>
               </div>
 
               <section class="account-view active" data-account-panel="overview">
-                <div class="empty-state">Choose a management section above to work on your fleet, services, listings, or contracts.</div>
+                <div class="empty-state">Choose a management section above to work on your fleet, services, listings, or deals.</div>
               </section>
 
               <section class="account-view" data-account-panel="fleet">
@@ -542,22 +536,6 @@
                 <div class="account-list" id="account-deals-list" aria-live="polite"></div>
               </section>
 
-              <section class="account-view" data-account-panel="contracts">
-                <div class="section-heading compact-heading">
-                  <div>
-                    <p class="eyebrow">My Contracts</p>
-                    <h2>Contract pipeline</h2>
-                  </div>
-                </div>
-                <div class="contract-tabs" aria-label="Contract states">
-                  <button class="sub-tab active" type="button">Incoming Requests</button>
-                  <button class="sub-tab" type="button">Submitted Requests</button>
-                  <button class="sub-tab" type="button">Active Contracts</button>
-                  <button class="sub-tab" type="button">Completed Contracts</button>
-                  <button class="sub-tab" type="button">Cancelled Contracts</button>
-                </div>
-                <div class="empty-state">Contracts will show customer, provider, agreed price, scheduled time, and completion status once request workflows are connected.</div>
-              </section>
             </section>
           </div>
         </section>
