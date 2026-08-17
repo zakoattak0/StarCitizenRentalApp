@@ -6,6 +6,7 @@ const MATERIAL_REQUESTS_URL = "/api/material-requests";
 const MATERIAL_OPTIONS_URL = "/api/material-options";
 const DEALS_URL = "/api/deals";
 const RATING_STATS_URL = "/api/rating-stats";
+const USERS_URL = "/api/users";
 const testDealStorageKey = "fsx.testDeals";
 
 const hangarServiceOptions = [
@@ -222,6 +223,8 @@ const bookings = [];
 const crewListings = [];
 
 const materialRequests = [];
+
+const marketplaceUsers = [];
 
 const demoOwnerPrefix = "FAKE DEMO - ";
 const dismissedDemoShipStorageKey = "fsx.dismissedDemoShipListings";
@@ -615,6 +618,7 @@ const dataStatus = {
   materialRequests: { loading: false, saving: false, error: "" },
   deals: { loading: false, saving: false, error: "" },
   ratingStats: { loading: false, error: "" },
+  users: { loading: false, error: "" },
 };
 
 const state = {
@@ -2823,6 +2827,22 @@ async function loadRatingStats() {
   }
 }
 
+async function loadUsers() {
+  dataStatus.users.loading = true;
+  dataStatus.users.error = "";
+  renderPlayerSearch();
+
+  try {
+    const payload = await fetch(USERS_URL, { cache: "no-store" }).then(readJson);
+    replaceCollection(marketplaceUsers, payload.users);
+  } catch (error) {
+    dataStatus.users.error = error instanceof Error ? error.message : "Unable to load players";
+  } finally {
+    dataStatus.users.loading = false;
+    renderPlayerSearch();
+  }
+}
+
 async function saveShipListing(listing) {
   const payload = await fetch(SHIP_LISTINGS_URL, {
     method: "POST",
@@ -3352,6 +3372,13 @@ function buildPlayerDirectory() {
     currentPlayer.isCurrentUser = true;
   }
 
+  marketplaceUsers.forEach((user) => {
+    const player = ensurePlayer(user.id, user.name || user.displayName);
+    player.avatarUrl = user.avatarUrl || player.avatarUrl || "";
+    player.isRegistered = true;
+    addPlayerSearchValues(player, [user.displayName, user.publicProfileName, user.rsiHandle]);
+  });
+
   ships.forEach((ship) => {
     const player = ensurePlayer(ship.ownerId, ship.owner);
     player.shipListings.push(ship);
@@ -3452,12 +3479,14 @@ function comparePlayers(first, second, sort) {
 
 function playerSearchCard(player) {
   const isActive = player.id === activePlayerId;
+  const listingLabel = player.listingCount === 1 ? "listing" : "listings";
+  const emptyLabel = player.isRegistered && !player.listingCount && !player.dealCount ? "registered account" : `${player.listingCount.toLocaleString()} ${listingLabel}`;
   return `
     <button class="player-card ${isActive ? "active" : ""}" type="button" data-player-id="${escapeHtml(player.id)}">
       <span class="player-card-name">${escapeHtml(player.name)}</span>
       <span class="player-card-badges">${playerBadges(player)}</span>
       <span class="player-card-rating">${ratingSummaryLine(player.id, player.rating, player.completedDealCount)}</span>
-      <span class="player-card-meta">${player.listingCount.toLocaleString()} listings &middot; ${player.dealCount.toLocaleString()} visible deals</span>
+      <span class="player-card-meta">${emptyLabel} &middot; ${player.dealCount.toLocaleString()} visible deals</span>
     </button>
   `;
 }
@@ -3494,6 +3523,7 @@ function playerDetailCard(player) {
 function playerBadges(player) {
   return [
     player.isCurrentUser ? `<span class="tag">You</span>` : "",
+    player.isRegistered && !player.isDemo && !player.isTest ? `<span class="tag">Registered</span>` : "",
     player.isTest ? testBadge() : "",
     player.isDemo ? demoBadge() : "",
   ].join("");
@@ -6130,6 +6160,7 @@ loadVehicles();
 loadHangarServices();
 loadMaterialOptions();
 loadSession();
+loadUsers();
 loadRatingStats();
 loadShipListings();
 loadCrewListings();

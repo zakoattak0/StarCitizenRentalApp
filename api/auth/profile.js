@@ -7,6 +7,7 @@ const {
   publicUser,
   sessionCookie,
 } = require("./_shared");
+const { upsertUser } = require("../_users");
 
 function sendJson(response, statusCode, payload) {
   response.setHeader("content-type", "application/json");
@@ -131,6 +132,8 @@ module.exports = async function handler(request, response) {
     }
 
     session.user.profile = profile;
+    await upsertUser(session.user);
+
     response.setHeader("Set-Cookie", cookieHeader(sessionCookie, encodeSession(session)));
     return sendJson(response, 200, { user: publicUser(session) });
   } catch (error) {

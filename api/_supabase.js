@@ -10,8 +10,10 @@ class ApiError extends Error {
 function supabaseConfig() {
   const rawUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const rawKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const rawServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
   const url = String(rawUrl || "").trim().replace(/\/+$/, "");
   const key = String(rawKey || "").trim();
+  const serviceRoleKey = String(rawServiceRoleKey || "").trim();
 
   if (!url || !key) {
     throw new Error("SUPABASE_URL/SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY are required");
@@ -30,24 +32,27 @@ function supabaseConfig() {
 
   return {
     key,
+    serviceRoleKey,
     url,
     host: parsedUrl.host,
   };
 }
 
 async function supabaseRequest(path, options = {}) {
-  const { url, key, host } = supabaseConfig();
+  const { useServiceRole = false, headers = {}, ...fetchOptions } = options;
+  const { url, key, serviceRoleKey, host } = supabaseConfig();
+  const requestKey = useServiceRole && serviceRoleKey ? serviceRoleKey : key;
   let response;
 
   try {
     response = await fetch(`${url}/rest/v1/${path}`, {
-      ...options,
+      ...fetchOptions,
       headers: {
-        apikey: key,
-        authorization: `Bearer ${key}`,
+        apikey: requestKey,
+        authorization: `Bearer ${requestKey}`,
         "content-type": "application/json",
         prefer: "return=representation",
-        ...(options.headers || {}),
+        ...headers,
       },
     });
   } catch (error) {

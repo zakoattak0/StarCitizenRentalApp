@@ -7,6 +7,7 @@ const {
   sessionCookie,
   stateCookie,
 } = require("./_shared");
+const { upsertUser } = require("../_users");
 
 module.exports = async function handler(request, response) {
   try {
@@ -82,6 +83,8 @@ module.exports = async function handler(request, response) {
       },
       expiresAt: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 7).toISOString(),
     };
+
+    await upsertUser(session.user);
 
     response.setHeader("Set-Cookie", [
       cookieHeader(sessionCookie, encodeSession(session)),

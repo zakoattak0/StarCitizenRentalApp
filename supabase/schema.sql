@@ -204,6 +204,10 @@ alter table public.org_memberships enable row level security;
 -- Tighten these when Discord accounts are connected to Supabase identities.
 drop policy if exists users_select_public on public.users;
 create policy users_select_public on public.users for select using (true);
+drop policy if exists users_insert_public on public.users;
+create policy users_insert_public on public.users for insert with check (true);
+drop policy if exists users_update_public on public.users;
+create policy users_update_public on public.users for update using (true) with check (true);
 
 drop policy if exists ship_listings_select_public on public.ship_listings;
 create policy ship_listings_select_public on public.ship_listings for select using (true);
