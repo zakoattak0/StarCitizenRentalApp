@@ -58,7 +58,7 @@ async function supabaseRequest(path, options = {}) {
     payload = text ? JSON.parse(text) : null;
   } catch {
     if (!response.ok) {
-      throw new Error(`Supabase returned ${response.status}: ${text.slice(0, 120)}`);
+      throw new Error(supabaseHttpErrorMessage(response.status, text, host));
     }
     throw new Error("Supabase returned an invalid JSON response");
   }
@@ -69,6 +69,21 @@ async function supabaseRequest(path, options = {}) {
   }
 
   return payload;
+}
+
+function supabaseHttpErrorMessage(status, text, host) {
+  if ([521, 522, 523, 524].includes(status)) {
+    return `Supabase is unreachable at ${host} (HTTP ${status}). The project may still be paused, waking up, or temporarily unavailable.`;
+  }
+
+  const plainText = text
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return `Supabase returned ${status}${plainText ? `: ${plainText.slice(0, 120)}` : ""}`;
 }
 
 function sendJson(response, statusCode, payload) {

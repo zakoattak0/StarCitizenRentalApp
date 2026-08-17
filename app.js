@@ -218,6 +218,7 @@ const crewListings = [];
 const materialRequests = [];
 
 const demoOwnerPrefix = "FAKE DEMO - ";
+const dismissedDemoShipStorageKey = "fsx.dismissedDemoShipListings";
 
 const demoShipListings = [
   {
@@ -990,7 +991,11 @@ removeShipConfirm.addEventListener("click", async () => {
   removeShipConfirm.textContent = "Removing...";
 
   try {
-    await deleteShipListing(listing);
+    if (listing.isDemo) {
+      dismissDemoShipListing(listing.id);
+    } else {
+      await deleteShipListing(listing);
+    }
     ships.splice(removeIndex, 1);
     closeRemoveConfirmation();
     resetOwnerForm();
@@ -2065,10 +2070,42 @@ function replaceCollection(target, source) {
   target.splice(0, target.length, ...(Array.isArray(source) ? source : []));
 }
 
-function applyDemoPostsWhenEmpty(target, demoPosts) {
+function applyDemoPostsWhenEmpty(target, demoPosts, dismissedDemoIds = new Set()) {
   if (!target.length) {
-    replaceCollection(target, demoPosts.map(cloneDemoPost));
+    replaceCollection(
+      target,
+      demoPosts
+        .filter((post) => !dismissedDemoIds.has(post.id))
+        .map(cloneDemoPost),
+    );
   }
+}
+
+function getDismissedDemoShipIds() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(dismissedDemoShipStorageKey) || "[]");
+    return new Set(Array.isArray(stored) ? stored : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDismissedDemoShipIds(ids) {
+  try {
+    localStorage.setItem(dismissedDemoShipStorageKey, JSON.stringify([...ids]));
+  } catch {
+    // Demo removal is best-effort; browsers can block localStorage in some privacy modes.
+  }
+}
+
+function dismissDemoShipListing(id) {
+  if (!id) {
+    return;
+  }
+
+  const dismissedIds = getDismissedDemoShipIds();
+  dismissedIds.add(id);
+  saveDismissedDemoShipIds(dismissedIds);
 }
 
 function cloneDemoPost(post) {
@@ -2138,11 +2175,11 @@ async function loadShipListings() {
   try {
     const payload = await fetch(SHIP_LISTINGS_URL, { cache: "no-store" }).then(readJson);
     replaceCollection(ships, payload.listings);
-    applyDemoPostsWhenEmpty(ships, demoShipListings);
+    applyDemoPostsWhenEmpty(ships, demoShipListings, getDismissedDemoShipIds());
     enrichSeedShips();
   } catch (error) {
     dataStatus.shipListings.error = error instanceof Error ? error.message : "Unable to load ship listings";
-    applyDemoPostsWhenEmpty(ships, demoShipListings);
+    applyDemoPostsWhenEmpty(ships, demoShipListings, getDismissedDemoShipIds());
     enrichSeedShips();
   } finally {
     dataStatus.shipListings.loading = false;
@@ -2541,15 +2578,17 @@ function renderFleet() {
 }
 
 function fleetShipActions(ship) {
+  const shipIndex = ships.indexOf(ship);
+
   if (ship.isDemo) {
     return `
       <div class="card-actions">
         ${demoOnlyButton("Fake Demo Only")}
+        <button class="secondary-button danger-button" type="button" data-fleet-action="remove" data-ship-index="${shipIndex}">Remove</button>
       </div>
     `;
   }
 
-  const shipIndex = ships.indexOf(ship);
   return `
     <div class="card-actions">
       <button class="primary-button" type="button" data-fleet-action="availability" data-ship-index="${shipIndex}">Availability</button>
@@ -3541,7 +3580,9 @@ function openRemoveConfirmation(index) {
   }
 
   pendingRemoveShipIndex = index;
-  removeShipMessage.textContent = `Are you sure you want to remove ${ship.ship} from your fleet?`;
+  removeShipMessage.textContent = ship.isDemo
+    ? `Remove the fake demo listing for ${ship.ship} from this browser?`
+    : `Are you sure you want to remove ${ship.ship} from your fleet?`;
   removeShipModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
   removeShipCancel.focus();
