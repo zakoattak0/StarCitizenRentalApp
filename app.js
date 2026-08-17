@@ -6,6 +6,7 @@ const MATERIAL_REQUESTS_URL = "/api/material-requests";
 const MATERIAL_OPTIONS_URL = "/api/material-options";
 const DEALS_URL = "/api/deals";
 const RATING_STATS_URL = "/api/rating-stats";
+const testDealStorageKey = "fsx.testDeals";
 
 const hangarServiceOptions = [
   { key: "size-1-ammo", label: "Size 1 Ammo", uexNames: ["Ship Ammunition - Size 1"] },
@@ -2085,7 +2086,7 @@ function dealNeedsCurrentUserAction(deal) {
     return false;
   }
   if (deal.status === "pending") {
-    return deal.providerUserId === userId;
+    return deal.providerUserId === userId || (isLocalTestDeal(deal) && deal.requesterUserId === userId);
   }
   if (deal.status === "completion_requested") {
     return (
@@ -2168,6 +2169,10 @@ function dealActionButtons(deal) {
   if (deal.status === "pending" && deal.requesterUserId === userId) {
     buttons.push(`<button class="secondary-button danger-button" type="button" data-deal-action="cancel" data-deal-id="${escapedId}">Cancel Request</button>`);
   }
+  if (deal.status === "pending" && isLocalTestDeal(deal) && deal.requesterUserId === userId) {
+    buttons.push(`<button class="primary-button" type="button" data-deal-action="test_accept" data-deal-id="${escapedId}">Test Accept as John Doe</button>`);
+    buttons.push(`<button class="secondary-button danger-button" type="button" data-deal-action="test_reject" data-deal-id="${escapedId}">Test Reject as John Doe</button>`);
+  }
   if (deal.status === "pending" && deal.providerUserId === userId) {
     buttons.push(`<button class="primary-button" type="button" data-deal-action="accept" data-deal-id="${escapedId}">Accept</button>`);
     buttons.push(`<button class="secondary-button danger-button" type="button" data-deal-action="reject" data-deal-id="${escapedId}">Reject</button>`);
@@ -2183,6 +2188,9 @@ function dealActionButtons(deal) {
     buttons.push(needsConfirmation
       ? `<button class="primary-button" type="button" data-deal-action="mark_complete" data-deal-id="${escapedId}">Confirm Complete</button>`
       : `<button class="secondary-button" type="button" disabled>Waiting for other party</button>`);
+    if (isLocalTestDeal(deal) && !deal.providerConfirmedComplete) {
+      buttons.push(`<button class="primary-button" type="button" data-deal-action="test_provider_complete" data-deal-id="${escapedId}">Test Confirm as John Doe</button>`);
+    }
   }
   if (deal.status === "completed" && !deal.myRating) {
     buttons.push(`<button class="primary-button" type="button" data-deal-rate="${escapedId}">Rate User</button>`);
@@ -2360,6 +2368,161 @@ function accountMaterialListingCard(request) {
 
 function replaceCollection(target, source) {
   target.splice(0, target.length, ...(Array.isArray(source) ? source : []));
+}
+
+function isTestProviderId(providerUserId) {
+  return String(providerUserId || "").startsWith("test-player-");
+}
+
+function isLocalTestDeal(dealOrId) {
+  const dealId = typeof dealOrId === "string" ? dealOrId : dealOrId?.id;
+  const providerUserId = typeof dealOrId === "string" ? "" : dealOrId?.providerUserId;
+  return String(dealId || "").startsWith("local-test-deal-") || isTestProviderId(providerUserId);
+}
+
+function localDealParticipantsMatch(deal, userId = authState.user?.id) {
+  return Boolean(userId && (deal.requesterUserId === userId || deal.providerUserId === userId));
+}
+
+function readLocalTestDeals() {
+  try {
+    const storedDeals = JSON.parse(localStorage.getItem(testDealStorageKey) || "[]");
+    return Array.isArray(storedDeals) ? storedDeals : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalTestDeals(storedDeals) {
+  try {
+    localStorage.setItem(testDealStorageKey, JSON.stringify(storedDeals));
+  } catch {
+    // Local test deals are a convenience only; production deals still use Supabase.
+  }
+}
+
+function localTestDealsForCurrentUser() {
+  return readLocalTestDeals().filter((deal) => localDealParticipantsMatch(deal));
+}
+
+function mergeDealsWithLocalTestDeals(remoteDeals = []) {
+  const localDeals = localTestDealsForCurrentUser();
+  const remoteIds = new Set(remoteDeals.map((deal) => deal.id).filter(Boolean));
+  return [
+    ...localDeals,
+    ...remoteDeals.filter((deal) => !remoteIds.has(deal.id) || !isLocalTestDeal(deal)),
+  ];
+}
+
+function createLocalTestDeal(deal) {
+  if (!authState.user) {
+    throw new Error("Sign in before requesting a test deal.");
+  }
+  if (deal.providerUserId === authState.user.id) {
+    throw new Error("You cannot create a deal with your own listing.");
+  }
+
+  const now = new Date().toISOString();
+  const localDeal = {
+    id: `local-test-deal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    requesterUserId: authState.user.id,
+    requesterName: preferredDisplayName(authState.user),
+    providerUserId: deal.providerUserId,
+    providerName: deal.providerName || "John Doe",
+    listingId: deal.listingId || "",
+    listingType: deal.listingType || "",
+    listingName: deal.listingName || "Test deal",
+    dealType: deal.dealType || "general",
+    status: "pending",
+    requesterConfirmedComplete: false,
+    providerConfirmedComplete: false,
+    requesterConfirmedAt: null,
+    providerConfirmedAt: null,
+    completedAt: null,
+    requestedAt: now,
+    updatedAt: now,
+    myRating: null,
+    isTest: true,
+  };
+
+  saveLocalTestDeals([localDeal, ...readLocalTestDeals()]);
+  return localDeal;
+}
+
+function updateLocalTestDeal(action, dealId) {
+  const storedDeals = readLocalTestDeals();
+  const dealIndex = storedDeals.findIndex((deal) => deal.id === dealId);
+  if (dealIndex === -1 || !localDealParticipantsMatch(storedDeals[dealIndex])) {
+    throw new Error("Test deal not found.");
+  }
+
+  const now = new Date().toISOString();
+  const deal = { ...storedDeals[dealIndex], updatedAt: now };
+
+  if (action === "cancel") {
+    if (deal.requesterUserId !== authState.user?.id || deal.status !== "pending") {
+      throw new Error("Only the requester can cancel a pending deal.");
+    }
+    deal.status = "cancelled";
+  } else if (action === "test_accept") {
+    if (deal.status !== "pending") {
+      throw new Error("Only pending test deals can be accepted.");
+    }
+    deal.status = "in_progress";
+  } else if (action === "test_reject") {
+    if (deal.status !== "pending") {
+      throw new Error("Only pending test deals can be rejected.");
+    }
+    deal.status = "rejected";
+  } else if (action === "mark_complete") {
+    if (!["in_progress", "completion_requested"].includes(deal.status)) {
+      throw new Error("Only active deals can be marked complete.");
+    }
+    if (deal.requesterUserId === authState.user?.id) {
+      deal.requesterConfirmedComplete = true;
+      deal.requesterConfirmedAt = now;
+    } else if (deal.providerUserId === authState.user?.id) {
+      deal.providerConfirmedComplete = true;
+      deal.providerConfirmedAt = now;
+    }
+    deal.status = deal.requesterConfirmedComplete && deal.providerConfirmedComplete ? "completed" : "completion_requested";
+    deal.completedAt = deal.status === "completed" ? now : null;
+  } else if (action === "test_provider_complete") {
+    if (!["in_progress", "completion_requested"].includes(deal.status)) {
+      throw new Error("Only active test deals can be completed.");
+    }
+    deal.providerConfirmedComplete = true;
+    deal.providerConfirmedAt = now;
+    deal.status = deal.requesterConfirmedComplete ? "completed" : "completion_requested";
+    deal.completedAt = deal.status === "completed" ? now : null;
+  } else {
+    throw new Error("Unsupported test deal action.");
+  }
+
+  storedDeals[dealIndex] = deal;
+  saveLocalTestDeals(storedDeals);
+  return deal;
+}
+
+function rateLocalTestDeal(dealId, rating, comment) {
+  const storedDeals = readLocalTestDeals();
+  const dealIndex = storedDeals.findIndex((deal) => deal.id === dealId);
+  if (dealIndex === -1 || !localDealParticipantsMatch(storedDeals[dealIndex])) {
+    throw new Error("Test deal not found.");
+  }
+  const deal = { ...storedDeals[dealIndex] };
+  if (deal.status !== "completed" || !deal.requesterConfirmedComplete || !deal.providerConfirmedComplete) {
+    throw new Error("Ratings are only allowed after both parties complete the deal.");
+  }
+
+  deal.myRating = {
+    rating,
+    comment: comment || "",
+    created_at: new Date().toISOString(),
+  };
+  storedDeals[dealIndex] = deal;
+  saveLocalTestDeals(storedDeals);
+  return deal.myRating;
 }
 
 function applyDemoPostsWhenEmpty(target, demoPosts, dismissedDemoIds = new Set()) {
@@ -2563,9 +2726,13 @@ async function loadDeals() {
 
   try {
     const payload = await fetch(DEALS_URL, { cache: "no-store" }).then(readJson);
-    replaceCollection(deals, payload.deals);
+    replaceCollection(deals, mergeDealsWithLocalTestDeals(payload.deals));
   } catch (error) {
-    dataStatus.deals.error = error instanceof Error ? error.message : "Unable to load deals";
+    const localDeals = localTestDealsForCurrentUser();
+    replaceCollection(deals, localDeals);
+    dataStatus.deals.error = localDeals.length
+      ? ""
+      : (error instanceof Error ? error.message : "Unable to load deals");
   } finally {
     dataStatus.deals.loading = false;
     renderAccountDeals();
@@ -2685,6 +2852,10 @@ async function saveMaterialRequest(request) {
 }
 
 async function createDeal(deal) {
+  if (isTestProviderId(deal.providerUserId)) {
+    return createLocalTestDeal(deal);
+  }
+
   const payload = await fetch(DEALS_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -2695,6 +2866,10 @@ async function createDeal(deal) {
 }
 
 async function updateDeal(action, dealId) {
+  if (isLocalTestDeal(dealId)) {
+    return updateLocalTestDeal(action, dealId);
+  }
+
   const payload = await fetch(DEALS_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -2705,6 +2880,10 @@ async function updateDeal(action, dealId) {
 }
 
 async function rateDeal(dealId, rating, comment) {
+  if (isLocalTestDeal(dealId)) {
+    return rateLocalTestDeal(dealId, rating, comment);
+  }
+
   const payload = await fetch(DEALS_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
