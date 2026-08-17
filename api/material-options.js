@@ -71,8 +71,12 @@ const getMajorTradeLocation = (terminal) => {
     return city;
   }
 
+  if (stationName) {
+    return stationName;
+  }
+
   if (isLagrangeStation(terminal)) {
-    return stationName || stationAlias;
+    return stationAlias;
   }
 
   if (isOrbitalStation(terminal)) {

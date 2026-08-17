@@ -2887,7 +2887,7 @@ function crewPayLabel(listing) {
   }
 
   if (listing.payType === "share") {
-    return `${formatCredits(listing.price)}% share`;
+    return `${formatCredits(listing.price)} share`;
   }
 
   return `${formatCredits(listing.price)} UEC / hour`;
@@ -3436,10 +3436,10 @@ function updateCrewPostingPayUI() {
     labelText.textContent = isFlat
       ? "Rate (UEC / hour)"
       : payType === "share"
-        ? "Share (%)"
+        ? "Share"
         : "Pay Cut (%)";
   }
-  crewPostingPayValue.placeholder = isFlat ? "5,000" : "15";
+  crewPostingPayValue.placeholder = isFlat ? "5,000" : payType === "share" ? "1" : "15";
   
   if (isFlat) {
     formatCreditInput(crewPostingPayValue);
