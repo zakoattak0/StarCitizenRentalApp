@@ -666,6 +666,7 @@ const materialLocationOptionsList = document.querySelector("#material-location-o
 const materialNameOptionsList = document.querySelector("#material-name-options");
 const materialLineItemsContainer = document.querySelector("#material-line-items");
 const addMaterialLineButton = document.querySelector("#add-material-line");
+const materialPaymentFieldset = document.querySelector("#material-payment-fieldset");
 const materialPaymentType = document.querySelector("#material-payment-type");
 const materialPaymentValue = document.querySelector("#material-payment-value");
 const materialPaymentValueLabel = document.querySelector("#material-payment-value-label");
@@ -1367,6 +1368,10 @@ materialLineItemsContainer.addEventListener("input", (event) => {
   if (event.target.matches("[name='material'], [name='quality']")) {
     updateMaterialPriceHint(event.target.closest(".material-line-item"));
   }
+
+  if (event.target.matches("[name='linePrice']")) {
+    formatCreditInput(event.target);
+  }
 });
 
 materialRequestForm.addEventListener("submit", async (event) => {
@@ -1374,20 +1379,35 @@ materialRequestForm.addEventListener("submit", async (event) => {
   const formData = new FormData(materialRequestForm);
   const payType = formData.get("paymentType");
   const payValue = formData.get("paymentValue");
-  
-  const lineItems = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item")).map((row) => {
+  const lineRows = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item"));
+  const hasPerMaterialPricing = lineRows.length > 1;
+
+  const lineItems = lineRows.map((row) => {
     const anyQuantity = row.querySelector(".material-any-quantity").checked;
     const quantity = anyQuantity ? "Any quantity" : row.querySelector("[name='quantity']").value;
-    return {
+    const linePrice = parseCredits(row.querySelector("[name='linePrice']").value);
+    const item = {
       material: row.querySelector("[name='material']").value,
       quantity,
       anyQuantity,
       quality: row.querySelector("[name='quality']").value,
     };
+
+    if (hasPerMaterialPricing) {
+      item.price = `${formatCredits(linePrice)} UEC / SCU`;
+      item.pricePerScu = linePrice;
+    }
+
+    return item;
   });
 
   if (lineItems.length === 0) {
     alert("Please add at least one material.");
+    return;
+  }
+
+  if (hasPerMaterialPricing && lineItems.some((item) => !Number(item.pricePerScu))) {
+    alert("Set a UEC / SCU price for each requested material.");
     return;
   }
 
@@ -1397,7 +1417,11 @@ materialRequestForm.addEventListener("submit", async (event) => {
     location: formatMaterialRequestLocation(formData),
     neededBy: formData.get("neededBy"),
     materials: lineItems,
-    price: payType === "perscu" ? `${payValue} UEC / SCU` : `${payValue} UEC Total`,
+    price: hasPerMaterialPricing
+      ? "Per material pricing"
+      : payType === "perscu"
+        ? `${payValue} UEC / SCU`
+        : `${payValue} UEC Total`,
     // For backwards compatibility/rendering single item if only one
     material: lineItems[0].material,
     quantity: formatMaterialQuantity(lineItems[0]),
@@ -2897,6 +2921,7 @@ function materialRequestCard(request) {
   const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
   const multiMaterial = materials.length > 1;
   const primaryQuantity = formatMaterialQuantity(materials[0] || request);
+  const priceLabel = materialRequestPriceLabel(request, materials);
 
   return `
     <article class="market-card procurement-card">
@@ -2908,13 +2933,13 @@ function materialRequestCard(request) {
         </div>
       </div>
       <div class="price-line">
-        <strong>${escapeHtml(request.price)}</strong>
+        <strong>${escapeHtml(priceLabel)}</strong>
       </div>
       <div class="config-summary">
         ${materials.map((m) => `
           <div class="config-summary-line">
             <strong>${escapeHtml(m.material)}</strong>
-            <span>${escapeHtml(formatMaterialQuantity(m))} (${escapeHtml(m.quality || "Any")})</span>
+            <span>${escapeHtml(materialLineSummary(m))}</span>
           </div>
         `).join("")}
       </div>
@@ -2928,6 +2953,32 @@ function materialRequestCard(request) {
       </div>
     </article>
   `;
+}
+
+function materialRequestPriceLabel(request, materials) {
+  if (materials.length > 1) {
+    return "Per material pricing";
+  }
+
+  return request.price || materialItemPriceLabel(materials[0]) || "Price open";
+}
+
+function materialLineSummary(item) {
+  const details = [
+    `${formatMaterialQuantity(item)} (${item.quality || "Any"})`,
+    materialItemPriceLabel(item),
+  ].filter(Boolean);
+
+  return details.join(" - ");
+}
+
+function materialItemPriceLabel(item) {
+  if (item?.price) {
+    return item.price;
+  }
+
+  const pricePerScu = Number(item?.pricePerScu || 0);
+  return pricePerScu > 0 ? `${formatCredits(pricePerScu)} UEC / SCU` : "";
 }
 
 function formatMaterialQuantity(item) {
@@ -3550,18 +3601,46 @@ function addMaterialLineItem() {
       Quality
       <input name="quality" type="text" placeholder="e.g. 735+" />
     </label>
+    <label class="material-line-price-field is-hidden">
+      Price / SCU
+      <input name="linePrice" type="text" inputmode="numeric" placeholder="7,500" />
+    </label>
     <button class="icon-button remove-line" type="button" aria-label="Remove material line">&times;</button>
   `;
 
   row.querySelector(".remove-line").addEventListener("click", () => {
     if (materialLineItemsContainer.children.length > 1) {
       row.remove();
+      updateMaterialPricingMode();
     }
   });
 
   materialLineItemsContainer.appendChild(row);
   updateMaterialQuantityMode(row);
   updateMaterialPriceHint(row);
+  updateMaterialPricingMode();
+}
+
+function updateMaterialPricingMode() {
+  const lineRows = Array.from(materialLineItemsContainer.querySelectorAll(".material-line-item"));
+  const hasPerMaterialPricing = lineRows.length > 1;
+
+  materialPaymentFieldset.classList.toggle("is-hidden", hasPerMaterialPricing);
+  materialPaymentType.disabled = hasPerMaterialPricing;
+  materialPaymentValue.disabled = hasPerMaterialPricing;
+  materialPaymentValue.required = !hasPerMaterialPricing;
+
+  lineRows.forEach((row) => {
+    const field = row.querySelector(".material-line-price-field");
+    const input = row.querySelector("[name='linePrice']");
+
+    field.classList.toggle("is-hidden", !hasPerMaterialPricing);
+    input.disabled = !hasPerMaterialPricing;
+    input.required = hasPerMaterialPricing;
+    if (!hasPerMaterialPricing) {
+      input.value = "";
+    }
+  });
 }
 
 function updateMaterialPriceHints() {
@@ -3643,20 +3722,27 @@ function materialPlayerPostingAverage(materialName, quality) {
 
 function materialPostingPricePoints(request, normalizedMaterial, bucket) {
   const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
-  if (materials.length !== 1) {
-    return [];
-  }
+  return materials.flatMap((item) => {
+    if (normalizeMaterialName(item.material) !== normalizedMaterial || materialQualityBucket(item.quality) !== bucket) {
+      return [];
+    }
 
-  const item = materials[0];
-  if (normalizeMaterialName(item.material) !== normalizedMaterial || materialQualityBucket(item.quality) !== bucket) {
-    return [];
-  }
-
-  const price = materialRequestPricePerScu(request, item);
-  return price > 0 ? [price] : [];
+    const price = materialRequestPricePerScu(request, item);
+    return price > 0 ? [price] : [];
+  });
 }
 
 function materialRequestPricePerScu(request, item) {
+  const itemPrice = materialItemPricePerScu(item);
+  if (itemPrice > 0) {
+    return itemPrice;
+  }
+
+  const materials = request.materials || [];
+  if (materials.length > 1) {
+    return 0;
+  }
+
   const price = parseCredits(request.price);
 
   if (!price) {
@@ -3669,6 +3755,21 @@ function materialRequestPricePerScu(request, item) {
 
   const quantity = parseMaterialQuantityValue(item);
   return quantity > 0 ? Math.round(price / quantity) : 0;
+}
+
+function materialItemPricePerScu(item) {
+  const numericPrice = Number(item?.pricePerScu || 0);
+  if (numericPrice > 0) {
+    return numericPrice;
+  }
+
+  const priceText = String(item?.price || "");
+  const parsedPrice = parseCredits(priceText);
+  if (!parsedPrice) {
+    return 0;
+  }
+
+  return parsedPrice;
 }
 
 function parseMaterialQuantityValue(item) {

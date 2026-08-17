@@ -1380,7 +1380,7 @@ h1 {
 
 .material-line-item {
   display: grid;
-  grid-template-columns: 1fr 100px 120px 100px auto;
+  grid-template-columns: minmax(150px, 1fr) 92px 116px 96px 126px auto;
   gap: 8px;
   align-items: end;
   border-bottom: 1px solid var(--line-soft);
