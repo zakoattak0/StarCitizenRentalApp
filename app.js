@@ -3,6 +3,7 @@ const HANGAR_SERVICES_URL = "/api/hangar-services";
 const SHIP_LISTINGS_URL = "/api/ship-listings";
 const CREW_LISTINGS_URL = "/api/crew-listings";
 const MATERIAL_REQUESTS_URL = "/api/material-requests";
+const MATERIAL_OPTIONS_URL = "/api/material-options";
 const DEALS_URL = "/api/deals";
 const RATING_STATS_URL = "/api/rating-stats";
 
@@ -112,6 +113,9 @@ const oreOptions = [
   "Copper",
   "Aluminum",
 ];
+
+let materialNameOptions = [...oreOptions];
+let materialLocationOptions = [];
 
 const size5WeaponOptions = [
   "'WAR'",
@@ -657,6 +661,11 @@ const materialRequestForm = document.querySelector("#material-request-form");
 const materialRequestClose = document.querySelector("#material-request-close");
 const materialRequestCancel = document.querySelector("#material-request-cancel");
 const materialRequestName = document.querySelector("#material-request-name");
+const materialLocationSystemSelect = document.querySelector("#material-location-system");
+const materialLocationPlanetSelect = document.querySelector("#material-location-planet");
+const materialLocationInput = document.querySelector("#material-location-input");
+const materialLocationOptionsList = document.querySelector("#material-location-options");
+const materialNameOptionsList = document.querySelector("#material-name-options");
 const materialLineItemsContainer = document.querySelector("#material-line-items");
 const addMaterialLineButton = document.querySelector("#add-material-line");
 const materialPaymentType = document.querySelector("#material-payment-type");
@@ -1262,13 +1271,18 @@ hangarServiceRows.addEventListener("input", (event) => {
 availabilityForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const selectedIndex = availabilityShipSelect.value;
-  if (selectedIndex !== "all" && ships[Number(selectedIndex)]) {
+  if (selectedIndex === "all" && ships.length) {
+    openAvailabilityModal("all");
+    return;
+  }
+
+  if (ships[Number(selectedIndex)]) {
     openAvailabilityModal(Number(selectedIndex));
   }
 });
 
 availabilityShipSelect.addEventListener("change", () => {
-  availabilityForm.querySelector("button[type='submit']").disabled = availabilityShipSelect.value === "all";
+  availabilityForm.querySelector("button[type='submit']").disabled = ships.length === 0;
   renderOwnerSchedule();
 });
 
@@ -1327,6 +1341,14 @@ addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
 
 materialPaymentType.addEventListener("change", updateMaterialPaymentUI);
 materialPaymentValue.addEventListener("input", () => formatCreditInput(materialPaymentValue));
+materialLocationSystemSelect.addEventListener("change", () => {
+  updateMaterialLocationFilters();
+  materialLocationInput.value = "";
+});
+materialLocationPlanetSelect.addEventListener("change", () => {
+  updateMaterialLocationOptions();
+  materialLocationInput.value = "";
+});
 
 materialLineItemsContainer.addEventListener("change", (event) => {
   if (!event.target.matches(".material-any-quantity")) {
@@ -1361,7 +1383,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
   const request = {
     requesterId: authState.user?.id || "",
     postedBy: formData.get("postedBy"),
-    location: formData.get("location"),
+    location: formatMaterialRequestLocation(formData),
     neededBy: formData.get("neededBy"),
     materials: lineItems,
     price: payType === "perscu" ? `${payValue} UEC / SCU` : `${payValue} UEC Total`,
@@ -1450,6 +1472,23 @@ async function loadHangarServices() {
 
   renderHangarServiceRows();
   updateHangarEligibility();
+}
+
+async function loadMaterialOptions() {
+  updateMaterialNameOptions();
+  updateMaterialLocationFilters();
+
+  try {
+    const payload = await fetch(MATERIAL_OPTIONS_URL, { cache: "no-store" }).then(readJson);
+    materialNameOptions = uniqueSorted([...oreOptions, ...(payload.materials || [])]);
+    materialLocationOptions = Array.isArray(payload.locations) ? payload.locations : [];
+  } catch {
+    materialNameOptions = uniqueSorted(oreOptions);
+    materialLocationOptions = [];
+  }
+
+  updateMaterialNameOptions();
+  updateMaterialLocationFilters();
 }
 
 function navigateToPanel(tabName) {
@@ -2926,7 +2965,7 @@ function renderOwnerSchedule() {
   availabilityForm.querySelectorAll("select, button").forEach((control) => {
     control.disabled = ships.length === 0;
   });
-  availabilityForm.querySelector("button[type='submit']").disabled = ships.length === 0 || availabilityShipSelect.value === "all";
+  availabilityForm.querySelector("button[type='submit']").disabled = ships.length === 0;
 
   const visibleMonth = scheduleCursor.getMonth();
   const calendarDays = scheduleView === "week"
@@ -3297,8 +3336,8 @@ function closeOwnerConfigurator() {
 }
 
 function openAvailabilityModal(index) {
-  const ship = ships[index];
-  if (!ship) {
+  const targetShips = availabilityTargetShips(index);
+  if (!targetShips.length) {
     return;
   }
 
@@ -3306,10 +3345,12 @@ function openAvailabilityModal(index) {
   availabilityView = "week";
   availabilityCursor = startOfDay(new Date());
   availabilityDraft = new Map();
-  (ship.dates || [])
+  sharedAvailabilityDates(targetShips)
     .filter((date) => !isPastAvailabilityKey(date))
     .forEach((date) => availabilityDraft.set(date, "available"));
-  availabilityModalTitle.textContent = `${ship.ship} availability`;
+  availabilityModalTitle.textContent = index === "all"
+    ? "All fleet ships availability"
+    : `${targetShips[0].ship} availability`;
   availabilityModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
   renderAvailabilityPicker();
@@ -3372,6 +3413,7 @@ function openMaterialRequestModal() {
 
   materialRequestForm.reset();
   materialRequestName.value = preferredDisplayName(authState.user);
+  updateMaterialLocationFilters();
   materialLineItemsContainer.innerHTML = "";
   addMaterialLineItem();
   updateMaterialPaymentUI();
@@ -3391,15 +3433,63 @@ function closeMaterialRequestModal() {
   }
 }
 
+function updateMaterialNameOptions() {
+  setDatalistOptions(materialNameOptionsList, materialNameOptions);
+}
+
+function updateMaterialLocationFilters() {
+  const selectedSystem = materialLocationSystemSelect.value;
+  const selectedPlanet = materialLocationPlanetSelect.value;
+  const systems = uniqueSorted(materialLocationOptions.map((location) => location.system));
+
+  setSelectOptions(materialLocationSystemSelect, systems, "Any system", selectedSystem);
+
+  const activeSystem = materialLocationSystemSelect.value;
+  const planets = uniqueSorted(
+    materialLocationOptions
+      .filter((location) => !activeSystem || location.system === activeSystem)
+      .map((location) => location.planet),
+  );
+
+  setSelectOptions(materialLocationPlanetSelect, planets, "Any planet / orbit", selectedPlanet);
+  updateMaterialLocationOptions();
+}
+
+function updateMaterialLocationOptions() {
+  const system = materialLocationSystemSelect.value;
+  const planet = materialLocationPlanetSelect.value;
+  const locations = materialLocationOptions
+    .filter((location) => !system || location.system === system)
+    .filter((location) => !planet || location.planet === planet)
+    .map((location) => location.location);
+
+  setDatalistOptions(materialLocationOptionsList, uniqueSorted(locations));
+}
+
+function setDatalistOptions(datalist, options) {
+  datalist.innerHTML = options
+    .map((option) => `<option value="${escapeHtml(option)}"></option>`)
+    .join("");
+}
+
+function formatMaterialRequestLocation(formData) {
+  return [
+    formData.get("locationSystem"),
+    formData.get("locationPlanet"),
+    formData.get("location"),
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" / ");
+}
+
 function addMaterialLineItem() {
   const row = document.createElement("div");
   row.className = "material-line-item";
   row.innerHTML = `
     <label>
       Ore / Material
-      <select name="material" required>
-        ${oreOptions.map((opt) => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join("")}
-      </select>
+      <input name="material" list="material-name-options" required placeholder="Type or choose material" />
     </label>
     <label>
       Qty (SCU)
@@ -3452,8 +3542,8 @@ function updateMaterialPaymentUI() {
 }
 
 async function saveAvailabilityChanges() {
-  const ship = ships[availabilityShipIndex];
-  if (!ship) {
+  const targetShips = availabilityTargetShips(availabilityShipIndex);
+  if (!targetShips.length) {
     closeAvailabilityModal();
     return;
   }
@@ -3469,8 +3559,12 @@ async function saveAvailabilityChanges() {
   availabilitySave.textContent = "Saving...";
 
   try {
-    const savedListing = await saveShipListing({ ...ship, dates });
-    ships[availabilityShipIndex] = savedListing;
+    const savedListings = await Promise.all(
+      targetShips.map((ship) => saveShipAvailability(ship, dates)),
+    );
+    savedListings.forEach(({ originalIndex, listing }) => {
+      ships[originalIndex] = listing;
+    });
     closeAvailabilityModal();
     renderFleet();
     renderCalendar();
@@ -3485,6 +3579,18 @@ async function saveAvailabilityChanges() {
     availabilitySave.disabled = false;
     availabilitySave.textContent = "Save availability";
   }
+}
+
+async function saveShipAvailability(ship, dates) {
+  const originalIndex = ships.indexOf(ship);
+  const updatedListing = { ...ship, dates };
+
+  if (ship.isDemo) {
+    return { originalIndex, listing: updatedListing };
+  }
+
+  const savedListing = await saveShipListing(updatedListing);
+  return { originalIndex, listing: savedListing };
 }
 
 function renderAvailabilityPicker() {
@@ -3550,11 +3656,34 @@ function availabilityStatusLabel(status) {
 }
 
 function isAvailabilityDateRented(dateKey) {
-  const ship = ships[availabilityShipIndex];
-  if (!ship) {
-    return false;
+  const targetShips = availabilityTargetShips(availabilityShipIndex);
+  return targetShips.some((ship) =>
+    bookings.some((booking) => booking.date === dateKey && booking.ship === ship.ship),
+  );
+}
+
+function availabilityTargetShips(index = availabilityShipIndex) {
+  if (index === "all") {
+    return ships;
   }
-  return bookings.some((booking) => booking.date === dateKey && booking.ship === ship.ship);
+
+  const ship = ships[Number(index)];
+  return ship ? [ship] : [];
+}
+
+function sharedAvailabilityDates(targetShips) {
+  if (!targetShips.length) {
+    return [];
+  }
+
+  if (targetShips.length === 1) {
+    return targetShips[0].dates || [];
+  }
+
+  const [firstShip, ...remainingShips] = targetShips;
+  return (firstShip.dates || []).filter((date) =>
+    remainingShips.every((ship) => (ship.dates || []).includes(date)),
+  );
 }
 
 function isPastAvailabilityDate(date) {
@@ -4779,6 +4908,7 @@ setActiveTab(panelFromPath(window.location.pathname));
 showAuthErrorFromUrl();
 loadVehicles();
 loadHangarServices();
+loadMaterialOptions();
 loadSession();
 loadRatingStats();
 loadShipListings();

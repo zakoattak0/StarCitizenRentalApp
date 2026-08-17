@@ -878,10 +878,20 @@
                 <input name="postedBy" id="material-request-name" readonly placeholder="Sign in to post" />
               </label>
               <label>
-                Delivery Location
-                <input name="location" placeholder="e.g. Orison, Seraphim..." required />
+                System
+                <select name="locationSystem" id="material-location-system"></select>
+              </label>
+              <label>
+                Planet / Orbit
+                <select name="locationPlanet" id="material-location-planet"></select>
+              </label>
+              <label>
+                Location
+                <input name="location" id="material-location-input" list="material-location-options" placeholder="e.g. Orison, Seraphim..." required />
+                <datalist id="material-location-options"></datalist>
               </label>
             </div>
+            <datalist id="material-name-options"></datalist>
             
             <div class="material-items-container">
               <legend>Materials Needed</legend>
