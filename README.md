@@ -53,6 +53,10 @@ DATABASE_URL=
 
 `AUTH_SECRET` should be a long random value. `DATABASE_URL` is reserved for a future database adapter if the account/session layer needs one.
 
+## RSI handle verification
+
+RSI verification is proof-of-control for a public handle. The app generates an `FSX-` code, the user adds it to their public RSI citizen profile bio, and `/api/auth/profile` fetches the public RSI profile before marking the handle verified.
+
 ## Deploy to Vercel
 
 Import this repository into Vercel. The build command is `npm run build`.

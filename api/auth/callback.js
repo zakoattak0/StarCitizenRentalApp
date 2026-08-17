@@ -69,6 +69,8 @@ module.exports = async function handler(request, response) {
           rsiHandle: "",
           rsiStatus: "not_linked",
           rsiVerificationCode: "",
+          rsiVerifiedAt: "",
+          rsiVerificationMethod: "",
           publicName: displayName,
         },
         stats: {

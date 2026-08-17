@@ -109,6 +109,37 @@ create table if not exists public.ratings (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.deals (
+  id uuid primary key default gen_random_uuid(),
+  requester_user_id text not null,
+  requester_name text,
+  provider_user_id text not null,
+  provider_name text,
+  listing_id text,
+  listing_type text,
+  listing_name text,
+  deal_type text not null default 'general' check (deal_type in ('ship_rental', 'crew_service', 'material_order', 'contract', 'general')),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected', 'cancelled', 'in_progress', 'completion_requested', 'completed', 'disputed')),
+  requester_confirmed_complete boolean not null default false,
+  provider_confirmed_complete boolean not null default false,
+  requester_confirmed_at timestamptz,
+  provider_confirmed_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.deal_ratings (
+  id uuid primary key default gen_random_uuid(),
+  deal_id uuid not null references public.deals(id) on delete cascade,
+  reviewer_user_id text not null,
+  reviewed_user_id text not null,
+  rating integer not null check (rating between 1 and 5),
+  comment text,
+  created_at timestamptz not null default now(),
+  unique (deal_id, reviewer_user_id)
+);
+
 create table if not exists public.org_memberships (
   id uuid primary key default gen_random_uuid(),
   user_id text,
@@ -153,6 +184,11 @@ create trigger set_org_memberships_updated_at
 before update on public.org_memberships
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_deals_updated_at on public.deals;
+create trigger set_deals_updated_at
+before update on public.deals
+for each row execute function public.set_updated_at();
+
 alter table public.users enable row level security;
 alter table public.ship_listings enable row level security;
 alter table public.crew_listings enable row level security;
@@ -160,6 +196,8 @@ alter table public.material_requests enable row level security;
 alter table public.material_offers enable row level security;
 alter table public.rental_availability enable row level security;
 alter table public.ratings enable row level security;
+alter table public.deals enable row level security;
+alter table public.deal_ratings enable row level security;
 alter table public.org_memberships enable row level security;
 
 -- Temporary public policies for the current no-Supabase-auth phase.
@@ -200,6 +238,18 @@ create policy rental_availability_select_public on public.rental_availability fo
 
 drop policy if exists ratings_select_public on public.ratings;
 create policy ratings_select_public on public.ratings for select using (true);
+
+drop policy if exists deals_select_public on public.deals;
+create policy deals_select_public on public.deals for select using (true);
+drop policy if exists deals_insert_public on public.deals;
+create policy deals_insert_public on public.deals for insert with check (true);
+drop policy if exists deals_update_public on public.deals;
+create policy deals_update_public on public.deals for update using (true) with check (true);
+
+drop policy if exists deal_ratings_select_public on public.deal_ratings;
+create policy deal_ratings_select_public on public.deal_ratings for select using (true);
+drop policy if exists deal_ratings_insert_public on public.deal_ratings;
+create policy deal_ratings_insert_public on public.deal_ratings for insert with check (true);
 
 drop policy if exists org_memberships_select_public on public.org_memberships;
 create policy org_memberships_select_public on public.org_memberships for select using (true);

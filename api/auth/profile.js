@@ -21,7 +21,47 @@ function requestBody(request) {
 }
 
 function normalizeHandle(value) {
-  return String(value || "").trim().replace(/\s+/g, "-").slice(0, 40);
+  const handle = String(value || "").trim().replace(/\s+/g, "-").slice(0, 40);
+  return /^[A-Za-z0-9_-]+$/.test(handle) ? handle : "";
+}
+
+function normalizeCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function citizenProfileUrl(handle) {
+  return `https://robertsspaceindustries.com/citizens/${encodeURIComponent(handle)}`;
+}
+
+async function fetchCitizenProfile(handle) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(citizenProfileUrl(handle), {
+      headers: {
+        "user-agent": "FSX-RSI-Verification/1.0",
+        accept: "text/html",
+      },
+      signal: controller.signal,
+    });
+
+    if (response.status === 404) {
+      throw new Error("That RSI handle profile was not found.");
+    }
+    if (!response.ok) {
+      throw new Error(`RSI profile check failed with status ${response.status}.`);
+    }
+
+    return await response.text();
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("RSI profile check timed out. Try again in a moment.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 module.exports = async function handler(request, response) {
@@ -45,28 +85,47 @@ module.exports = async function handler(request, response) {
       publicName: session.user.displayName || session.user.username || "",
       ...(session.user.profile || {}),
     };
+    if (profile.rsiStatus === "verified" && profile.rsiVerificationMethod !== "public_profile_code") {
+      profile.rsiStatus = profile.rsiHandle && profile.rsiVerificationCode ? "pending" : "not_linked";
+      profile.rsiVerifiedAt = "";
+    }
 
     if (action === "start-rsi") {
       const rsiHandle = normalizeHandle(body.rsiHandle);
       if (!rsiHandle) {
-        return sendJson(response, 400, { error: "Enter an RSI handle to link." });
+        return sendJson(response, 400, { error: "Enter a valid RSI handle using letters, numbers, underscores, or hyphens." });
       }
       profile.rsiHandle = rsiHandle;
       profile.rsiStatus = "pending";
       profile.rsiVerificationCode = `FSX-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+      profile.rsiVerifiedAt = "";
+      profile.rsiVerificationMethod = "";
     } else if (action === "verify-rsi") {
-      const code = String(body.code || "").trim().toUpperCase();
+      const code = normalizeCode(profile.rsiVerificationCode);
       if (!profile.rsiHandle || profile.rsiStatus !== "pending") {
-        return sendJson(response, 400, { error: "Start RSI verification before entering a code." });
+        return sendJson(response, 400, { error: "Start RSI verification before checking the RSI profile." });
       }
-      if (code !== String(profile.rsiVerificationCode || "").toUpperCase()) {
-        return sendJson(response, 400, { error: "Verification code does not match." });
+      if (!code) {
+        return sendJson(response, 400, { error: "Start RSI verification to generate a code first." });
       }
+
+      const profileHtml = await fetchCitizenProfile(profile.rsiHandle);
+      if (!profileHtml.toUpperCase().includes(code)) {
+        return sendJson(response, 400, {
+          error: `Could not find ${code} on the public RSI profile for ${profile.rsiHandle}. Add the code to the profile bio, save it, then try again.`,
+        });
+      }
+
       profile.rsiStatus = "verified";
+      profile.rsiVerifiedAt = new Date().toISOString();
+      profile.rsiVerificationMethod = "public_profile_code";
+      profile.rsiVerificationCode = "";
     } else if (action === "clear-rsi") {
       profile.rsiHandle = "";
       profile.rsiStatus = "not_linked";
       profile.rsiVerificationCode = "";
+      profile.rsiVerifiedAt = "";
+      profile.rsiVerificationMethod = "";
     } else {
       return sendJson(response, 400, { error: "Unknown profile action." });
     }

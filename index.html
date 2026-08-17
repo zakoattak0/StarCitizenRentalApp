@@ -25,7 +25,24 @@
         <nav class="tabs" aria-label="Primary">
           <button class="tab" data-tab="ships">Ships</button>
           <button class="tab" data-tab="crew">Crew</button>
-          <button class="tab" data-tab="materials">Materials</button>
+          <div class="nav-dropdown" id="materials-nav-dropdown">
+            <button
+              class="tab nav-dropdown-trigger"
+              id="materials-menu-button"
+              type="button"
+              data-tab="materials"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="materials-menu"
+            >
+              Materials
+              <span class="dropdown-caret" aria-hidden="true"></span>
+            </button>
+            <div class="nav-dropdown-menu" id="materials-menu" role="menu" aria-labelledby="materials-menu-button">
+              <button type="button" role="menuitem" data-route="materials">Browse Listings</button>
+              <button type="button" role="menuitem" id="post-material-request-menu-button" data-auth-action="post a material request">Post Material Request</button>
+            </div>
+          </div>
           <button class="tab auth-account-tab" data-tab="account">Account</button>
         </nav>
 
@@ -274,7 +291,7 @@
                 </label>
                 <div class="modal-actions">
                   <button class="secondary-button" id="rsi-start-button" type="submit">Link RSI handle</button>
-                  <button class="primary-button is-hidden" id="rsi-verify-button" type="button">Verify RSI</button>
+                  <button class="primary-button is-hidden" id="rsi-verify-button" type="button">Check RSI Profile</button>
                   <button class="secondary-button is-hidden" id="rsi-clear-button" type="button">Remove RSI</button>
                 </div>
                 <p class="api-status" id="rsi-status-message">RSI verification is optional and never required to post.</p>
@@ -321,6 +338,11 @@
                   <strong>My Listings</strong>
                   <p>Review all active ship, crew, and material postings.</p>
                 </button>
+                <button class="account-tile" type="button" data-account-target="deals">
+                  <span>Deals</span>
+                  <strong>My Deals</strong>
+                  <p>Accept requests, track active work, confirm completion, and rate completed deals.</p>
+                </button>
                 <button class="account-tile" type="button" data-account-target="contracts">
                   <span>Contracts</span>
                   <strong>My Contracts</strong>
@@ -333,6 +355,7 @@
                 <button class="sub-tab" data-account-view="fleet">My Fleet</button>
                 <button class="sub-tab" data-account-view="services">My Services</button>
                 <button class="sub-tab" data-account-view="listings">My Listings</button>
+                <button class="sub-tab" data-account-view="deals">My Deals</button>
                 <button class="sub-tab" data-account-view="contracts">My Contracts</button>
               </div>
 
@@ -354,7 +377,7 @@
                 <div class="owner-workspace">
                   <section class="owner-view active" data-owner-panel="fleet">
                     <div class="fleet-toolbar">
-                      <button class="primary-button" id="add-fleet-ship" type="button" data-auth-action="create a ship listing">Add ship</button>
+                      <button class="primary-button" id="add-fleet-ship" type="button">Add ship</button>
                     </div>
                     <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
                   </section>
@@ -404,6 +427,22 @@
                   </div>
                 </div>
                 <div class="account-list" id="account-listings-list" aria-live="polite"></div>
+              </section>
+
+              <section class="account-view" data-account-panel="deals">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="eyebrow">My Deals</p>
+                    <h2>Requests and active agreements</h2>
+                  </div>
+                </div>
+                <div class="contract-tabs" id="account-deal-filters" aria-label="Deal filters">
+                  <button class="sub-tab active" type="button" data-deal-filter="open">Open Deals</button>
+                  <button class="sub-tab" type="button" data-deal-filter="waiting">Waiting on Me</button>
+                  <button class="sub-tab" type="button" data-deal-filter="completed">Completed Deals</button>
+                  <button class="sub-tab" type="button" data-deal-filter="closed">Cancelled/Rejected Deals</button>
+                </div>
+                <div class="account-list" id="account-deals-list" aria-live="polite"></div>
               </section>
 
               <section class="account-view" data-account-panel="contracts">

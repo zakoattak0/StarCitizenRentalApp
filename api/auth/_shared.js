@@ -86,9 +86,16 @@ function publicUser(session) {
     rsiHandle: "",
     rsiStatus: "not_linked",
     rsiVerificationCode: "",
+    rsiVerifiedAt: "",
+    rsiVerificationMethod: "",
     publicName: session.user.displayName || session.user.username,
     ...(session.user.profile || {}),
   };
+
+  if (profile.rsiStatus === "verified" && profile.rsiVerificationMethod !== "public_profile_code") {
+    profile.rsiStatus = profile.rsiHandle && profile.rsiVerificationCode ? "pending" : "not_linked";
+    profile.rsiVerifiedAt = "";
+  }
 
   return {
     id: session.user.id,

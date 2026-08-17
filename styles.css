@@ -120,6 +120,25 @@ legend {
   flex-wrap: wrap;
 }
 
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 160ms ease;
+}
+
 .tab,
 .sub-tab,
 .icon-button,
@@ -145,12 +164,62 @@ legend {
   border-color: var(--cyan);
 }
 
+.tab:disabled,
+.sub-tab:disabled,
+.icon-button:disabled,
+.secondary-button:disabled,
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
 .tab.active,
 .sub-tab.active,
 .primary-button {
   background: linear-gradient(180deg, rgba(255, 59, 48, 0.25), rgba(185, 36, 32, 0.18));
   border-color: var(--cyan);
   color: #ffffff;
+}
+
+.nav-dropdown.is-open .dropdown-caret {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 210px;
+  border: 1px solid var(--line);
+  background: rgba(10, 10, 10, 0.98);
+  box-shadow: var(--shadow);
+  padding: 6px;
+}
+
+.nav-dropdown.is-open .nav-dropdown-menu {
+  display: grid;
+  gap: 4px;
+}
+
+.nav-dropdown-menu button {
+  min-height: 40px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  padding: 0 10px;
+  text-align: left;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.nav-dropdown-menu button:hover,
+.nav-dropdown-menu button:focus {
+  border-color: var(--cyan);
+  background: #151515;
+  outline: none;
 }
 
 .secondary-button {
@@ -380,6 +449,12 @@ main {
 .market-card .primary-button,
 .market-card .secondary-button {
   width: 100%;
+}
+
+.demo-button {
+  border-color: rgba(255, 198, 41, 0.78);
+  background: rgba(255, 198, 41, 0.12);
+  color: #ffe59b;
 }
 
 .price-line {
@@ -1690,6 +1765,13 @@ legend {
   margin-bottom: 10px;
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .card-top h2 {
   margin: 0;
   font-size: 1.05rem;
@@ -1703,6 +1785,12 @@ legend {
   font-size: 0.72rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.demo-tag {
+  border-color: rgba(255, 198, 41, 0.72);
+  color: #ffe59b;
+  background: rgba(255, 198, 41, 0.12);
 }
 
 .card-actions {
