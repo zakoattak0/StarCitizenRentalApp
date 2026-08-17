@@ -1389,6 +1389,13 @@ h1 {
   align-content: center;
 }
 
+.material-price-hint {
+  color: var(--cyan);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
 .material-line-item:last-child {
   border-bottom: 0;
   margin-bottom: 0;

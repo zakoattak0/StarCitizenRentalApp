@@ -1,4 +1,5 @@
 const commoditiesUrl = "https://api.uexcorp.uk/2.0/commodities";
+const commodityPricesUrl = "https://api.uexcorp.uk/2.0/commodities_prices_all";
 const terminalsUrl = "https://api.uexcorp.uk/2.0/terminals";
 
 const getUexString = (row, key) => String(row?.[key] ?? "").trim();
@@ -53,8 +54,9 @@ module.exports = async function handler(request, response) {
       return response.status(405).json({ error: "Method not allowed" });
     }
 
-    const [commodities, terminals] = await Promise.all([
+    const [commodities, commodityPrices, terminals] = await Promise.all([
       fetchUex(commoditiesUrl),
+      fetchUex(commodityPricesUrl),
       fetchUex(terminalsUrl),
     ]);
 
@@ -63,6 +65,7 @@ module.exports = async function handler(request, response) {
         .filter((commodity) => Number(commodity.is_visible ?? 1) === 1)
         .map((commodity) => getUexString(commodity, "name")),
     );
+    const materialPrices = averageSellPrices(commodityPrices);
 
     const locations = terminals
       .filter((terminal) => Number(terminal.is_visible ?? 1) === 1)
@@ -93,17 +96,46 @@ module.exports = async function handler(request, response) {
     response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     return response.status(200).json({
       materials,
+      materialPrices,
       locations,
       source: {
         commodities: commoditiesUrl,
+        commodityPrices: commodityPricesUrl,
         terminals: terminalsUrl,
       },
     });
   } catch (error) {
     return response.status(502).json({
       materials: [],
+      materialPrices: {},
       locations: [],
       error: error instanceof Error ? error.message : "Unable to load UEX material options",
     });
   }
 };
+
+function averageSellPrices(rows) {
+  const totals = rows.reduce((prices, row) => {
+    const name = getUexString(row, "commodity_name");
+    const price = Number(row.price_sell || row.price_sell_avg || 0);
+
+    if (!name || price <= 0 || Number(row.status_sell ?? 1) === 0) {
+      return prices;
+    }
+
+    prices[name] = prices[name] || { total: 0, count: 0 };
+    prices[name].total += price;
+    prices[name].count += 1;
+    return prices;
+  }, {});
+
+  return Object.fromEntries(
+    Object.entries(totals).map(([name, value]) => [
+      name,
+      {
+        averageSellPrice: Math.round(value.total / value.count),
+        pricePoints: value.count,
+      },
+    ]),
+  );
+}

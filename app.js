@@ -116,6 +116,7 @@ const oreOptions = [
 
 let materialNameOptions = [...oreOptions];
 let materialLocationOptions = [];
+let materialSellPriceByName = new Map();
 
 const size5WeaponOptions = [
   "'WAR'",
@@ -438,38 +439,35 @@ const demoCrewListings = [
 ].map(markDemoPost);
 
 const demoMaterialRequests = [
-  {
-    id: "fake-demo-material-rmc",
-    requesterId: "fake-demo-material-requester-rmc",
-    postedBy: `${demoOwnerPrefix}RMC Buyer Placeholder`,
-    location: "FAKE DEMO delivery - Orison TDD",
-    neededBy: "FAKE DEMO date - this week",
-    price: "FAKE DEMO: 12,000 UEC / SCU",
-    materials: [{ material: "Recycled Material Composite (RMC)", quantity: 96, quality: "Any" }],
-  },
-  {
-    id: "fake-demo-material-quantainium",
-    requesterId: "fake-demo-material-requester-quant",
-    postedBy: `${demoOwnerPrefix}Ore Buyer Placeholder`,
-    location: "FAKE DEMO delivery - ARC-L1",
-    neededBy: "FAKE DEMO date - flexible",
-    price: "FAKE DEMO: 19,500 UEC / SCU",
-    materials: [{ material: "Quantainium", quantity: 32, quality: "+/- 5%" }],
-  },
-  {
-    id: "fake-demo-material-mixed",
-    requesterId: "fake-demo-material-requester-mixed",
-    postedBy: `${demoOwnerPrefix}Multi-Material Placeholder`,
-    location: "FAKE DEMO delivery - Area18",
-    neededBy: "FAKE DEMO date - no rush",
-    price: "FAKE DEMO: open bid",
-    materials: [
-      { material: "Gold", quantity: 50, quality: "Any" },
-      { material: "Bexalite", quantity: 20, quality: "High value preferred" },
-      { material: "Construction Materials", anyQuantity: true, quality: "Any" },
-    ],
-  },
-].map(markDemoPost);
+  ["rmc-700-01", "Recycled Material Composite", 96, "700+", 6400, "Orison TDD"],
+  ["rmc-700-02", "Recycled Material Composite", 140, "725+", 6800, "Seraphim Station"],
+  ["rmc-700-03", "Recycled Material Composite", 72, "735+", 7100, "Everus Harbor"],
+  ["rmc-700-outlier", "Recycled Material Composite", 10, "740+", 99000, "FAKE DEMO outlier terminal"],
+  ["rmc-750-01", "Recycled Material Composite", 120, "765+", 7600, "Area18 TDD"],
+  ["rmc-750-02", "Recycled Material Composite", 80, "790+", 8050, "Lorville CBD"],
+  ["quant-700-01", "Quantainium", 32, "700+", 18200, "ARC-L1 Refinery"],
+  ["quant-700-02", "Quantainium", 48, "735+", 19100, "HUR-L2 Refinery"],
+  ["quant-750-01", "Quantainium", 24, "765+", 21400, "MIC-L1 Refinery"],
+  ["quant-800-01", "Quantainium", 18, "820+", 24000, "CRU-L1 Refinery"],
+  ["bex-650-01", "Bexalite", 35, "650+", 8200, "ARC-L1 Refinery"],
+  ["bex-650-02", "Bexalite", 44, "680+", 8700, "HUR-L1 Refinery"],
+  ["bex-700-01", "Bexalite", 28, "710+", 9300, "MIC-L2 Refinery"],
+  ["bex-750-01", "Bexalite", 22, "760+", 10100, "CRU-L5 Refinery"],
+  ["gold-500-01", "Gold", 100, "500+", 7100, "Area18 TDD"],
+  ["gold-500-02", "Gold", 64, "545+", 7600, "Lorville CBD"],
+  ["taranite-700-01", "Taranite", 30, "735+", 7800, "ARC-L2 Refinery"],
+  ["diamond-450-01", "Diamond", 200, "450+", 6200, "New Babbage TDD"],
+  ["agricium-750-01", "Agricium", 40, "750+", 9800, "Orison TDD"],
+  ["laranite-600-01", "Laranite", 55, "600+", 6500, "Everus Harbor"],
+].map(([id, material, quantity, quality, price, location]) => markDemoPost({
+  id: `fake-demo-material-stileron-${id}`,
+  requesterId: "fake-demo-material-requester-stileron",
+  postedBy: `${demoOwnerPrefix}Stileron`,
+  location: `FAKE DEMO trade - ${location}`,
+  neededBy: "FAKE DEMO date - benchmark sample",
+  price: `FAKE DEMO: ${price.toLocaleString("en-US")} UEC / SCU`,
+  materials: [{ material, quantity, quality }],
+}));
 
 const deals = [];
 
@@ -661,8 +659,6 @@ const materialRequestForm = document.querySelector("#material-request-form");
 const materialRequestClose = document.querySelector("#material-request-close");
 const materialRequestCancel = document.querySelector("#material-request-cancel");
 const materialRequestName = document.querySelector("#material-request-name");
-const materialLocationSystemSelect = document.querySelector("#material-location-system");
-const materialLocationPlanetSelect = document.querySelector("#material-location-planet");
 const materialLocationInput = document.querySelector("#material-location-input");
 const materialLocationOptionsList = document.querySelector("#material-location-options");
 const materialNameOptionsList = document.querySelector("#material-name-options");
@@ -1341,21 +1337,23 @@ addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
 
 materialPaymentType.addEventListener("change", updateMaterialPaymentUI);
 materialPaymentValue.addEventListener("input", () => formatCreditInput(materialPaymentValue));
-materialLocationSystemSelect.addEventListener("change", () => {
-  updateMaterialLocationFilters();
-  materialLocationInput.value = "";
-});
-materialLocationPlanetSelect.addEventListener("change", () => {
-  updateMaterialLocationOptions();
-  materialLocationInput.value = "";
-});
 
 materialLineItemsContainer.addEventListener("change", (event) => {
+  if (event.target.matches("[name='material']")) {
+    updateMaterialPriceHint(event.target.closest(".material-line-item"));
+  }
+
   if (!event.target.matches(".material-any-quantity")) {
     return;
   }
 
   updateMaterialQuantityMode(event.target.closest(".material-line-item"));
+});
+
+materialLineItemsContainer.addEventListener("input", (event) => {
+  if (event.target.matches("[name='material'], [name='quality']")) {
+    updateMaterialPriceHint(event.target.closest(".material-line-item"));
+  }
 });
 
 materialRequestForm.addEventListener("submit", async (event) => {
@@ -1383,7 +1381,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
   const request = {
     requesterId: authState.user?.id || "",
     postedBy: formData.get("postedBy"),
-    location: formatMaterialRequestLocation(formData),
+    location: formData.get("location"),
     neededBy: formData.get("neededBy"),
     materials: lineItems,
     price: payType === "perscu" ? `${payValue} UEC / SCU` : `${payValue} UEC Total`,
@@ -1476,19 +1474,22 @@ async function loadHangarServices() {
 
 async function loadMaterialOptions() {
   updateMaterialNameOptions();
-  updateMaterialLocationFilters();
+  updateMaterialLocationOptions();
 
   try {
     const payload = await fetch(MATERIAL_OPTIONS_URL, { cache: "no-store" }).then(readJson);
     materialNameOptions = uniqueSorted([...oreOptions, ...(payload.materials || [])]);
+    materialSellPriceByName = new Map(Object.entries(payload.materialPrices || {}));
     materialLocationOptions = Array.isArray(payload.locations) ? payload.locations : [];
   } catch {
     materialNameOptions = uniqueSorted(oreOptions);
+    materialSellPriceByName = new Map();
     materialLocationOptions = [];
   }
 
   updateMaterialNameOptions();
-  updateMaterialLocationFilters();
+  updateMaterialPriceHints();
+  updateMaterialLocationOptions();
 }
 
 function navigateToPanel(tabName) {
@@ -2310,6 +2311,7 @@ async function loadMaterialRequests() {
     applyDemoPostsWhenEmpty(materialRequests, demoMaterialRequests);
     dataStatus.materialRequests.loading = false;
     renderMaterialRequests();
+    updateMaterialPriceHints();
     renderAccountListings();
   }
 }
@@ -3413,7 +3415,7 @@ function openMaterialRequestModal() {
 
   materialRequestForm.reset();
   materialRequestName.value = preferredDisplayName(authState.user);
-  updateMaterialLocationFilters();
+  updateMaterialLocationOptions();
   materialLineItemsContainer.innerHTML = "";
   addMaterialLineItem();
   updateMaterialPaymentUI();
@@ -3437,50 +3439,17 @@ function updateMaterialNameOptions() {
   setDatalistOptions(materialNameOptionsList, materialNameOptions);
 }
 
-function updateMaterialLocationFilters() {
-  const selectedSystem = materialLocationSystemSelect.value;
-  const selectedPlanet = materialLocationPlanetSelect.value;
-  const systems = uniqueSorted(materialLocationOptions.map((location) => location.system));
-
-  setSelectOptions(materialLocationSystemSelect, systems, "Any system", selectedSystem);
-
-  const activeSystem = materialLocationSystemSelect.value;
-  const planets = uniqueSorted(
-    materialLocationOptions
-      .filter((location) => !activeSystem || location.system === activeSystem)
-      .map((location) => location.planet),
-  );
-
-  setSelectOptions(materialLocationPlanetSelect, planets, "Any planet / orbit", selectedPlanet);
-  updateMaterialLocationOptions();
-}
-
 function updateMaterialLocationOptions() {
-  const system = materialLocationSystemSelect.value;
-  const planet = materialLocationPlanetSelect.value;
-  const locations = materialLocationOptions
-    .filter((location) => !system || location.system === system)
-    .filter((location) => !planet || location.planet === planet)
-    .map((location) => location.location);
-
-  setDatalistOptions(materialLocationOptionsList, uniqueSorted(locations));
+  setDatalistOptions(
+    materialLocationOptionsList,
+    uniqueSorted(materialLocationOptions.map((location) => location.location)),
+  );
 }
 
 function setDatalistOptions(datalist, options) {
   datalist.innerHTML = options
     .map((option) => `<option value="${escapeHtml(option)}"></option>`)
     .join("");
-}
-
-function formatMaterialRequestLocation(formData) {
-  return [
-    formData.get("locationSystem"),
-    formData.get("locationPlanet"),
-    formData.get("location"),
-  ]
-    .map((value) => String(value || "").trim())
-    .filter(Boolean)
-    .join(" / ");
 }
 
 function addMaterialLineItem() {
@@ -3490,6 +3459,7 @@ function addMaterialLineItem() {
     <label>
       Ore / Material
       <input name="material" list="material-name-options" required placeholder="Type or choose material" />
+      <small class="material-price-hint">Select a material to see average sell price.</small>
     </label>
     <label>
       Qty (SCU)
@@ -3501,7 +3471,7 @@ function addMaterialLineItem() {
     </label>
     <label>
       Quality
-      <input name="quality" type="text" placeholder="+/- %" />
+      <input name="quality" type="text" placeholder="e.g. 735+" />
     </label>
     <button class="icon-button remove-line" type="button" aria-label="Remove material line">&times;</button>
   `;
@@ -3514,6 +3484,166 @@ function addMaterialLineItem() {
 
   materialLineItemsContainer.appendChild(row);
   updateMaterialQuantityMode(row);
+  updateMaterialPriceHint(row);
+}
+
+function updateMaterialPriceHints() {
+  materialLineItemsContainer.querySelectorAll(".material-line-item").forEach(updateMaterialPriceHint);
+}
+
+function updateMaterialPriceHint(row) {
+  if (!row) {
+    return;
+  }
+
+  const material = row.querySelector("[name='material']").value;
+  const quality = row.querySelector("[name='quality']").value;
+  const hint = row.querySelector(".material-price-hint");
+  const gamePrice = materialAverageSellPrice(material);
+  const playerPrice = materialPlayerPostingAverage(material, quality);
+
+  if (!material) {
+    hint.textContent = "Select a material to see average sell price.";
+    return;
+  }
+
+  hint.innerHTML = [
+    gamePrice
+      ? `Game avg sell: ${formatCredits(gamePrice.averageSellPrice)} UEC / SCU (${gamePrice.pricePoints.toLocaleString()} locations)`
+      : "No current game sell average available.",
+    playerPrice
+      ? `Player avg: ${formatCredits(playerPrice.averagePrice)} UEC / SCU for ${playerPrice.bucketLabel} quality (${playerPrice.usedCount}/${playerPrice.totalCount} posts, outliers excluded)`
+      : playerBenchmarkMissingLabel(material, quality),
+  ].map(escapeHtml).join("<br>");
+}
+
+function playerBenchmarkMissingLabel(material, quality) {
+  const bucket = materialQualityBucket(quality);
+  return bucket === null
+    ? "Enter quality to see matching player posting average."
+    : `No player posting average yet for ${materialQualityBucketLabel(bucket)} quality.`;
+}
+
+function materialAverageSellPrice(materialName) {
+  const exact = materialSellPriceByName.get(materialName);
+  if (exact) {
+    return exact;
+  }
+
+  const normalizedName = normalizeMaterialName(materialName);
+  return Array.from(materialSellPriceByName.entries())
+    .find(([name]) => normalizeMaterialName(name) === normalizedName)?.[1] || null;
+}
+
+function normalizeMaterialName(value) {
+  return normalizeFilterValue(String(value || "").replace(/\s*\([^)]*\)\s*/g, " "));
+}
+
+function materialPlayerPostingAverage(materialName, quality) {
+  const normalizedMaterial = normalizeMaterialName(materialName);
+  const bucket = materialQualityBucket(quality);
+
+  if (!normalizedMaterial || bucket === null) {
+    return null;
+  }
+
+  const prices = materialRequests
+    .flatMap((request) => materialPostingPricePoints(request, normalizedMaterial, bucket));
+  const filteredPrices = filterMaterialPriceOutliers(prices);
+
+  if (!filteredPrices.length) {
+    return null;
+  }
+
+  const averagePrice = Math.round(filteredPrices.reduce((total, price) => total + price, 0) / filteredPrices.length);
+  return {
+    averagePrice,
+    bucketLabel: materialQualityBucketLabel(bucket),
+    totalCount: prices.length,
+    usedCount: filteredPrices.length,
+  };
+}
+
+function materialPostingPricePoints(request, normalizedMaterial, bucket) {
+  const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
+  if (materials.length !== 1) {
+    return [];
+  }
+
+  const item = materials[0];
+  if (normalizeMaterialName(item.material) !== normalizedMaterial || materialQualityBucket(item.quality) !== bucket) {
+    return [];
+  }
+
+  const price = materialRequestPricePerScu(request, item);
+  return price > 0 ? [price] : [];
+}
+
+function materialRequestPricePerScu(request, item) {
+  const price = parseCredits(request.price);
+
+  if (!price) {
+    return 0;
+  }
+
+  if (normalizeFilterValue(request.price).includes("scu")) {
+    return price;
+  }
+
+  const quantity = parseMaterialQuantityValue(item);
+  return quantity > 0 ? Math.round(price / quantity) : 0;
+}
+
+function parseMaterialQuantityValue(item) {
+  if (item?.anyQuantity) {
+    return 0;
+  }
+
+  return Number(String(item?.quantity || "").replace(/[^0-9.]/g, "")) || 0;
+}
+
+function materialQualityBucket(quality) {
+  const match = String(quality || "").match(/\d+(?:\.\d+)?/);
+  if (!match) {
+    return null;
+  }
+
+  return Math.floor(Number(match[0]) / 50) * 50;
+}
+
+function materialQualityBucketLabel(bucket) {
+  return `${bucket}+`;
+}
+
+function filterMaterialPriceOutliers(prices) {
+  if (prices.length < 4) {
+    return prices;
+  }
+
+  const sortedPrices = [...prices].sort((first, second) => first - second);
+  const q1 = percentile(sortedPrices, 0.25);
+  const q3 = percentile(sortedPrices, 0.75);
+  const iqr = q3 - q1;
+
+  if (iqr === 0) {
+    return sortedPrices;
+  }
+
+  const lowerBound = q1 - (iqr * 1.5);
+  const upperBound = q3 + (iqr * 1.5);
+  return sortedPrices.filter((price) => price >= lowerBound && price <= upperBound);
+}
+
+function percentile(sortedValues, percentileValue) {
+  const index = (sortedValues.length - 1) * percentileValue;
+  const lowerIndex = Math.floor(index);
+  const upperIndex = Math.ceil(index);
+
+  if (lowerIndex === upperIndex) {
+    return sortedValues[lowerIndex];
+  }
+
+  return sortedValues[lowerIndex] + ((sortedValues[upperIndex] - sortedValues[lowerIndex]) * (index - lowerIndex));
 }
 
 function updateMaterialQuantityMode(row) {
