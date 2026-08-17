@@ -2179,6 +2179,17 @@ function applyDemoPostsWhenEmpty(target, demoPosts, dismissedDemoIds = new Set()
   }
 }
 
+function prependMissingDemoPosts(target, demoPosts) {
+  const existingIds = new Set(target.map((post) => post.id).filter(Boolean));
+  const missingDemoPosts = demoPosts
+    .filter((post) => !existingIds.has(post.id))
+    .map(cloneDemoPost);
+
+  if (missingDemoPosts.length) {
+    target.unshift(...missingDemoPosts);
+  }
+}
+
 function getDismissedDemoShipIds() {
   try {
     const stored = JSON.parse(localStorage.getItem(dismissedDemoShipStorageKey) || "[]");
@@ -2321,7 +2332,7 @@ async function loadMaterialRequests() {
   } catch (error) {
     dataStatus.materialRequests.error = error instanceof Error ? error.message : "Unable to load material requests";
   } finally {
-    applyDemoPostsWhenEmpty(materialRequests, demoMaterialRequests);
+    prependMissingDemoPosts(materialRequests, demoMaterialRequests);
     dataStatus.materialRequests.loading = false;
     renderMaterialRequests();
     updateMaterialPriceHints();
