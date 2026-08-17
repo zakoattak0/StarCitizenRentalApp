@@ -439,26 +439,26 @@ const demoCrewListings = [
 ].map(markDemoPost);
 
 const demoMaterialRequests = [
-  ["rmc-700-01", "Recycled Material Composite", 96, "700+", 6400, "Orison TDD"],
-  ["rmc-700-02", "Recycled Material Composite", 140, "725+", 6800, "Seraphim Station"],
-  ["rmc-700-03", "Recycled Material Composite", 72, "735+", 7100, "Everus Harbor"],
-  ["rmc-700-outlier", "Recycled Material Composite", 10, "740+", 99000, "FAKE DEMO outlier terminal"],
-  ["rmc-750-01", "Recycled Material Composite", 120, "765+", 7600, "Area18 TDD"],
-  ["rmc-750-02", "Recycled Material Composite", 80, "790+", 8050, "Lorville CBD"],
-  ["quant-700-01", "Quantainium", 32, "700+", 18200, "ARC-L1 Refinery"],
-  ["quant-700-02", "Quantainium", 48, "735+", 19100, "HUR-L2 Refinery"],
-  ["quant-750-01", "Quantainium", 24, "765+", 21400, "MIC-L1 Refinery"],
-  ["quant-800-01", "Quantainium", 18, "820+", 24000, "CRU-L1 Refinery"],
-  ["bex-650-01", "Bexalite", 35, "650+", 8200, "ARC-L1 Refinery"],
-  ["bex-650-02", "Bexalite", 44, "680+", 8700, "HUR-L1 Refinery"],
-  ["bex-700-01", "Bexalite", 28, "710+", 9300, "MIC-L2 Refinery"],
-  ["bex-750-01", "Bexalite", 22, "760+", 10100, "CRU-L5 Refinery"],
-  ["gold-500-01", "Gold", 100, "500+", 7100, "Area18 TDD"],
-  ["gold-500-02", "Gold", 64, "545+", 7600, "Lorville CBD"],
-  ["taranite-700-01", "Taranite", 30, "735+", 7800, "ARC-L2 Refinery"],
-  ["diamond-450-01", "Diamond", 200, "450+", 6200, "New Babbage TDD"],
-  ["agricium-750-01", "Agricium", 40, "750+", 9800, "Orison TDD"],
-  ["laranite-600-01", "Laranite", 55, "600+", 6500, "Everus Harbor"],
+  ["rmc-700-01", "Recycled Material Composite", 96, "700+", 6400, "Stanton / Crusader / Orison"],
+  ["rmc-700-02", "Recycled Material Composite", 140, "725+", 6800, "Stanton / Crusader / Seraphim Station"],
+  ["rmc-700-03", "Recycled Material Composite", 72, "735+", 7100, "Stanton / Hurston / Everus Harbor"],
+  ["rmc-700-outlier", "Recycled Material Composite", 10, "740+", 99000, "Stanton / ArcCorp / Baijini Point"],
+  ["rmc-750-01", "Recycled Material Composite", 120, "765+", 7600, "Stanton / ArcCorp / Area 18"],
+  ["rmc-750-02", "Recycled Material Composite", 80, "790+", 8050, "Stanton / Hurston / Lorville"],
+  ["quant-700-01", "Quantainium", 32, "700+", 18200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station"],
+  ["quant-700-02", "Quantainium", 48, "735+", 19100, "Stanton / Hurston / HUR-L2 Faithful Dream Station"],
+  ["quant-750-01", "Quantainium", 24, "765+", 21400, "Stanton / MicroTech / MIC-L1 Shallow Frontier Station"],
+  ["quant-800-01", "Quantainium", 18, "820+", 24000, "Stanton / Crusader / CRU-L1 Ambitious Dream Station"],
+  ["bex-650-01", "Bexalite", 35, "650+", 8200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station"],
+  ["bex-650-02", "Bexalite", 44, "680+", 8700, "Stanton / Hurston / HUR-L1 Green Glade Station"],
+  ["bex-700-01", "Bexalite", 28, "710+", 9300, "Stanton / MicroTech / MIC-L2 Long Forest Station"],
+  ["bex-750-01", "Bexalite", 22, "760+", 10100, "Stanton / Crusader / CRU-L5 Beautiful Glen Station"],
+  ["gold-500-01", "Gold", 100, "500+", 7100, "Stanton / ArcCorp / Area 18"],
+  ["gold-500-02", "Gold", 64, "545+", 7600, "Stanton / Hurston / Lorville"],
+  ["taranite-700-01", "Taranite", 30, "735+", 7800, "Stanton / ArcCorp / ARC-L2 Lively Pathway Station"],
+  ["diamond-450-01", "Diamond", 200, "450+", 6200, "Stanton / MicroTech / New Babbage"],
+  ["agricium-750-01", "Agricium", 40, "750+", 9800, "Stanton / Crusader / Orison"],
+  ["laranite-600-01", "Laranite", 55, "600+", 6500, "Stanton / Hurston / Everus Harbor"],
 ].map(([id, material, quantity, quality, price, location]) => markDemoPost({
   id: `fake-demo-material-stileron-${id}`,
   requesterId: "fake-demo-material-requester-stileron",
@@ -659,6 +659,8 @@ const materialRequestForm = document.querySelector("#material-request-form");
 const materialRequestClose = document.querySelector("#material-request-close");
 const materialRequestCancel = document.querySelector("#material-request-cancel");
 const materialRequestName = document.querySelector("#material-request-name");
+const materialLocationSystemSelect = document.querySelector("#material-location-system");
+const materialLocationPlanetSelect = document.querySelector("#material-location-planet");
 const materialLocationInput = document.querySelector("#material-location-input");
 const materialLocationOptionsList = document.querySelector("#material-location-options");
 const materialNameOptionsList = document.querySelector("#material-name-options");
@@ -1333,6 +1335,17 @@ postMaterialRequestButton.addEventListener("click", openPostMaterialRequestFlow)
 materialRequestClose.addEventListener("click", closeMaterialRequestModal);
 materialRequestCancel.addEventListener("click", closeMaterialRequestModal);
 
+materialLocationSystemSelect.addEventListener("change", () => {
+  materialLocationPlanetSelect.value = "";
+  materialLocationInput.value = "";
+  updateMaterialLocationFilters();
+});
+
+materialLocationPlanetSelect.addEventListener("change", () => {
+  materialLocationInput.value = "";
+  updateMaterialLocationOptions();
+});
+
 addMaterialLineButton.addEventListener("click", () => addMaterialLineItem());
 
 materialPaymentType.addEventListener("change", updateMaterialPaymentUI);
@@ -1381,7 +1394,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
   const request = {
     requesterId: authState.user?.id || "",
     postedBy: formData.get("postedBy"),
-    location: formData.get("location"),
+    location: formatMaterialRequestLocation(formData),
     neededBy: formData.get("neededBy"),
     materials: lineItems,
     price: payType === "perscu" ? `${payValue} UEC / SCU` : `${payValue} UEC Total`,
@@ -1474,7 +1487,7 @@ async function loadHangarServices() {
 
 async function loadMaterialOptions() {
   updateMaterialNameOptions();
-  updateMaterialLocationOptions();
+  updateMaterialLocationFilters();
 
   try {
     const payload = await fetch(MATERIAL_OPTIONS_URL, { cache: "no-store" }).then(readJson);
@@ -1489,7 +1502,7 @@ async function loadMaterialOptions() {
 
   updateMaterialNameOptions();
   updateMaterialPriceHints();
-  updateMaterialLocationOptions();
+  updateMaterialLocationFilters();
 }
 
 function navigateToPanel(tabName) {
@@ -2077,7 +2090,7 @@ function accountServiceCard(listing) {
       </div>
       <div class="account-listing-meta">
         ${listingStatusBadge(listing.availabilityStatus || "Active")}
-        <strong>${listing.payType === "cut" ? `${formatCredits(listing.price)}% cut` : `${formatCredits(listing.price)} UEC / hour`}</strong>
+        <strong>${crewPayLabel(listing)}</strong>
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" disabled>Edit</button>
@@ -2119,7 +2132,7 @@ function accountCrewListingCard(listing) {
       </div>
       <div class="account-listing-meta">
         ${listingStatusBadge(listing.availabilityStatus || "Active")}
-        <strong>${listing.payType === "cut" ? `${formatCredits(listing.price)}% cut` : `${formatCredits(listing.price)} UEC / hour`}</strong>
+        <strong>${crewPayLabel(listing)}</strong>
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" disabled>Edit</button>
@@ -2832,7 +2845,7 @@ function shipMarketplaceCard(ship) {
 }
 
 function crewMarketplaceCard(crew) {
-  const payLabel = crew.payType === "cut" ? `${crew.price}% Cut` : `${formatCredits(crew.price)} UEC / hour`;
+  const payLabel = crewPayLabel(crew);
   const ratingLine = ratingSummaryLine(crew.ownerId, crew.rating, crew.completedJobs);
   
   return `
@@ -2855,6 +2868,18 @@ function crewMarketplaceCard(crew) {
       ${crew.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="primary-button" type="button" data-auth-action="request crew services" data-deal-request data-deal-type="crew_service" data-listing-type="crew" data-listing-id="${escapeHtml(crew.id || "")}" data-listing-name="${escapeHtml(crew.role || crew.name || "Crew service")}" data-provider-id="${escapeHtml(crew.ownerId || "")}" data-provider-name="${escapeHtml(crew.name || "Provider")}">Request Crew</button>`}
     </article>
   `;
+}
+
+function crewPayLabel(listing) {
+  if (listing.payType === "cut") {
+    return `${formatCredits(listing.price)}% cut`;
+  }
+
+  if (listing.payType === "share") {
+    return `${formatCredits(listing.price)}% share`;
+  }
+
+  return `${formatCredits(listing.price)} UEC / hour`;
 }
 
 function materialRequestCard(request) {
@@ -3393,10 +3418,15 @@ function closeCrewPostingModal() {
 }
 
 function updateCrewPostingPayUI() {
-  const isFlat = crewPostingPayType.value === "flat";
+  const payType = crewPostingPayType.value;
+  const isFlat = payType === "flat";
   const labelText = crewPostingPayValueLabel.querySelector(".label-text");
   if (labelText) {
-    labelText.textContent = isFlat ? "Rate (UEC / hour)" : "Pay Cut (%)";
+    labelText.textContent = isFlat
+      ? "Rate (UEC / hour)"
+      : payType === "share"
+        ? "Share (%)"
+        : "Pay Cut (%)";
   }
   crewPostingPayValue.placeholder = isFlat ? "5,000" : "15";
   
@@ -3415,7 +3445,7 @@ function openMaterialRequestModal() {
 
   materialRequestForm.reset();
   materialRequestName.value = preferredDisplayName(authState.user);
-  updateMaterialLocationOptions();
+  updateMaterialLocationFilters();
   materialLineItemsContainer.innerHTML = "";
   addMaterialLineItem();
   updateMaterialPaymentUI();
@@ -3439,11 +3469,47 @@ function updateMaterialNameOptions() {
   setDatalistOptions(materialNameOptionsList, materialNameOptions);
 }
 
+function updateMaterialLocationFilters() {
+  const selectedSystem = materialLocationSystemSelect.value;
+  const selectedPlanet = materialLocationPlanetSelect.value;
+  const systems = uniqueSorted(materialLocationOptions.map((location) => location.system));
+
+  setSelectOptions(materialLocationSystemSelect, systems, "Any system", selectedSystem);
+
+  const activeSystem = materialLocationSystemSelect.value;
+  const planets = uniqueSorted(
+    materialLocationOptions
+      .filter((location) => !activeSystem || location.system === activeSystem)
+      .map((location) => location.planet),
+  );
+
+  setSelectOptions(materialLocationPlanetSelect, planets, "Any planet / orbit", selectedPlanet);
+  updateMaterialLocationOptions();
+}
+
 function updateMaterialLocationOptions() {
+  const system = materialLocationSystemSelect.value;
+  const planet = materialLocationPlanetSelect.value;
+  const locations = materialLocationOptions
+    .filter((location) => !system || location.system === system)
+    .filter((location) => !planet || location.planet === planet)
+    .map((location) => location.location);
+
   setDatalistOptions(
     materialLocationOptionsList,
-    uniqueSorted(materialLocationOptions.map((location) => location.location)),
+    uniqueSorted(locations),
   );
+}
+
+function formatMaterialRequestLocation(formData) {
+  return [
+    formData.get("locationSystem"),
+    formData.get("locationPlanet"),
+    formData.get("location"),
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" / ");
 }
 
 function setDatalistOptions(datalist, options) {

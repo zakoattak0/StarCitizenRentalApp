@@ -846,6 +846,7 @@
                 <select name="payType" id="crew-posting-pay-type">
                   <option value="flat">Flat Rate</option>
                   <option value="cut">Percentage Cut</option>
+                  <option value="share">Share</option>
                 </select>
               </label>
               <label id="crew-posting-pay-value-label">
@@ -878,8 +879,16 @@
                 <input name="postedBy" id="material-request-name" readonly placeholder="Sign in to post" />
               </label>
               <label>
+                System
+                <select name="locationSystem" id="material-location-system" required></select>
+              </label>
+              <label>
+                Planet / Orbit
+                <select name="locationPlanet" id="material-location-planet" required></select>
+              </label>
+              <label class="form-grid-span">
                 Trade Location
-                <input name="location" id="material-location-input" list="material-location-options" placeholder="e.g. Orison, Seraphim..." required />
+                <input name="location" id="material-location-input" list="material-location-options" placeholder="e.g. Area18, ARC-L1, Baijini Point..." required />
                 <datalist id="material-location-options"></datalist>
               </label>
             </div>

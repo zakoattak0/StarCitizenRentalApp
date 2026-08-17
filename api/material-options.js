@@ -20,32 +20,87 @@ const fetchUex = async (url) => {
   return Array.isArray(payload.data) ? payload.data : [];
 };
 
-const getTerminalDisplayName = (terminal) => {
-  const fullName = getUexString(terminal, "fullname");
-  const displayName = getUexString(terminal, "displayname");
-  const name = getUexString(terminal, "name");
+const knownOrbitalStations = [
+  "Baijini Point",
+  "Everus Harbor",
+  "Port Tressler",
+  "Seraphim Station",
+];
+
+const getLocationHaystack = (terminal) =>
+  [
+    "nickname",
+    "displayname",
+    "name",
+    "fullname",
+    "orbit_name",
+    "space_station_name",
+    "city_name",
+    "planet_name",
+  ]
+    .map((key) => getUexString(terminal, key))
+    .join(" ");
+
+const getStationAlias = (terminal) => {
+  const haystack = getLocationHaystack(terminal);
+  const lPointMatch = haystack.match(/\b[A-Z]{2,4}-L[1-5]\b/i);
+
+  if (lPointMatch) {
+    return lPointMatch[0].toUpperCase();
+  }
+
+  return "";
+};
+
+const isLagrangeStation = (terminal) => {
+  const haystack = getLocationHaystack(terminal);
+  return /\b[A-Z]{2,4}-L[1-5]\b/i.test(haystack) || /lagrange point/i.test(haystack);
+};
+
+const isOrbitalStation = (terminal) => {
+  const haystack = getLocationHaystack(terminal).toLowerCase();
+  return knownOrbitalStations.some((station) => haystack.includes(station.toLowerCase()));
+};
+
+const getMajorTradeLocation = (terminal) => {
+  const city = getUexString(terminal, "city_name");
   const stationName = getUexString(terminal, "space_station_name");
-  const locationName = displayName || stationName;
+  const stationAlias = getStationAlias(terminal);
 
-  if (fullName) {
-    return fullName;
+  if (city) {
+    return city;
   }
 
-  if (
-    locationName &&
-    name &&
-    locationName.toLowerCase() !== name.toLowerCase() &&
-    !locationName.toLowerCase().includes(name.toLowerCase())
-  ) {
-    return `${locationName} - ${name}`;
+  if (isLagrangeStation(terminal)) {
+    return stationName || stationAlias;
   }
 
-  return displayName || name || stationName || `Terminal ${terminal?.id ?? "Unknown"}`;
+  if (isOrbitalStation(terminal)) {
+    return stationName || knownOrbitalStations.find((station) =>
+      getLocationHaystack(terminal).toLowerCase().includes(station.toLowerCase()),
+    );
+  }
+
+  return "";
 };
 
 const uniqueSorted = (values) =>
   [...new Set(values.filter(Boolean))]
     .sort((first, second) => first.localeCompare(second));
+
+const uniqueLocationRows = (rows) => {
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = `${row.system}|${row.planet}|${row.location}`.toLowerCase();
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+};
 
 module.exports = async function handler(request, response) {
   try {
@@ -67,31 +122,32 @@ module.exports = async function handler(request, response) {
     );
     const materialPrices = averageSellPrices(commodityPrices);
 
-    const locations = terminals
-      .filter((terminal) => Number(terminal.is_visible ?? 1) === 1)
-      .map((terminal) => {
-        const system = getUexString(terminal, "star_system_name") || "Unknown";
-        const planet =
-          getUexString(terminal, "planet_name") ||
-          getUexString(terminal, "orbit_name") ||
-          getUexString(terminal, "moon_name") ||
-          getUexString(terminal, "city_name") ||
-          "Deep Space";
-        const location = getTerminalDisplayName(terminal);
+    const locations = uniqueLocationRows(
+      terminals
+        .filter((terminal) => Number(terminal.is_visible ?? 1) === 1)
+        .map((terminal) => {
+          const system = getUexString(terminal, "star_system_name") || "Unknown";
+          const planet =
+            getUexString(terminal, "planet_name") ||
+            getUexString(terminal, "orbit_name") ||
+            getUexString(terminal, "moon_name") ||
+            getUexString(terminal, "city_name") ||
+            "Deep Space";
+          const location = getMajorTradeLocation(terminal);
 
-        return {
-          system,
-          planet,
-          location,
-        };
-      })
-      .filter((location) => location.location)
-      .sort(
-        (first, second) =>
-          first.system.localeCompare(second.system) ||
-          first.planet.localeCompare(second.planet) ||
-          first.location.localeCompare(second.location),
-      );
+          return {
+            system,
+            planet,
+            location,
+          };
+        })
+        .filter((location) => location.location),
+    ).sort(
+      (first, second) =>
+        first.system.localeCompare(second.system) ||
+        first.planet.localeCompare(second.planet) ||
+        first.location.localeCompare(second.location),
+    );
 
     response.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     return response.status(200).json({
