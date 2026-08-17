@@ -636,7 +636,11 @@ const accountDealFilters = document.querySelector("#account-deal-filters");
 const authPromptModal = document.querySelector("#auth-prompt-modal");
 const authPromptMessage = document.querySelector("#auth-prompt-message");
 const authPromptCancel = document.querySelector("#auth-prompt-cancel");
+const navDropdowns = Array.from(document.querySelectorAll(".nav-dropdown"));
+const navDropdownTriggers = Array.from(document.querySelectorAll(".nav-dropdown-trigger"));
+const postShipListingMenuButton = document.querySelector("#post-ship-listing-menu-button");
 const createCrewPostingButton = document.querySelector("#create-crew-posting-button");
+const createCrewPostingMenuButton = document.querySelector("#create-crew-posting-menu-button");
 const crewPostingModal = document.querySelector("#crew-posting-modal");
 const crewPostingForm = document.querySelector("#crew-posting-form");
 const crewPostingClose = document.querySelector("#crew-posting-close");
@@ -646,8 +650,6 @@ const crewPostingPayValue = document.querySelector("#crew-posting-pay-value");
 const crewPostingPayValueLabel = document.querySelector("#crew-posting-pay-value-label");
 const crewPostingName = document.querySelector("#crew-posting-name");
 
-const materialsNavDropdown = document.querySelector("#materials-nav-dropdown");
-const materialsMenuButton = document.querySelector("#materials-menu-button");
 const postMaterialRequestMenuButton = document.querySelector("#post-material-request-menu-button");
 const postMaterialRequestButton = document.querySelector("#post-material-request-button");
 const materialRequestModal = document.querySelector("#material-request-modal");
@@ -685,28 +687,40 @@ document.querySelectorAll("[data-route]").forEach((control) => {
   control.addEventListener("click", (event) => {
     event.preventDefault();
     navigateToPanel(control.dataset.route);
-    closeMaterialsMenu();
+    closeAllNavMenus();
   });
 });
 
-materialsMenuButton.addEventListener("click", () => {
-  toggleMaterialsMenu();
+navDropdownTriggers.forEach((trigger) => {
+  trigger.addEventListener("click", () => {
+    toggleNavMenu(trigger.closest(".nav-dropdown"));
+  });
+});
+
+postShipListingMenuButton.addEventListener("click", () => {
+  closeAllNavMenus();
+  openPostShipListingFlow();
+});
+
+createCrewPostingMenuButton.addEventListener("click", () => {
+  closeAllNavMenus();
+  openPostCrewListingFlow();
 });
 
 postMaterialRequestMenuButton.addEventListener("click", () => {
-  closeMaterialsMenu();
-  openMaterialRequestModal();
+  closeAllNavMenus();
+  openPostMaterialRequestFlow();
 });
 
 document.addEventListener("click", (event) => {
-  if (!materialsNavDropdown.contains(event.target)) {
-    closeMaterialsMenu();
+  if (!event.target.closest(".nav-dropdown")) {
+    closeAllNavMenus();
   }
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    closeMaterialsMenu();
+    closeAllNavMenus();
   }
 });
 
@@ -1258,7 +1272,7 @@ availabilityShipSelect.addEventListener("change", () => {
   renderOwnerSchedule();
 });
 
-createCrewPostingButton.addEventListener("click", openCrewPostingModal);
+createCrewPostingButton.addEventListener("click", openPostCrewListingFlow);
 accountCreateServiceButton.addEventListener("click", openCrewPostingModal);
 crewPostingClose.addEventListener("click", closeCrewPostingModal);
 crewPostingCancel.addEventListener("click", closeCrewPostingModal);
@@ -1305,7 +1319,7 @@ crewPostingForm.addEventListener("submit", async (event) => {
   }
 });
 
-postMaterialRequestButton.addEventListener("click", openMaterialRequestModal);
+postMaterialRequestButton.addEventListener("click", openPostMaterialRequestFlow);
 materialRequestClose.addEventListener("click", closeMaterialRequestModal);
 materialRequestCancel.addEventListener("click", closeMaterialRequestModal);
 
@@ -1447,14 +1461,26 @@ function navigateToPanel(tabName) {
   }
 }
 
-function toggleMaterialsMenu() {
-  const isOpen = materialsNavDropdown.classList.toggle("is-open");
-  materialsMenuButton.setAttribute("aria-expanded", String(isOpen));
+function toggleNavMenu(dropdown) {
+  if (!dropdown) {
+    return;
+  }
+
+  const isOpen = dropdown.classList.contains("is-open");
+  closeAllNavMenus(dropdown);
+  dropdown.classList.toggle("is-open", !isOpen);
+  dropdown.querySelector(".nav-dropdown-trigger")?.setAttribute("aria-expanded", String(!isOpen));
 }
 
-function closeMaterialsMenu() {
-  materialsNavDropdown.classList.remove("is-open");
-  materialsMenuButton.setAttribute("aria-expanded", "false");
+function closeAllNavMenus(exceptDropdown = null) {
+  navDropdowns.forEach((dropdown) => {
+    if (dropdown === exceptDropdown) {
+      return;
+    }
+
+    dropdown.classList.remove("is-open");
+    dropdown.querySelector(".nav-dropdown-trigger")?.setAttribute("aria-expanded", "false");
+  });
 }
 
 function panelRoute(tabName) {
@@ -1544,12 +1570,27 @@ function setAccountView(viewName) {
 
 function openAddShipFlow() {
   if (!canCreatePosting(authState.user)) {
-    showAuthPrompt("Sign in with Discord to add ships to your fleet.");
+    showAuthPrompt("Create an account with Discord or a verified RSI handle to post ship listings.");
     return;
   }
 
   resetOwnerForm();
   openOwnerConfigurator("add");
+}
+
+function openPostShipListingFlow() {
+  navigateToPanel("ships");
+  openAddShipFlow();
+}
+
+function openPostCrewListingFlow() {
+  navigateToPanel("crew");
+  openCrewPostingModal();
+}
+
+function openPostMaterialRequestFlow() {
+  navigateToPanel("materials");
+  openMaterialRequestModal();
 }
 
 async function loadSession() {
@@ -1614,7 +1655,11 @@ function renderAccountPanel() {
 }
 
 function canCreatePosting(userProfile) {
-  return Boolean(userProfile?.discordId || userProfile?.id?.startsWith("discord:"));
+  return Boolean(
+    userProfile?.discordId ||
+    userProfile?.id?.startsWith("discord:") ||
+    (userProfile?.profile?.rsiStatus === "verified" && userProfile.profile.rsiHandle),
+  );
 }
 
 function preferredDisplayName(user = authState.user) {
@@ -1670,7 +1715,7 @@ function renderRsiLinkControls(profile = {}) {
     : "";
   rsiStatusMessage.textContent = verified
     ? "RSI handle verified. This handle will display publicly before your Discord username."
-    : "RSI verification is optional and never required to post.";
+    : "A verified RSI handle can qualify your posting identity and display publicly before your Discord username.";
 }
 
 async function updateRsiProfile(action, payload = {}) {
@@ -2412,8 +2457,8 @@ function marketplaceUserListingCount(user) {
   return ships.filter((ship) => ship.ownerId === user.id || identities.includes(normalizeFilterValue(ship.owner))).length;
 }
 
-function showAuthPrompt() {
-  authPromptMessage.textContent = "Posting requires a linked Discord account.";
+function showAuthPrompt(message = "Create an account with Discord or a verified RSI handle before posting.") {
+  authPromptMessage.textContent = message;
   authPromptModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
 }
@@ -4383,7 +4428,7 @@ function enrichSeedShips() {
 }
 
 function shipImage(ship) {
-  const localPhoto = ship.vehicle?.slug ? `/ships/${ship.vehicle.slug}.webp` : "";
+  const localPhoto = localShipImagePath(ship.vehicle);
   const fallbackPhoto = ship.vehicle?.photo || "";
   const photo = localPhoto || fallbackPhoto;
   if (!photo) {
@@ -4392,6 +4437,18 @@ function shipImage(ship) {
 
   const fallbackAttr = localPhoto && fallbackPhoto ? ` data-fallback-src="${escapeHtml(fallbackPhoto)}"` : "";
   return `<img class="ship-image" src="${escapeHtml(photo)}" alt="${escapeHtml(ship.ship)}" loading="lazy"${fallbackAttr} onerror="handleShipImageError(this)" />`;
+}
+
+function localShipImagePath(vehicle) {
+  if (vehicle?.image) {
+    return encodeURI(vehicle.image);
+  }
+
+  if (vehicle?.slug) {
+    return `/ships/${encodeURIComponent(vehicle.slug)}.webp`;
+  }
+
+  return "";
 }
 
 function vehicleFacts(ship) {

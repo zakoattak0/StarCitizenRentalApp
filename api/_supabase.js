@@ -1,3 +1,12 @@
+const { decodeSession, parseCookies, publicUser, sessionCookie } = require("./auth/_shared");
+
+class ApiError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
 function supabaseConfig() {
   const rawUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const rawKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -91,6 +100,31 @@ function sendJson(response, statusCode, payload) {
   response.status(statusCode).json(payload);
 }
 
+function sendError(response, error, fallbackMessage) {
+  return sendJson(response, error?.statusCode || 500, {
+    error: error instanceof Error ? error.message : fallbackMessage,
+  });
+}
+
+function canPostWithAccount(user) {
+  return Boolean(
+    user?.discordId ||
+    user?.id?.startsWith("discord:") ||
+    (user?.profile?.rsiStatus === "verified" && user.profile.rsiHandle),
+  );
+}
+
+function requirePostingAccount(request) {
+  const session = decodeSession(parseCookies(request)[sessionCookie]);
+  const user = publicUser(session);
+
+  if (!canPostWithAccount(user)) {
+    throw new ApiError(401, "Create an account with Discord or a verified RSI handle before posting.");
+  }
+
+  return user;
+}
+
 function requestBody(request) {
   if (!request.body) {
     return {};
@@ -100,7 +134,9 @@ function requestBody(request) {
 }
 
 module.exports = {
+  requirePostingAccount,
   requestBody,
+  sendError,
   sendJson,
   supabaseRequest,
 };

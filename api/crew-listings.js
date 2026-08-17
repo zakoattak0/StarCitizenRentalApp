@@ -1,4 +1,4 @@
-const { requestBody, sendJson, supabaseRequest } = require("./_supabase");
+const { requestBody, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
 
 function toClient(row) {
   return {
@@ -39,6 +39,7 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "POST") {
+      requirePostingAccount(request);
       const { listing } = requestBody(request);
       if (!listing?.role) {
         return sendJson(response, 400, { error: "Crew role is required" });
@@ -66,8 +67,6 @@ module.exports = async function handler(request, response) {
     response.setHeader("allow", "GET, POST, DELETE");
     return sendJson(response, 405, { error: "Method not allowed" });
   } catch (error) {
-    return sendJson(response, 500, {
-      error: error instanceof Error ? error.message : "Crew listings request failed",
-    });
+    return sendError(response, error, "Crew listings request failed");
   }
 };

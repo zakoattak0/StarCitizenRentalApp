@@ -23,8 +23,42 @@
         </a>
 
         <nav class="tabs" aria-label="Primary">
-          <button class="tab" data-tab="ships">Ships</button>
-          <button class="tab" data-tab="crew">Crew</button>
+          <div class="nav-dropdown" id="ships-nav-dropdown">
+            <button
+              class="tab nav-dropdown-trigger"
+              id="ships-menu-button"
+              type="button"
+              data-tab="ships"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="ships-menu"
+            >
+              Ships
+              <span class="dropdown-caret" aria-hidden="true"></span>
+            </button>
+            <div class="nav-dropdown-menu" id="ships-menu" role="menu" aria-labelledby="ships-menu-button">
+              <button type="button" role="menuitem" data-route="ships">Browse Listings</button>
+              <button type="button" role="menuitem" id="post-ship-listing-menu-button" data-auth-action="post a ship listing">Post Ship Listing</button>
+            </div>
+          </div>
+          <div class="nav-dropdown" id="crew-nav-dropdown">
+            <button
+              class="tab nav-dropdown-trigger"
+              id="crew-menu-button"
+              type="button"
+              data-tab="crew"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="crew-menu"
+            >
+              Crew
+              <span class="dropdown-caret" aria-hidden="true"></span>
+            </button>
+            <div class="nav-dropdown-menu" id="crew-menu" role="menu" aria-labelledby="crew-menu-button">
+              <button type="button" role="menuitem" data-route="crew">Browse Listings</button>
+              <button type="button" role="menuitem" id="create-crew-posting-menu-button" data-auth-action="create a crew posting">Create Posting</button>
+            </div>
+          </div>
           <div class="nav-dropdown" id="materials-nav-dropdown">
             <button
               class="tab nav-dropdown-trigger"
@@ -156,7 +190,7 @@
               <p class="eyebrow">Crew marketplace</p>
               <h1>Hire player services</h1>
             </div>
-            <button class="primary-button" id="create-crew-posting-button" type="button">Create Posting</button>
+            <button class="primary-button" id="create-crew-posting-button" type="button" data-auth-action="create a crew posting">Create Posting</button>
           </div>
 
           <details class="filter-drawer" open>
@@ -246,7 +280,7 @@
 
           <div class="account-gate" id="account-signed-out">
             <h2>Sign in to manage your account</h2>
-            <p>Discord login is required to post listings, services, contracts, or offers. RSI linking is optional and helps prove your in-game identity.</p>
+            <p>Create an account with Discord before posting listings, services, contracts, or offers. A verified RSI handle can also qualify your posting identity.</p>
             <a class="primary-button" href="/api/auth/discord">Sign in with Discord</a>
           </div>
 
@@ -294,7 +328,7 @@
                   <button class="primary-button is-hidden" id="rsi-verify-button" type="button">Check RSI Profile</button>
                   <button class="secondary-button is-hidden" id="rsi-clear-button" type="button">Remove RSI</button>
                 </div>
-                <p class="api-status" id="rsi-status-message">RSI verification is optional and never required to post.</p>
+                <p class="api-status" id="rsi-status-message">A verified RSI handle can qualify your posting identity and display publicly before your Discord username.</p>
               </form>
             </section>
 
@@ -318,7 +352,7 @@
                   <strong id="account-org">None</strong>
                 </div>
               </div>
-              <p class="account-note">Discord is the required account identity for business activity. RSI handle linking is optional and improves trust for in-game transactions.</p>
+              <p class="account-note">Posting requires an account identity through Discord or a verified RSI handle. Verified RSI handles improve trust for in-game transactions.</p>
             </section>
 
             <section class="account-management">
@@ -377,7 +411,7 @@
                 <div class="owner-workspace">
                   <section class="owner-view active" data-owner-panel="fleet">
                     <div class="fleet-toolbar">
-                      <button class="primary-button" id="add-fleet-ship" type="button">Add ship</button>
+                      <button class="primary-button" id="add-fleet-ship" type="button" data-auth-action="post a ship listing">Add ship</button>
                     </div>
                     <div class="fleet-list" id="fleet-list" aria-live="polite"></div>
                   </section>
@@ -776,7 +810,7 @@
       <div class="modal-backdrop is-hidden" id="auth-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title">
         <div class="confirm-modal">
           <h2 id="auth-prompt-title">Sign in required</h2>
-          <p id="auth-prompt-message">Sign in with Discord to use this action.</p>
+          <p id="auth-prompt-message">Create an account with Discord or a verified RSI handle before posting.</p>
           <div class="modal-actions">
             <button class="secondary-button" id="auth-prompt-cancel" type="button">Not now</button>
             <a class="primary-button" href="/api/auth/discord">Sign in with Discord</a>
