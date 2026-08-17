@@ -77,6 +77,7 @@
               <button type="button" role="menuitem" id="post-material-request-menu-button" data-auth-action="post a material listing">Post Material Listing</button>
             </div>
           </div>
+          <button class="tab" data-tab="players">Players</button>
           <button class="tab auth-account-tab" data-tab="account">Account</button>
         </nav>
 
@@ -331,6 +332,45 @@
           </details>
 
           <div class="market-results" id="material-request-results" aria-live="polite"></div>
+        </section>
+
+        <section class="panel" id="players-panel" data-panel="players">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Player directory</p>
+              <h1>Search players and deals</h1>
+            </div>
+          </div>
+
+          <form class="filters player-search-form" id="player-search-form">
+            <label>
+              Player search
+              <input name="query" placeholder="Search by player, listing, material, ship, or deal" />
+            </label>
+            <label>
+              Show
+              <select name="scope">
+                <option value="all">All players</option>
+                <option value="listings">Has listings</option>
+                <option value="deals">Has visible deals</option>
+                <option value="test">Test players</option>
+              </select>
+            </label>
+            <label>
+              Sort by
+              <select name="sort">
+                <option value="activity">Most activity</option>
+                <option value="deals">Most visible deals</option>
+                <option value="rating">Highest rating</option>
+                <option value="name">Name A to Z</option>
+              </select>
+            </label>
+          </form>
+
+          <div class="player-browser">
+            <div class="player-search-results" id="player-search-results" aria-live="polite"></div>
+            <div class="player-detail-panel" id="player-detail-panel" aria-live="polite"></div>
+          </div>
         </section>
 
         <section class="panel" id="account-panel" data-panel="account">

@@ -607,6 +607,7 @@ const deals = [];
 let ratingStats = {};
 let activeDealFilter = "open";
 let activeMaterialListingFilter = "all";
+let activePlayerId = "";
 
 const dataStatus = {
   shipListings: { loading: false, saving: false, error: "" },
@@ -771,6 +772,9 @@ const accountListingsList = document.querySelector("#account-listings-list");
 const accountCreateServiceButton = document.querySelector("#account-create-service-button");
 const accountDealsList = document.querySelector("#account-deals-list");
 const accountDealFilters = document.querySelector("#account-deal-filters");
+const playerSearchForm = document.querySelector("#player-search-form");
+const playerSearchResults = document.querySelector("#player-search-results");
+const playerDetailPanel = document.querySelector("#player-detail-panel");
 const authPromptModal = document.querySelector("#auth-prompt-modal");
 const authPromptMessage = document.querySelector("#auth-prompt-message");
 const authPromptCancel = document.querySelector("#auth-prompt-cancel");
@@ -923,6 +927,25 @@ materialListingFilters?.addEventListener("click", (event) => {
     button.classList.toggle("active", button === filterButton);
   });
   renderMaterialRequests();
+});
+
+playerSearchForm?.addEventListener("input", () => {
+  renderPlayerSearch();
+});
+
+playerSearchForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  renderPlayerSearch();
+});
+
+playerSearchResults?.addEventListener("click", (event) => {
+  const playerButton = event.target.closest("[data-player-id]");
+  if (!playerButton) {
+    return;
+  }
+
+  activePlayerId = playerButton.dataset.playerId || "";
+  renderPlayerSearch();
 });
 
 accountDealsList?.addEventListener("click", async (event) => {
@@ -1146,6 +1169,7 @@ ownerForm.addEventListener("submit", async (event) => {
     renderCalendarFilterOptions();
     updateFilterSummary();
     renderAccountListings();
+    renderPlayerSearch();
   } catch (error) {
     showFormError(error instanceof Error ? error.message : "Ship listing could not be saved");
   } finally {
@@ -1186,6 +1210,7 @@ removeShipConfirm.addEventListener("click", async () => {
     renderCalendarFilterOptions();
     updateFilterSummary();
     renderAccountListings();
+    renderPlayerSearch();
   } catch (error) {
     dataStatus.shipListings.error = error instanceof Error ? error.message : "Ship listing could not be removed";
     renderFleet();
@@ -1482,6 +1507,7 @@ crewPostingForm.addEventListener("submit", async (event) => {
     renderCrewMarketplace();
     renderAccountServices();
     renderAccountListings();
+    renderPlayerSearch();
   } catch (error) {
     dataStatus.crewListings.error = error instanceof Error ? error.message : "Crew listing could not be saved";
     renderCrewMarketplace();
@@ -1603,6 +1629,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
     closeMaterialRequestModal();
     renderMaterialRequests();
     renderAccountListings();
+    renderPlayerSearch();
   } catch (error) {
     dataStatus.materialRequests.error = error instanceof Error ? error.message : "Material request could not be saved";
     renderMaterialRequests();
@@ -1733,6 +1760,7 @@ function panelRoute(tabName) {
     ships: "/ships",
     crew: "/crew",
     materials: "/materials",
+    players: "/players",
     calendar: "/calendar",
     account: "/account",
   }[tabName] || "/";
@@ -1744,6 +1772,7 @@ function panelFromPath(pathname) {
     "/ships": "ships",
     "/crew": "crew",
     "/materials": "materials",
+    "/players": "players",
     "/calendar": "calendar",
     "/account": "account",
   }[pathname] || "home";
@@ -1768,6 +1797,8 @@ function setActiveTab(tabName) {
     renderCrewMarketplace();
   } else if (tabName === "materials") {
     renderMaterialRequests();
+  } else if (tabName === "players") {
+    renderPlayerSearch();
   } else if (tabName === "account") {
     renderAccountPanel();
   }
@@ -2700,6 +2731,7 @@ async function loadShipListings() {
     renderCalendarFilterOptions();
     updateFilterSummary();
     renderAccountPanel();
+    renderPlayerSearch();
   }
 }
 
@@ -2720,6 +2752,7 @@ async function loadCrewListings() {
     renderCrewMarketplace();
     renderAccountServices();
     renderAccountListings();
+    renderPlayerSearch();
   }
 }
 
@@ -2740,6 +2773,7 @@ async function loadMaterialRequests() {
     renderMaterialRequests();
     updateMaterialPriceHints();
     renderAccountListings();
+    renderPlayerSearch();
   }
 }
 
@@ -2747,6 +2781,7 @@ async function loadDeals() {
   if (!authState.user) {
     replaceCollection(deals, []);
     renderAccountDeals();
+    renderPlayerSearch();
     return;
   }
 
@@ -2766,6 +2801,7 @@ async function loadDeals() {
   } finally {
     dataStatus.deals.loading = false;
     renderAccountDeals();
+    renderPlayerSearch();
   }
 }
 
@@ -2783,6 +2819,7 @@ async function loadRatingStats() {
     renderShipMarketplace();
     renderCrewMarketplace();
     renderAccountPanel();
+    renderPlayerSearch();
   }
 }
 
@@ -2838,6 +2875,7 @@ async function removeCrewListing(id) {
     renderCrewMarketplace();
     renderAccountServices();
     renderAccountListings();
+    renderPlayerSearch();
   } catch (error) {
     dataStatus.crewListings.error = error instanceof Error ? error.message : "Crew listing could not be deleted";
     renderAccountServices();
@@ -2855,6 +2893,7 @@ async function removeMaterialRequest(id) {
     materialRequests.splice(materialRequests.indexOf(request), 1);
     renderMaterialRequests();
     renderAccountListings();
+    renderPlayerSearch();
   } catch (error) {
     dataStatus.materialRequests.error = error instanceof Error ? error.message : "Material request could not be deleted";
     renderAccountListings();
@@ -3251,6 +3290,260 @@ function renderMaterialRequests() {
   materialRequestResults.innerHTML = listings.length
     ? listings.map(materialRequestCard).join("")
     : `<div class="empty-state">No ${materialListingFilterLabel(activeMaterialListingFilter)} material listings posted yet.</div>`;
+}
+
+function renderPlayerSearch() {
+  if (!playerSearchResults || !playerDetailPanel) {
+    return;
+  }
+
+  const form = playerSearchForm ? new FormData(playerSearchForm) : new FormData();
+  const query = normalizeFilterValue(form.get("query"));
+  const scope = String(form.get("scope") || "all");
+  const sort = String(form.get("sort") || "activity");
+  const players = buildPlayerDirectory()
+    .filter((player) => playerMatchesSearch(player, query, scope))
+    .sort((first, second) => comparePlayers(first, second, sort));
+
+  if (!players.some((player) => player.id === activePlayerId)) {
+    activePlayerId = players[0]?.id || "";
+  }
+
+  playerSearchResults.innerHTML = players.length
+    ? players.map(playerSearchCard).join("")
+    : `<div class="empty-state">No players match that search yet.</div>`;
+
+  const selectedPlayer = players.find((player) => player.id === activePlayerId);
+  playerDetailPanel.innerHTML = selectedPlayer
+    ? playerDetailCard(selectedPlayer)
+    : `<div class="empty-state">Select a player to view listings and visible deals.</div>`;
+}
+
+function buildPlayerDirectory() {
+  const playersById = new Map();
+
+  const ensurePlayer = (id, name) => {
+    const normalizedName = String(name || "").trim();
+    const playerId = String(id || "").trim() || `player:${normalizeFilterValue(normalizedName) || "unknown"}`;
+    if (!playersById.has(playerId)) {
+      playersById.set(playerId, {
+        id: playerId,
+        name: normalizedName || "Unknown player",
+        shipListings: [],
+        crewListings: [],
+        materialListings: [],
+        deals: [],
+        isDemo: false,
+        isTest: false,
+        searchValues: [],
+      });
+    }
+
+    const player = playersById.get(playerId);
+    if ((!player.name || player.name === "Unknown player") && normalizedName) {
+      player.name = normalizedName;
+    }
+    addPlayerSearchValues(player, [player.id, player.name]);
+    return player;
+  };
+
+  if (authState.user) {
+    const currentPlayer = ensurePlayer(authState.user.id, preferredDisplayName(authState.user));
+    currentPlayer.isCurrentUser = true;
+  }
+
+  ships.forEach((ship) => {
+    const player = ensurePlayer(ship.ownerId, ship.owner);
+    player.shipListings.push(ship);
+    player.isDemo = player.isDemo || Boolean(ship.isDemo);
+    player.isTest = player.isTest || Boolean(ship.isTest);
+    addPlayerSearchValues(player, [ship.ship, ship.role, ship.manufacturer, ship.vehicle?.company]);
+  });
+
+  crewListings.forEach((crew) => {
+    const player = ensurePlayer(crew.ownerId, crew.name);
+    player.crewListings.push(crew);
+    player.isDemo = player.isDemo || Boolean(crew.isDemo);
+    player.isTest = player.isTest || Boolean(crew.isTest);
+    addPlayerSearchValues(player, [crew.role, crew.summary, crew.availabilityStatus]);
+  });
+
+  materialRequests.forEach((request) => {
+    const player = ensurePlayer(request.requesterId, request.postedBy);
+    player.materialListings.push(request);
+    player.isDemo = player.isDemo || Boolean(request.isDemo);
+    player.isTest = player.isTest || Boolean(request.isTest);
+    addPlayerSearchValues(player, [
+      request.material,
+      request.location,
+      materialListingLabel(materialListingType(request)),
+      ...(request.materials || []).map((item) => item.material),
+    ]);
+  });
+
+  deals.forEach((deal) => {
+    const requester = ensurePlayer(deal.requesterUserId, deal.requesterName);
+    const provider = ensurePlayer(deal.providerUserId, deal.providerName);
+    requester.deals.push(deal);
+    if (provider.id !== requester.id) {
+      provider.deals.push(deal);
+    }
+    requester.isTest = requester.isTest || Boolean(deal.isTest);
+    provider.isTest = provider.isTest || Boolean(deal.isTest);
+    addPlayerSearchValues(requester, [deal.listingName, dealTypeLabel(deal.dealType), dealStatusLabel(deal.status), deal.providerName]);
+    addPlayerSearchValues(provider, [deal.listingName, dealTypeLabel(deal.dealType), dealStatusLabel(deal.status), deal.requesterName]);
+  });
+
+  return [...playersById.values()].map(finalizePlayerProfile);
+}
+
+function addPlayerSearchValues(player, values) {
+  player.searchValues.push(...values.map(normalizeFilterValue).filter(Boolean));
+}
+
+function finalizePlayerProfile(player) {
+  const stats = ratingStats[player.id] || {};
+  const listingRatings = [
+    ...player.shipListings.map((ship) => Number(ship.rating || 0)),
+    ...player.crewListings.map((crew) => Number(crew.rating || 0)),
+  ].filter(Boolean);
+  const fallbackRating = listingRatings.length
+    ? listingRatings.reduce((total, rating) => total + rating, 0) / listingRatings.length
+    : 0;
+  const fallbackDeals = [
+    ...player.shipListings.map((ship) => Number(ship.completedJobs || 0)),
+    ...player.crewListings.map((crew) => Number(crew.completedJobs || 0)),
+  ].reduce((total, count) => total + count, 0);
+  const visibleCompletedDeals = player.deals.filter((deal) => deal.status === "completed").length;
+
+  return {
+    ...player,
+    listingCount: player.shipListings.length + player.crewListings.length + player.materialListings.length,
+    dealCount: player.deals.length,
+    completedDealCount: Number(stats.ratedDeals || visibleCompletedDeals || fallbackDeals || 0),
+    rating: Number(stats.averageRating || fallbackRating || 0),
+    searchText: [...new Set(player.searchValues)].join(" "),
+  };
+}
+
+function playerMatchesSearch(player, query, scope) {
+  const matchesQuery = !query || player.searchText.includes(query);
+  const matchesScope = (
+    scope === "all" ||
+    (scope === "listings" && player.listingCount > 0) ||
+    (scope === "deals" && player.dealCount > 0) ||
+    (scope === "test" && (player.isTest || player.isDemo))
+  );
+  return matchesQuery && matchesScope;
+}
+
+function comparePlayers(first, second, sort) {
+  if (sort === "name") {
+    return first.name.localeCompare(second.name);
+  }
+  if (sort === "deals") {
+    return second.dealCount - first.dealCount || first.name.localeCompare(second.name);
+  }
+  if (sort === "rating") {
+    return second.rating - first.rating || second.completedDealCount - first.completedDealCount || first.name.localeCompare(second.name);
+  }
+  return (second.listingCount + second.dealCount) - (first.listingCount + first.dealCount) || first.name.localeCompare(second.name);
+}
+
+function playerSearchCard(player) {
+  const isActive = player.id === activePlayerId;
+  return `
+    <button class="player-card ${isActive ? "active" : ""}" type="button" data-player-id="${escapeHtml(player.id)}">
+      <span class="player-card-name">${escapeHtml(player.name)}</span>
+      <span class="player-card-badges">${playerBadges(player)}</span>
+      <span class="player-card-rating">${ratingSummaryLine(player.id, player.rating, player.completedDealCount)}</span>
+      <span class="player-card-meta">${player.listingCount.toLocaleString()} listings &middot; ${player.dealCount.toLocaleString()} visible deals</span>
+    </button>
+  `;
+}
+
+function playerDetailCard(player) {
+  return `
+    <article class="player-profile">
+      <div class="player-profile-header">
+        <div>
+          <p class="eyebrow">Player profile</p>
+          <h2>${escapeHtml(player.name)}</h2>
+          <p>${ratingSummaryLine(player.id, player.rating, player.completedDealCount)}</p>
+        </div>
+        <div class="card-tags">${playerBadges(player)}</div>
+      </div>
+      <div class="player-stat-grid">
+        <div><span>Ships</span><strong>${player.shipListings.length.toLocaleString()}</strong></div>
+        <div><span>Crew</span><strong>${player.crewListings.length.toLocaleString()}</strong></div>
+        <div><span>Materials</span><strong>${player.materialListings.length.toLocaleString()}</strong></div>
+        <div><span>Visible deals</span><strong>${player.dealCount.toLocaleString()}</strong></div>
+      </div>
+      <section class="player-profile-section">
+        <h3>Active listings</h3>
+        ${playerListingRows(player)}
+      </section>
+      <section class="player-profile-section">
+        <h3>Visible deals</h3>
+        ${playerDealRows(player)}
+      </section>
+    </article>
+  `;
+}
+
+function playerBadges(player) {
+  return [
+    player.isCurrentUser ? `<span class="tag">You</span>` : "",
+    player.isTest ? testBadge() : "",
+    player.isDemo ? demoBadge() : "",
+  ].join("");
+}
+
+function playerListingRows(player) {
+  const rows = [
+    ...player.shipListings.map((ship) => playerListingRow("Ship", ship.ship, `${formatCredits(getShipRate(ship, "hour") || ship.rates?.hour || 0)} UEC / hour`, ship.availabilityStatus || "Schedule pending")),
+    ...player.crewListings.map((crew) => playerListingRow("Crew", crew.role, crewPayLabel(crew), crew.availabilityStatus || "Available")),
+    ...player.materialListings.map((request) => {
+      const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
+      const title = materials.length > 1 ? `Multi-Material ${materialListingLabel(materialListingType(request))}` : materials[0].material;
+      return playerListingRow(materialListingLabel(materialListingType(request)), title, materialRequestPriceLabel(request, materials), simpleMaterialLocation(request.location) || "Open location");
+    }),
+  ];
+
+  return rows.length ? `<div class="player-row-list">${rows.join("")}</div>` : `<div class="empty-state">No active listings for this player.</div>`;
+}
+
+function playerListingRow(type, title, value, meta) {
+  return `
+    <div class="player-row">
+      <span>${escapeHtml(type)}</span>
+      <strong>${escapeHtml(title || "Listing")}</strong>
+      <b>${escapeHtml(value || "Open")}</b>
+      <small>${escapeHtml(meta || "")}</small>
+    </div>
+  `;
+}
+
+function playerDealRows(player) {
+  const sortedDeals = [...player.deals].sort((first, second) => new Date(second.updatedAt || second.requestedAt || 0) - new Date(first.updatedAt || first.requestedAt || 0));
+  return sortedDeals.length
+    ? `<div class="player-row-list">${sortedDeals.map((deal) => playerDealRow(deal, player)).join("")}</div>`
+    : `<div class="empty-state">No visible deals for this player yet.</div>`;
+}
+
+function playerDealRow(deal, player) {
+  const isRequester = deal.requesterUserId === player.id;
+  const otherParty = isRequester ? deal.providerName : deal.requesterName;
+  const ratingText = deal.myRating ? `Rated ${deal.myRating.rating} / 5` : dealStatusLabel(deal.status);
+
+  return `
+    <div class="player-row deal-player-row">
+      <span>${escapeHtml(dealTypeLabel(deal.dealType))}</span>
+      <strong>${escapeHtml(deal.listingName || "Deal")}</strong>
+      <b>${escapeHtml(ratingText)}</b>
+      <small>${escapeHtml(`${isRequester ? "Provider" : "Requester"}: ${otherParty || "Unknown"} / ${formatDateTime(deal.requestedAt)}`)}</small>
+    </div>
+  `;
 }
 
 function marketplaceShipListings() {
@@ -5827,6 +6120,7 @@ renderFleet();
 renderShipMarketplace();
 renderCrewMarketplace();
 renderMaterialRequests();
+renderPlayerSearch();
 renderOwnerSchedule();
 renderCalendarFilterOptions();
 updateFilterSummary();
