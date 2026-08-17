@@ -470,6 +470,137 @@ const demoMaterialRequests = [
   materials: [{ material, quantity, quality, listingType }],
 }));
 
+const johnDoePlayer = {
+  id: "test-player-john-doe",
+  name: "John Doe",
+};
+
+const johnDoeShipListings = [
+  {
+    id: "test-john-doe-ship-c2",
+    ownerId: johnDoePlayer.id,
+    owner: johnDoePlayer.name,
+    ship: "C2 Hercules Starlifter",
+    role: "Cargo",
+    manufacturer: "Crusader Industries",
+    rates: { hour: 16000, day: 98000, week: 520000 },
+    offeredRates: ["hour", "day", "week"],
+    rateBasePeriod: "hour",
+    rateBase: 16000,
+    rateAdjustments: { day: -18, week: -35 },
+    pilotIncluded: true,
+    pilotRate: 6000,
+    notes: "TEST PLAYER POST - John Doe cargo hauler for scheduling and deal flow testing.",
+    dates: demoDateKeys([1, 2, 3, 5, 8, 9, 12]),
+    rating: 4.6,
+    completedJobs: 17,
+    isTest: true,
+  },
+  {
+    id: "test-john-doe-ship-prospector",
+    ownerId: johnDoePlayer.id,
+    owner: johnDoePlayer.name,
+    ship: "Prospector",
+    role: "Mining",
+    manufacturer: "MISC",
+    rates: { hour: 9000, day: 54000 },
+    offeredRates: ["hour", "day"],
+    rateBasePeriod: "hour",
+    rateBase: 9000,
+    rateAdjustments: { day: -20 },
+    pilotIncluded: false,
+    pilotRate: 0,
+    notes: "TEST PLAYER POST - John Doe mining ship for rental request testing.",
+    dates: demoDateKeys([0, 4, 6, 7, 10]),
+    shipConfig: {
+      type: "mining",
+      headCapacity: 1,
+      headSize: 1,
+      currentHeads: { center: "Lancet MH1 Mining Laser" },
+      availableHeads: [{ name: "Hofstede-S1 Mining Laser", quantity: 1 }],
+      availableModules: [{ name: "Rieger-C1 Module", quantity: 2 }],
+    },
+    rating: 4.4,
+    completedJobs: 9,
+    isTest: true,
+  },
+];
+
+const johnDoeCrewListings = [
+  {
+    id: "test-john-doe-crew-pilot",
+    ownerId: johnDoePlayer.id,
+    name: johnDoePlayer.name,
+    role: "Pilot",
+    price: 5500,
+    payType: "flat",
+    rating: 4.7,
+    completedJobs: 21,
+    availabilityStatus: "Available now",
+    summary: "TEST PLAYER POST - John Doe is available for cargo runs, escorts, and pickup/drop-off testing.",
+    isTest: true,
+  },
+  {
+    id: "test-john-doe-crew-engineer",
+    ownerId: johnDoePlayer.id,
+    name: johnDoePlayer.name,
+    role: "Engineer",
+    price: 1,
+    payType: "share",
+    rating: 4.5,
+    completedJobs: 13,
+    availabilityStatus: "Scheduled",
+    summary: "TEST PLAYER POST - John Doe engineering support for share-pay deal testing.",
+    isTest: true,
+  },
+];
+
+const johnDoeMaterialListings = [
+  {
+    id: "test-john-doe-material-wts-gold",
+    requesterId: johnDoePlayer.id,
+    postedBy: johnDoePlayer.name,
+    listingType: "wts",
+    location: "Stanton / ArcCorp / Area 18",
+    neededBy: demoDateKeys([14])[0],
+    price: "7,250 UEC / SCU",
+    material: "Gold",
+    quantity: "120 SCU",
+    quality: "545+",
+    materials: [{ material: "Gold", quantity: 120, quality: "545+", listingType: "wts", price: "7,250 UEC / SCU", pricePerScu: 7250 }],
+    isTest: true,
+  },
+  {
+    id: "test-john-doe-material-wtb-rmc",
+    requesterId: johnDoePlayer.id,
+    postedBy: johnDoePlayer.name,
+    listingType: "wtb",
+    location: "Stanton / Crusader / Seraphim Station",
+    neededBy: demoDateKeys([7])[0],
+    price: "6,900 UEC / SCU",
+    material: "Recycled Material Composite",
+    quantity: "80 SCU",
+    quality: "700+",
+    materials: [{ material: "Recycled Material Composite", quantity: 80, quality: "700+", listingType: "wtb", price: "6,900 UEC / SCU", pricePerScu: 6900 }],
+    isTest: true,
+  },
+];
+
+bookings.push(
+  {
+    date: demoDateKeys([2])[0],
+    ship: "C2 Hercules Starlifter",
+    owner: johnDoePlayer.name,
+    status: "booked",
+  },
+  {
+    date: demoDateKeys([6])[0],
+    ship: "Prospector",
+    owner: johnDoePlayer.name,
+    status: "booked",
+  },
+);
+
 const deals = [];
 
 let ratingStats = {};
@@ -2243,13 +2374,17 @@ function applyDemoPostsWhenEmpty(target, demoPosts, dismissedDemoIds = new Set()
 }
 
 function prependMissingDemoPosts(target, demoPosts) {
+  prependMissingPosts(target, demoPosts);
+}
+
+function prependMissingPosts(target, posts) {
   const existingIds = new Set(target.map((post) => post.id).filter(Boolean));
-  const missingDemoPosts = demoPosts
+  const missingPosts = posts
     .filter((post) => !existingIds.has(post.id))
     .map(cloneDemoPost);
 
-  if (missingDemoPosts.length) {
-    target.unshift(...missingDemoPosts);
+  if (missingPosts.length) {
+    target.unshift(...missingPosts);
   }
 }
 
@@ -2303,8 +2438,16 @@ function demoOnlyButton(label) {
   return `<button class="primary-button demo-button" type="button" disabled title="FAKE DEMO POST - placeholder only">${escapeHtml(label)}</button>`;
 }
 
+function testOnlyButton(label) {
+  return `<button class="secondary-button test-button" type="button" disabled title="Seeded test player listing">${escapeHtml(label)}</button>`;
+}
+
 function demoBadge() {
   return `<span class="tag demo-tag">FAKE DEMO</span>`;
+}
+
+function testBadge() {
+  return `<span class="tag test-tag">TEST PLAYER</span>`;
 }
 
 function setListingSaving(statusKey, isSaving) {
@@ -2348,10 +2491,12 @@ async function loadShipListings() {
     const payload = await fetch(SHIP_LISTINGS_URL, { cache: "no-store" }).then(readJson);
     replaceCollection(ships, payload.listings);
     applyDemoPostsWhenEmpty(ships, demoShipListings, getDismissedDemoShipIds());
+    prependMissingPosts(ships, johnDoeShipListings);
     enrichSeedShips();
   } catch (error) {
     dataStatus.shipListings.error = error instanceof Error ? error.message : "Unable to load ship listings";
     applyDemoPostsWhenEmpty(ships, demoShipListings, getDismissedDemoShipIds());
+    prependMissingPosts(ships, johnDoeShipListings);
     enrichSeedShips();
   } finally {
     dataStatus.shipListings.loading = false;
@@ -2377,6 +2522,7 @@ async function loadCrewListings() {
     dataStatus.crewListings.error = error instanceof Error ? error.message : "Unable to load crew listings";
   } finally {
     applyDemoPostsWhenEmpty(crewListings, demoCrewListings);
+    prependMissingPosts(crewListings, johnDoeCrewListings);
     dataStatus.crewListings.loading = false;
     renderCrewMarketplace();
     renderAccountServices();
@@ -2396,6 +2542,7 @@ async function loadMaterialRequests() {
     dataStatus.materialRequests.error = error instanceof Error ? error.message : "Unable to load material requests";
   } finally {
     prependMissingDemoPosts(materialRequests, demoMaterialRequests);
+    prependMissingPosts(materialRequests, johnDoeMaterialListings);
     dataStatus.materialRequests.loading = false;
     renderMaterialRequests();
     updateMaterialPriceHints();
@@ -2731,6 +2878,7 @@ function renderFleet() {
                 <h2>${escapeHtml(ship.ship)}</h2>
                 <div class="card-tags">
                   ${ship.isDemo ? demoBadge() : ""}
+                  ${ship.isTest ? testBadge() : ""}
                   <span class="tag">${escapeHtml(ship.role)}</span>
                 </div>
               </div>
@@ -2758,6 +2906,14 @@ function fleetShipActions(ship) {
       <div class="card-actions">
         ${demoOnlyButton("Fake Demo Only")}
         <button class="secondary-button danger-button" type="button" data-fleet-action="remove" data-ship-index="${shipIndex}">Remove</button>
+      </div>
+    `;
+  }
+
+  if (ship.isTest) {
+    return `
+      <div class="card-actions">
+        ${testOnlyButton("Test Player Listing")}
       </div>
     `;
   }
@@ -2914,6 +3070,7 @@ function shipMarketplaceCard(ship) {
         <h2>${escapeHtml(ship.ship)}</h2>
         <div class="card-tags">
           ${ship.isDemo ? demoBadge() : ""}
+          ${ship.isTest ? testBadge() : ""}
           <span class="tag">${escapeHtml(ship.availabilityStatus || "Available")}</span>
         </div>
       </div>
@@ -2944,6 +3101,7 @@ function crewMarketplaceCard(crew) {
         <h2>${escapeHtml(crew.name)}</h2>
         <div class="card-tags">
           ${crew.isDemo ? demoBadge() : ""}
+          ${crew.isTest ? testBadge() : ""}
           <span class="tag">${escapeHtml(crew.availabilityStatus)}</span>
         </div>
       </div>
@@ -2987,6 +3145,7 @@ function materialRequestCard(request) {
         <h2>${multiMaterial ? `Multi-Material ${listingLabel}` : escapeHtml(materials[0].material)}</h2>
         <div class="card-tags">
           ${request.isDemo ? demoBadge() : ""}
+          ${request.isTest ? testBadge() : ""}
           <span class="tag">${listingLabel}</span>
           <span class="tag">${multiMaterial ? `${materials.length} Items` : escapeHtml(primaryQuantity)}</span>
         </div>

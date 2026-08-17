@@ -457,6 +457,12 @@ main {
   color: #ffe59b;
 }
 
+.test-button {
+  border-color: rgba(57, 217, 138, 0.52);
+  background: rgba(57, 217, 138, 0.08);
+  color: var(--green);
+}
+
 .price-line {
   display: flex;
   align-items: baseline;
@@ -1868,6 +1874,12 @@ legend {
   border-color: rgba(255, 198, 41, 0.72);
   color: #ffe59b;
   background: rgba(255, 198, 41, 0.12);
+}
+
+.test-tag {
+  border-color: rgba(57, 217, 138, 0.62);
+  color: var(--green);
+  background: rgba(57, 217, 138, 0.1);
 }
 
 .card-actions {
