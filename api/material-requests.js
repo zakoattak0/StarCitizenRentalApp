@@ -1,4 +1,4 @@
-const { requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
+const { checkRateLimit, requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
 
 function toClient(row) {
   const materials = row.materials || [];
@@ -55,6 +55,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "POST") {
       const user = requirePostingAccount(request);
+      await checkRateLimit(`write:material_requests:${user.id}`, 20, 600);
       const { request: materialRequest } = requestBody(request);
       if (!materialRequest?.materials?.length) {
         return sendJson(response, 400, { error: "At least one requested material is required" });
@@ -72,6 +73,7 @@ module.exports = async function handler(request, response) {
 
     if (request.method === "DELETE") {
       const user = requirePostingAccount(request);
+      await checkRateLimit(`write:material_requests:${user.id}`, 20, 600);
       const id = new URL(request.url, "http://localhost").searchParams.get("id");
       if (!id) {
         return sendJson(response, 400, { error: "Material request id is required" });

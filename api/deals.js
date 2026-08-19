@@ -1,4 +1,4 @@
-const { requestBody, sendJson, supabaseRequest } = require("./_supabase");
+const { checkRateLimit, requestBody, sendJson, supabaseRequest } = require("./_supabase");
 const { decodeSession, parseCookies, publicUser, sessionCookie } = require("./auth/_shared");
 
 const dealTypes = new Set(["ship_rental", "crew_service", "material_order", "contract", "general"]);
@@ -205,6 +205,7 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "POST") {
+      await checkRateLimit(`write:deals:${user.id}`, 40, 600);
       const body = requestBody(request);
       if (body.action === "create") {
         return sendJson(response, 200, { deal: await createDeal(user, body.deal) });
@@ -218,7 +219,7 @@ module.exports = async function handler(request, response) {
     response.setHeader("allow", "GET, POST");
     return sendJson(response, 405, { error: "Method not allowed" });
   } catch (error) {
-    return sendJson(response, 400, {
+    return sendJson(response, error?.statusCode || 400, {
       error: error instanceof Error ? error.message : "Deal request failed",
     });
   }

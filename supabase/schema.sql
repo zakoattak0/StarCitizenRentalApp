@@ -247,3 +247,33 @@ drop policy if exists deal_ratings_insert_public on public.deal_ratings;
 
 drop policy if exists org_memberships_select_public on public.org_memberships;
 create policy org_memberships_select_public on public.org_memberships for select using (true);
+
+-- Fixed-window rate limiting counter for API writes and the RSI verification
+-- proxy. Server-side only (service role); no anon/authenticated access.
+create table if not exists public.rate_limits (
+  key text not null,
+  window_start timestamptz not null,
+  count integer not null default 1,
+  primary key (key, window_start)
+);
+
+alter table public.rate_limits enable row level security;
+
+create or replace function public.increment_rate_limit(p_key text, p_window_start timestamptz)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_count integer;
+begin
+  insert into public.rate_limits (key, window_start, count)
+  values (p_key, p_window_start, 1)
+  on conflict (key, window_start)
+  do update set count = public.rate_limits.count + 1
+  returning count into new_count;
+
+  return new_count;
+end;
+$$;

@@ -124,24 +124,32 @@ Never print, commit, or hardcode real values for the variables above.
 
 ## Known issues
 
-- **Security (fixed 2026-08-19, needs a live Supabase run)**: `supabase/schema.sql` no longer
-  grants public insert/update/delete — only `select` is public now. All writes in `api/ship-
-  listings.js`, `api/crew-listings.js`, `api/material-requests.js`, and `api/deals.js` go through
-  `useServiceRole: true` (service role bypasses RLS), and the API layer enforces ownership via
+- **Security (fixed and confirmed live 2026-08-19)**: `supabase/schema.sql` grants only public
+  `select`, no insert/update/delete. All writes in `api/ship-listings.js`, `api/crew-listings.js`,
+  `api/material-requests.js`, `api/deals.js`, and RSI verification in `api/auth/account.js` go
+  through `useServiceRole: true` (bypasses RLS); the API layer enforces ownership via
   `requireOwnedRow()` in `api/_supabase.js` (403 if you don't own the row, 404 if it doesn't
-  exist) plus server-set `owner_id`/`requester_id` (client-supplied values are ignored on write).
-  **This requires `SUPABASE_SERVICE_ROLE_KEY` to actually be set** — without it, `_supabase.js`
-  silently falls back to the anon key, which RLS now rejects, and every create/edit/delete/rate
-  call will fail. **The updated `supabase/schema.sql` still needs to be run against the live
-  Supabase project** (SQL editor, or `apply_migration` via the Supabase MCP connection) — editing
-  the file alone doesn't change the deployed database.
-- **npm audit**: `sharp` (used only by `scripts/sync-ship-images.mjs`, not runtime/API code) has a
-  high-severity advisory on versions `<0.35.0`; current pinned version is `0.33.5`. Fixing requires
-  a breaking major-version bump (`npm audit fix --force` → `sharp@0.35.3`). Not applied — flag to
-  the user before upgrading since it's a major version change to a dependency, even though blast
-  radius is limited to the local sync script.
-- Account/profile data lives only in the signed session cookie; the `users` table + `api/users.js`
-  exist but aren't the source of truth yet.
+  exist) and server-sets `owner_id`/`requester_id` (client-supplied values are ignored on write).
+  Requires `SUPABASE_SERVICE_ROLE_KEY` to be set — without it, writes fail (RLS rejects the anon
+  key, which is the fallback when the service key is missing).
+- **Rate limiting (added 2026-08-19)**: `checkRateLimit(key, limit, windowSeconds)` in
+  `api/_supabase.js` is a fixed-window counter backed by the `public.rate_limits` table +
+  `increment_rate_limit()` Postgres function (chosen over in-memory limiting because Vercel
+  serverless functions don't share memory across invocations). Applied to: ship/crew/material
+  listing writes (20/10min per user), deal actions (40/10min per user), and RSI profile actions
+  (15/10min per user, plus a tighter 5/10min specifically on `verify-rsi` since it scrapes an
+  external RSI page per call). Throws `ApiError(429, ...)` — make sure any new write route's
+  catch-all uses `error?.statusCode || <default>` (not a hardcoded status) so 429s surface
+  correctly; `deals.js` and `auth/account.js` needed a one-line fix for this while adding rate
+  limiting. The `rate_limits` table self-trims rows older than 7 days opportunistically (~1% of
+  calls) rather than needing a cron job.
+- **npm audit (fixed 2026-08-19)**: `sharp` was bumped `0.33.5` → `0.35.3` (`npm audit fix
+  --force`) to clear a high-severity libvips advisory. Verified the `resize()`/`webp()` API used
+  by `scripts/sync-ship-images.mjs` still works after the bump. 0 vulnerabilities now.
+- Account/profile data is persisted to the `users` table via `upsertUser()` (called on every
+  session check and profile update in `api/auth/account.js`), and the player directory reads it
+  back via `/api/users`. (The original ChatGPT handoff doc claims this table "isn't the source of
+  truth yet" — that's stale; verified wired in both directions as of 2026-08-19.)
 - Calendar "rentals" mode and `Generate Request` are placeholders (`bookings` array is always
   empty; button just changes label to "coming soon").
 - `ratings` table is legacy/unused; `deal_ratings` + `/api/reference-data?type=rating-stats` is the
@@ -180,11 +188,17 @@ with `origin/main`.
 Per `CURRENT_TASKS.md` and repository history, the natural next phase is production hardening and
 finishing partially-built workflows, roughly in this order:
 
-1. ~~Lock down Supabase RLS + add ownership checks to listing/deal PATCH/DELETE routes.~~ Done in
-   code 2026-08-19 — still needs the updated `supabase/schema.sql` applied to the live database
-   and `SUPABASE_SERVICE_ROLE_KEY` confirmed set in Vercel before deploying.
-2. Persist Discord/RSI profiles into the `users` table instead of only the session cookie.
-3. Build the real scheduling/reservation system (`rental_availability` table exists but isn't
+1. ~~Lock down Supabase RLS + add ownership checks to listing/deal PATCH/DELETE routes.~~ Done and
+   confirmed live 2026-08-19.
+2. ~~Persist Discord/RSI profiles into the `users` table.~~ Already done (verified 2026-08-19, was
+   incorrectly listed as outstanding in the original ChatGPT handoff).
+3. ~~Add rate limiting on write endpoints and the RSI verification proxy.~~ Done 2026-08-19.
+4. ~~Fix the `sharp` high-severity advisory.~~ Done 2026-08-19 (`0.33.5` → `0.35.3`).
+5. Build the real scheduling/reservation system (`rental_availability` table exists but isn't
    wired up) and replace the calendar's placeholder request builder.
-4. Add edit/pause controls for crew and material listings (ship listings already have them).
-5. Add at least basic smoke tests for API route validation and core frontend flows.
+6. Add edit/pause controls for crew and material listings (ship listings already have them).
+7. Add at least basic smoke tests for API route validation and core frontend flows — worth
+   prioritizing given how many silent breakages (missing tables, a deploy-blocking function count)
+   this session found that a five-minute smoke test would have caught immediately.
+8. Confirm the Discord OAuth login flow actually works end-to-end on the live site — not yet
+   manually verified as of 2026-08-19.

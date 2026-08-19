@@ -144,6 +144,29 @@ async function requireOwnedRow(table, id, ownerColumn, userId) {
   }
 }
 
+async function checkRateLimit(key, limit, windowSeconds) {
+  const bucketMs = windowSeconds * 1000;
+  const windowStart = new Date(Math.floor(Date.now() / bucketMs) * bucketMs).toISOString();
+
+  const count = await supabaseRequest("rpc/increment_rate_limit", {
+    method: "POST",
+    body: JSON.stringify({ p_key: key, p_window_start: windowStart }),
+    useServiceRole: true,
+  });
+
+  // Opportunistic cleanup so the table doesn't grow unbounded; skips on most calls.
+  if (Math.random() < 0.01) {
+    supabaseRequest(`rate_limits?window_start=lt.${encodeURIComponent(new Date(Date.now() - 7 * 86400 * 1000).toISOString())}`, {
+      method: "DELETE",
+      useServiceRole: true,
+    }).catch(() => {});
+  }
+
+  if (Number(count) > limit) {
+    throw new ApiError(429, "Too many requests. Please slow down and try again shortly.");
+  }
+}
+
 function requestBody(request) {
   if (!request.body) {
     return {};
@@ -153,6 +176,7 @@ function requestBody(request) {
 }
 
 module.exports = {
+  checkRateLimit,
   requireOwnedRow,
   requirePostingAccount,
   requestBody,

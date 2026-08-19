@@ -9,6 +9,7 @@ const {
   sessionCookie,
 } = require("./_shared");
 const { upsertUser } = require("../_users");
+const { checkRateLimit } = require("../_supabase");
 
 function sendJson(response, statusCode, payload) {
   response.setHeader("content-type", "application/json");
@@ -93,6 +94,13 @@ async function handleProfile(request, response) {
 
   const body = requestBody(request);
   const action = body.action;
+
+  await checkRateLimit(`profile:${session.user.id}`, 15, 600);
+  if (action === "verify-rsi") {
+    // Tighter limit: this hits an external RSI profile page per call.
+    await checkRateLimit(`rsi-verify:${session.user.id}`, 5, 600);
+  }
+
   const profile = {
     rsiHandle: "",
     rsiStatus: "not_linked",
@@ -175,7 +183,7 @@ module.exports = async function handler(request, response) {
     response.setHeader("allow", "GET, POST");
     return sendJson(response, 405, { error: "Method not allowed" });
   } catch (error) {
-    return sendJson(response, 500, {
+    return sendJson(response, error?.statusCode || 500, {
       error: error instanceof Error ? error.message : "Account request failed",
     });
   }
