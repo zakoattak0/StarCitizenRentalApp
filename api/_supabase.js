@@ -130,6 +130,20 @@ function requirePostingAccount(request) {
   return user;
 }
 
+async function requireOwnedRow(table, id, ownerColumn, userId) {
+  const rows = await supabaseRequest(
+    `${table}?id=eq.${encodeURIComponent(id)}&select=${encodeURIComponent(ownerColumn)}`,
+    { method: "GET" },
+  );
+  const row = rows[0];
+  if (!row) {
+    throw new ApiError(404, "Listing not found");
+  }
+  if (!userId || row[ownerColumn] !== userId) {
+    throw new ApiError(403, "You do not own this listing");
+  }
+}
+
 function requestBody(request) {
   if (!request.body) {
     return {};
@@ -139,6 +153,7 @@ function requestBody(request) {
 }
 
 module.exports = {
+  requireOwnedRow,
   requirePostingAccount,
   requestBody,
   sendError,

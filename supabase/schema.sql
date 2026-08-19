@@ -200,42 +200,35 @@ alter table public.deals enable row level security;
 alter table public.deal_ratings enable row level security;
 alter table public.org_memberships enable row level security;
 
--- Temporary public policies for the current no-Supabase-auth phase.
--- Tighten these when Discord accounts are connected to Supabase identities.
+-- Marketplace data is publicly readable (no login needed to browse), but all
+-- writes go through the Vercel API routes using the service role key, which
+-- bypasses RLS. The API layer enforces the session/ownership checks. Do not
+-- add public insert/update/delete policies back for these tables -- the anon
+-- key is used for reads only.
 drop policy if exists users_select_public on public.users;
 create policy users_select_public on public.users for select using (true);
 drop policy if exists users_insert_public on public.users;
-create policy users_insert_public on public.users for insert with check (true);
 drop policy if exists users_update_public on public.users;
-create policy users_update_public on public.users for update using (true) with check (true);
 
 drop policy if exists ship_listings_select_public on public.ship_listings;
 create policy ship_listings_select_public on public.ship_listings for select using (true);
 drop policy if exists ship_listings_insert_public on public.ship_listings;
-create policy ship_listings_insert_public on public.ship_listings for insert with check (true);
 drop policy if exists ship_listings_update_public on public.ship_listings;
-create policy ship_listings_update_public on public.ship_listings for update using (true) with check (true);
 drop policy if exists ship_listings_delete_public on public.ship_listings;
-create policy ship_listings_delete_public on public.ship_listings for delete using (true);
 
 drop policy if exists crew_listings_select_public on public.crew_listings;
 create policy crew_listings_select_public on public.crew_listings for select using (true);
 drop policy if exists crew_listings_insert_public on public.crew_listings;
-create policy crew_listings_insert_public on public.crew_listings for insert with check (true);
 drop policy if exists crew_listings_delete_public on public.crew_listings;
-create policy crew_listings_delete_public on public.crew_listings for delete using (true);
 
 drop policy if exists material_requests_select_public on public.material_requests;
 create policy material_requests_select_public on public.material_requests for select using (true);
 drop policy if exists material_requests_insert_public on public.material_requests;
-create policy material_requests_insert_public on public.material_requests for insert with check (true);
 drop policy if exists material_requests_delete_public on public.material_requests;
-create policy material_requests_delete_public on public.material_requests for delete using (true);
 
 drop policy if exists material_offers_select_public on public.material_offers;
 create policy material_offers_select_public on public.material_offers for select using (true);
 drop policy if exists material_offers_insert_public on public.material_offers;
-create policy material_offers_insert_public on public.material_offers for insert with check (true);
 
 drop policy if exists rental_availability_select_public on public.rental_availability;
 create policy rental_availability_select_public on public.rental_availability for select using (true);
@@ -246,14 +239,11 @@ create policy ratings_select_public on public.ratings for select using (true);
 drop policy if exists deals_select_public on public.deals;
 create policy deals_select_public on public.deals for select using (true);
 drop policy if exists deals_insert_public on public.deals;
-create policy deals_insert_public on public.deals for insert with check (true);
 drop policy if exists deals_update_public on public.deals;
-create policy deals_update_public on public.deals for update using (true) with check (true);
 
 drop policy if exists deal_ratings_select_public on public.deal_ratings;
 create policy deal_ratings_select_public on public.deal_ratings for select using (true);
 drop policy if exists deal_ratings_insert_public on public.deal_ratings;
-create policy deal_ratings_insert_public on public.deal_ratings for insert with check (true);
 
 drop policy if exists org_memberships_select_public on public.org_memberships;
 create policy org_memberships_select_public on public.org_memberships for select using (true);

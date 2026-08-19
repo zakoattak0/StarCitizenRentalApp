@@ -100,6 +100,7 @@ async function createDeal(user, deal) {
   const rows = await supabaseRequest("deals", {
     method: "POST",
     body: JSON.stringify(row),
+    useServiceRole: true,
   });
   return toClient(rows[0]);
 }
@@ -150,6 +151,7 @@ async function updateDeal(user, action, dealId) {
   const rows = await supabaseRequest(`deals?id=eq.${encodeURIComponent(dealId)}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
+    useServiceRole: true,
   });
   return toClient(rows[0]);
 }
@@ -186,6 +188,7 @@ async function rateDeal(user, body) {
       rating,
       comment: body.comment || null,
     }),
+    useServiceRole: true,
   });
   return rows[0];
 }

@@ -1,4 +1,4 @@
-const { requestBody, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
+const { requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
 
 function toClient(row) {
   return {
@@ -67,32 +67,41 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "POST") {
-      requirePostingAccount(request);
+      const user = requirePostingAccount(request);
       const { listing } = requestBody(request);
       if (!listing?.ship) {
         return sendJson(response, 400, { error: "Ship is required" });
       }
 
+      if (listing.id) {
+        await requireOwnedRow("ship_listings", listing.id, "owner_id", user.id);
+      }
+
       const row = toRow(listing);
+      row.owner_id = user.id;
       const path = listing.id
         ? `ship_listings?id=eq.${encodeURIComponent(listing.id)}`
         : "ship_listings";
       const rows = await supabaseRequest(path, {
         method: listing.id ? "PATCH" : "POST",
         body: JSON.stringify(row),
+        useServiceRole: true,
       });
 
       return sendJson(response, 200, { listing: toClient(rows[0]) });
     }
 
     if (request.method === "DELETE") {
+      const user = requirePostingAccount(request);
       const id = new URL(request.url, "http://localhost").searchParams.get("id");
       if (!id) {
         return sendJson(response, 400, { error: "Listing id is required" });
       }
 
+      await requireOwnedRow("ship_listings", id, "owner_id", user.id);
       await supabaseRequest(`ship_listings?id=eq.${encodeURIComponent(id)}`, {
         method: "DELETE",
+        useServiceRole: true,
       });
       return sendJson(response, 200, { ok: true });
     }

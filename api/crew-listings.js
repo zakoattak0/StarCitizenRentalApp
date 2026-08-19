@@ -1,4 +1,4 @@
-const { requestBody, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
+const { requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
 
 function toClient(row) {
   return {
@@ -39,27 +39,33 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "POST") {
-      requirePostingAccount(request);
+      const user = requirePostingAccount(request);
       const { listing } = requestBody(request);
       if (!listing?.role) {
         return sendJson(response, 400, { error: "Crew role is required" });
       }
 
+      const row = toRow(listing);
+      row.owner_id = user.id;
       const rows = await supabaseRequest("crew_listings", {
         method: "POST",
-        body: JSON.stringify(toRow(listing)),
+        body: JSON.stringify(row),
+        useServiceRole: true,
       });
       return sendJson(response, 200, { listing: toClient(rows[0]) });
     }
 
     if (request.method === "DELETE") {
+      const user = requirePostingAccount(request);
       const id = new URL(request.url, "http://localhost").searchParams.get("id");
       if (!id) {
         return sendJson(response, 400, { error: "Crew listing id is required" });
       }
 
+      await requireOwnedRow("crew_listings", id, "owner_id", user.id);
       await supabaseRequest(`crew_listings?id=eq.${encodeURIComponent(id)}`, {
         method: "DELETE",
+        useServiceRole: true,
       });
       return sendJson(response, 200, { ok: true });
     }

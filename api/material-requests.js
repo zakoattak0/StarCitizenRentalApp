@@ -1,4 +1,4 @@
-const { requestBody, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
+const { requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
 
 function toClient(row) {
   const materials = row.materials || [];
@@ -54,27 +54,33 @@ module.exports = async function handler(request, response) {
     }
 
     if (request.method === "POST") {
-      requirePostingAccount(request);
+      const user = requirePostingAccount(request);
       const { request: materialRequest } = requestBody(request);
       if (!materialRequest?.materials?.length) {
         return sendJson(response, 400, { error: "At least one requested material is required" });
       }
 
+      const row = toRow(materialRequest);
+      row.requester_id = user.id;
       const rows = await supabaseRequest("material_requests", {
         method: "POST",
-        body: JSON.stringify(toRow(materialRequest)),
+        body: JSON.stringify(row),
+        useServiceRole: true,
       });
       return sendJson(response, 200, { request: toClient(rows[0]) });
     }
 
     if (request.method === "DELETE") {
+      const user = requirePostingAccount(request);
       const id = new URL(request.url, "http://localhost").searchParams.get("id");
       if (!id) {
         return sendJson(response, 400, { error: "Material request id is required" });
       }
 
+      await requireOwnedRow("material_requests", id, "requester_id", user.id);
       await supabaseRequest(`material_requests?id=eq.${encodeURIComponent(id)}`, {
         method: "DELETE",
+        useServiceRole: true,
       });
       return sendJson(response, 200, { ok: true });
     }

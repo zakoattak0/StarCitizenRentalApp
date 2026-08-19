@@ -23,7 +23,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 The API routes also support `SUPABASE_URL` and `SUPABASE_ANON_KEY` if you prefer non-public variable names for the same values.
 
-Current persistence uses temporary public insert/update/delete policies because Supabase auth is not wired to Discord yet. Tighten those policies when account ownership is connected to Supabase identities.
+Marketplace data is publicly readable, but all writes go through the Vercel API routes using `SUPABASE_SERVICE_ROLE_KEY`, which bypasses RLS — the API routes enforce the session/ownership checks instead of Postgres policies. `SUPABASE_SERVICE_ROLE_KEY` must be set for posting, editing, or deleting listings/deals to work; without it, writes fail (RLS rejects the anon key, and the service role key is required to bypass it). Never expose this key to the browser.
 
 ## Discord auth setup
 
