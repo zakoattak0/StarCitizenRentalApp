@@ -34,10 +34,17 @@ ship/commodity/location data.
 
 - `index.html`, `app.js`, `styles.css` — the entire frontend.
 - `api/` — Vercel serverless functions (`ship-listings.js`, `crew-listings.js`,
-  `material-requests.js`, `deals.js`, `rating-stats.js`, `hangar-services.js`,
-  `material-options.js`, `users.js`, `_supabase.js`, `_users.js`).
-- `api/auth/` — Discord OAuth (`discord.js`, `callback.js`), session (`session.js`, `_shared.js`),
-  `profile.js` (RSI verification), `logout.js`.
+  `material-requests.js`, `deals.js`, `reference-data.js`, `users.js`, `_supabase.js`, `_users.js`).
+  **Vercel's Hobby plan caps a deployment at 12 serverless functions** — every non-`_`-prefixed
+  `.js` file directly under `api/` (including `api/auth/`) counts as one. Currently at 9; don't add
+  a new top-level route file without checking the count first, and prefer adding an `?action=`/
+  `?type=` branch to an existing consolidated handler over creating a new file. `reference-data.js`
+  merges the old `hangar-services.js`/`material-options.js`/`rating-stats.js` (dispatch via
+  `?type=`).
+- `api/auth/` — Discord OAuth (`discord.js`, `callback.js` — **do not rename these two**, the
+  callback URL is registered as the redirect URI in the Discord Developer Portal), `_shared.js`
+  (cookie/session helpers), and `account.js`, which merges the old `session.js`/`profile.js`/
+  `logout.js` (GET = session check, GET `?action=logout` = sign out, POST = RSI profile actions).
 - `supabase/schema.sql` — DB schema + RLS policies. Edit intentionally; treat as a migration.
 - `scripts/build.mjs` — copies static files + `public/` into `dist/`, stamps per-route
   `index.html` copies for SPA paths.
@@ -137,7 +144,16 @@ Never print, commit, or hardcode real values for the variables above.
   exist but aren't the source of truth yet.
 - Calendar "rentals" mode and `Generate Request` are placeholders (`bookings` array is always
   empty; button just changes label to "coming soon").
-- `ratings` table is legacy/unused; `deal_ratings` + `/api/rating-stats` is the active rating path.
+- `ratings` table is legacy/unused; `deal_ratings` + `/api/reference-data?type=rating-stats` is the
+  active rating path.
+- **Deploy blocker (fixed 2026-08-19)**: the project had grown to 13 top-level `api/*.js` route
+  files, one over Vercel Hobby's 12-function cap — the deploy that would have shipped the RLS/
+  ownership fix above failed with "No more than 12 Serverless Functions...". Consolidated
+  `hangar-services.js`/`material-options.js`/`rating-stats.js` into `reference-data.js` and
+  `session.js`/`profile.js`/`logout.js` into `auth/account.js` (9 functions now). This had likely
+  been silently breaking every production deploy since `api/users.js` was added in `062ba48`
+  (2026-08-17) — consistent with `deals`/`deal_ratings` never existing in the live database despite
+  `api/deals.js` existing in the repo for many commits.
 - `/owners` static route has no corresponding panel in `app.js` (falls through to home panel).
 
 ## Current development state

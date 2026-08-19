@@ -55,7 +55,7 @@ DATABASE_URL=
 
 ## RSI handle verification
 
-RSI verification is proof-of-control for a public handle. The app generates an `FSX-` code, the user adds it to their public RSI citizen profile bio, and `/api/auth/profile` fetches the public RSI profile before marking the handle verified.
+RSI verification is proof-of-control for a public handle. The app generates an `FSX-` code, the user adds it to their public RSI citizen profile bio, and `/api/auth/account` (POST) fetches the public RSI profile before marking the handle verified.
 
 ## Deploy to Vercel
 

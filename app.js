@@ -1,11 +1,11 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
-const HANGAR_SERVICES_URL = "/api/hangar-services";
+const HANGAR_SERVICES_URL = "/api/reference-data?type=hangar-services";
 const SHIP_LISTINGS_URL = "/api/ship-listings";
 const CREW_LISTINGS_URL = "/api/crew-listings";
 const MATERIAL_REQUESTS_URL = "/api/material-requests";
-const MATERIAL_OPTIONS_URL = "/api/material-options";
+const MATERIAL_OPTIONS_URL = "/api/reference-data?type=material-options";
 const DEALS_URL = "/api/deals";
-const RATING_STATS_URL = "/api/rating-stats";
+const RATING_STATS_URL = "/api/reference-data?type=rating-stats";
 const USERS_URL = "/api/users";
 const testDealStorageKey = "fsx.testDeals";
 
@@ -1877,7 +1877,7 @@ async function loadSession() {
   updateAuthUI();
 
   try {
-    const response = await fetch("/api/auth/session", { cache: "no-store" });
+    const response = await fetch("/api/auth/account", { cache: "no-store" });
     const session = await response.json();
     authState.user = session.authenticated ? session.user : null;
   } catch (error) {
@@ -2000,7 +2000,7 @@ function renderRsiLinkControls(profile = {}) {
 async function updateRsiProfile(action, payload = {}) {
   rsiStatusMessage.textContent = action === "verify-rsi" ? "Checking the public RSI profile..." : "Saving RSI profile...";
   try {
-    const response = await fetch("/api/auth/profile", {
+    const response = await fetch("/api/auth/account", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action, ...payload }),
