@@ -46,10 +46,17 @@ module.exports = async function handler(request, response) {
         return sendJson(response, 400, { error: "Crew role is required" });
       }
 
+      if (listing.id) {
+        await requireOwnedRow("crew_listings", listing.id, "owner_id", user.id);
+      }
+
       const row = toRow(listing);
       row.owner_id = user.id;
-      const rows = await supabaseRequest("crew_listings", {
-        method: "POST",
+      const path = listing.id
+        ? `crew_listings?id=eq.${encodeURIComponent(listing.id)}`
+        : "crew_listings";
+      const rows = await supabaseRequest(path, {
+        method: listing.id ? "PATCH" : "POST",
         body: JSON.stringify(row),
         useServiceRole: true,
       });

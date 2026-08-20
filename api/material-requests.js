@@ -61,10 +61,17 @@ module.exports = async function handler(request, response) {
         return sendJson(response, 400, { error: "At least one requested material is required" });
       }
 
+      if (materialRequest.id) {
+        await requireOwnedRow("material_requests", materialRequest.id, "requester_id", user.id);
+      }
+
       const row = toRow(materialRequest);
       row.requester_id = user.id;
-      const rows = await supabaseRequest("material_requests", {
-        method: "POST",
+      const path = materialRequest.id
+        ? `material_requests?id=eq.${encodeURIComponent(materialRequest.id)}`
+        : "material_requests";
+      const rows = await supabaseRequest(path, {
+        method: materialRequest.id ? "PATCH" : "POST",
         body: JSON.stringify(row),
         useServiceRole: true,
       });

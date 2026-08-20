@@ -155,6 +155,8 @@ let vehicleCatalog = [];
 let hangarMarketRows = [];
 let hangarMarketError = "";
 let editingShipIndex = null;
+let editingCrewId = null;
+let editingMaterialId = null;
 let pendingRemoveShipIndex = null;
 let availabilityShipIndex = null;
 let availabilityView = "week";
@@ -789,6 +791,8 @@ const createCrewPostingButton = document.querySelector("#create-crew-posting-but
 const createCrewPostingMenuButton = document.querySelector("#create-crew-posting-menu-button");
 const crewPostingModal = document.querySelector("#crew-posting-modal");
 const crewPostingForm = document.querySelector("#crew-posting-form");
+const crewPostingTitle = document.querySelector("#crew-posting-title");
+const crewPostingSubmitButton = document.querySelector("#crew-posting-submit");
 const crewPostingClose = document.querySelector("#crew-posting-close");
 const crewPostingCancel = document.querySelector("#crew-posting-cancel");
 const crewPostingPayType = document.querySelector("#crew-posting-pay-type");
@@ -1287,6 +1291,13 @@ accountServicesList.addEventListener("click", async (event) => {
   if (actionButton.dataset.accountAction === "delete-crew") {
     await removeCrewListing(actionButton.dataset.listingId);
   }
+
+  if (actionButton.dataset.accountAction === "edit-crew") {
+    const listing = crewListings.find((item) => item.id === actionButton.dataset.listingId);
+    if (listing) {
+      openCrewPostingModal(listing);
+    }
+  }
 });
 
 accountListingsList.addEventListener("click", async (event) => {
@@ -1316,8 +1327,24 @@ accountListingsList.addEventListener("click", async (event) => {
     await removeCrewListing(id);
   }
 
+  if (action === "edit-crew") {
+    const listing = crewListings.find((item) => item.id === id);
+    if (listing) {
+      setAccountView("services");
+      openCrewPostingModal(listing);
+    }
+  }
+
   if (action === "delete-material") {
     await removeMaterialRequest(id);
+  }
+
+  if (action === "edit-material") {
+    const request = materialRequests.find((item) => item.id === id);
+    if (request) {
+      setAccountView("listings");
+      openMaterialRequestModal(request);
+    }
   }
 });
 
@@ -1473,7 +1500,7 @@ availabilityShipSelect.addEventListener("change", () => {
 });
 
 createCrewPostingButton.addEventListener("click", openPostCrewListingFlow);
-accountCreateServiceButton.addEventListener("click", openCrewPostingModal);
+accountCreateServiceButton.addEventListener("click", () => openCrewPostingModal());
 crewPostingClose.addEventListener("click", closeCrewPostingModal);
 crewPostingCancel.addEventListener("click", closeCrewPostingModal);
 
@@ -1490,15 +1517,17 @@ crewPostingForm.addEventListener("submit", async (event) => {
   const payType = data.get("payType");
   const rawValue = data.get("payValue");
 
+  const existingListing = editingCrewId ? crewListings.find((item) => item.id === editingCrewId) : null;
   const listing = {
-    ownerId: authState.user?.id || "",
+    id: existingListing?.id || "",
+    ownerId: authState.user?.id || existingListing?.ownerId || "",
     name: data.get("name"),
     role: data.get("role"),
     price: parseCredits(rawValue),
     payType,
-    rating: 5.0,
-    completedJobs: 0,
-    availabilityStatus: "Available now",
+    rating: existingListing?.rating ?? 5.0,
+    completedJobs: existingListing?.completedJobs ?? 0,
+    availabilityStatus: existingListing?.availabilityStatus || "Available now",
     summary: data.get("summary"),
   };
 
@@ -1506,7 +1535,11 @@ crewPostingForm.addEventListener("submit", async (event) => {
 
   try {
     const savedListing = await saveCrewListing(listing);
-    crewListings.unshift(savedListing);
+    if (existingListing) {
+      crewListings[crewListings.indexOf(existingListing)] = savedListing;
+    } else {
+      crewListings.unshift(savedListing);
+    }
     closeCrewPostingModal();
     renderCrewMarketplace();
     renderAccountServices();
@@ -1607,8 +1640,10 @@ materialRequestForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  const existingRequest = editingMaterialId ? materialRequests.find((item) => item.id === editingMaterialId) : null;
   const request = {
-    requesterId: authState.user?.id || "",
+    id: existingRequest?.id || "",
+    requesterId: authState.user?.id || existingRequest?.requesterId || "",
     postedBy: formData.get("postedBy"),
     listingType,
     location: formatMaterialRequestLocation(formData),
@@ -1629,7 +1664,11 @@ materialRequestForm.addEventListener("submit", async (event) => {
 
   try {
     const savedRequest = await saveMaterialRequest(request);
-    materialRequests.unshift(savedRequest);
+    if (existingRequest) {
+      materialRequests[materialRequests.indexOf(existingRequest)] = savedRequest;
+    } else {
+      materialRequests.unshift(savedRequest);
+    }
     closeMaterialRequestModal();
     renderMaterialRequests();
     renderAccountListings();
@@ -2356,7 +2395,7 @@ function accountServiceCard(listing) {
         <strong>${crewPayLabel(listing)}</strong>
       </div>
       <div class="card-actions">
-        <button class="secondary-button" type="button" disabled>Edit</button>
+        <button class="secondary-button" type="button" data-account-action="edit-crew" data-listing-id="${escapeHtml(listing.id)}">Edit</button>
         <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-crew" data-listing-id="${escapeHtml(listing.id)}">Delete</button>
       </div>
@@ -2398,7 +2437,7 @@ function accountCrewListingCard(listing) {
         <strong>${crewPayLabel(listing)}</strong>
       </div>
       <div class="card-actions">
-        <button class="secondary-button" type="button" disabled>Edit</button>
+        <button class="secondary-button" type="button" data-account-action="edit-crew" data-listing-id="${escapeHtml(listing.id)}">Edit</button>
         <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-crew" data-listing-id="${escapeHtml(listing.id)}">Delete</button>
       </div>
@@ -2423,7 +2462,7 @@ function accountMaterialListingCard(request) {
         <strong>${escapeHtml(materialRequestPriceLabel(request, materials))}</strong>
       </div>
       <div class="card-actions">
-        <button class="secondary-button" type="button" disabled>Edit</button>
+        <button class="secondary-button" type="button" data-account-action="edit-material" data-listing-id="${escapeHtml(request.id)}">Edit</button>
         <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-material" data-listing-id="${escapeHtml(request.id)}">Delete</button>
       </div>
@@ -2688,6 +2727,24 @@ function setListingSaving(statusKey, isSaving) {
       : editingShipIndex === null
         ? "Add ship"
         : "Update ship";
+  }
+
+  if (statusKey === "crewListings") {
+    crewPostingSubmitButton.disabled = isSaving;
+    crewPostingSubmitButton.textContent = isSaving
+      ? "Saving..."
+      : editingCrewId === null
+        ? "Post Services"
+        : "Update Services";
+  }
+
+  if (statusKey === "materialRequests") {
+    materialSubmitButton.disabled = isSaving;
+    materialSubmitButton.textContent = isSaving
+      ? "Saving..."
+      : editingMaterialId === null
+        ? "Post Listing"
+        : "Update Listing";
   }
 }
 
@@ -4363,20 +4420,40 @@ function closeAvailabilityModal() {
   }
 }
 
-function openCrewPostingModal() {
+function openCrewPostingModal(listing = null) {
   if (!canCreatePosting(authState.user)) {
     showAuthPrompt();
     return;
   }
 
-  crewPostingForm.reset();
-  crewPostingName.value = preferredDisplayName(authState.user);
-  updateCrewPostingPayUI();
+  if (listing) {
+    populateCrewPostingForm(listing);
+  } else {
+    crewPostingForm.reset();
+    editingCrewId = null;
+    crewPostingName.value = preferredDisplayName(authState.user);
+    crewPostingTitle.textContent = "Create Crew Posting";
+    crewPostingSubmitButton.textContent = "Post Services";
+    updateCrewPostingPayUI();
+  }
   crewPostingModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
 }
 
+function populateCrewPostingForm(listing) {
+  editingCrewId = listing.id;
+  crewPostingName.value = listing.name || preferredDisplayName(authState.user);
+  crewPostingForm.elements.role.value = listing.role || "";
+  crewPostingPayType.value = listing.payType || "flat";
+  crewPostingPayValue.value = formatCreditInputValue(listing.price || 0);
+  crewPostingForm.elements.summary.value = listing.summary || "";
+  updateCrewPostingPayUI();
+  crewPostingTitle.textContent = "Update Crew Posting";
+  crewPostingSubmitButton.textContent = "Update Services";
+}
+
 function closeCrewPostingModal() {
+  editingCrewId = null;
   crewPostingModal.classList.add("is-hidden");
   if (
     ownerConfiguratorModal.classList.contains("is-hidden") &&
@@ -4407,25 +4484,85 @@ function updateCrewPostingPayUI() {
   }
 }
 
-function openMaterialRequestModal() {
+function openMaterialRequestModal(request = null) {
   if (!canCreatePosting(authState.user)) {
     showAuthPrompt();
     return;
   }
 
-  materialRequestForm.reset();
-  materialRequestForm.elements.listingType.value = "wtb";
-  materialRequestName.value = preferredDisplayName(authState.user);
-  updateMaterialLocationFilters();
-  materialLineItemsContainer.innerHTML = "";
-  addMaterialLineItem();
-  updateMaterialListingTypeUI();
-  updateMaterialPaymentUI();
+  if (request) {
+    populateMaterialRequestForm(request);
+  } else {
+    materialRequestForm.reset();
+    editingMaterialId = null;
+    materialRequestForm.elements.listingType.value = "wtb";
+    materialRequestName.value = preferredDisplayName(authState.user);
+    updateMaterialLocationFilters();
+    materialLineItemsContainer.innerHTML = "";
+    addMaterialLineItem();
+    updateMaterialListingTypeUI();
+    updateMaterialPaymentUI();
+    materialRequestTitle.textContent = "Post Material Listing";
+    materialSubmitButton.textContent = "Post Listing";
+  }
   materialRequestModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
 }
 
+function populateMaterialRequestForm(request) {
+  editingMaterialId = request.id;
+  materialRequestForm.elements.listingType.value = request.listingType === "wts" ? "wts" : "wtb";
+  materialRequestName.value = request.postedBy || preferredDisplayName(authState.user);
+
+  updateMaterialLocationFilters();
+  const locationParts = String(request.location || "").split(" / ");
+  const [locSystem, locPlanet, locText] =
+    locationParts.length === 3 ? locationParts : [null, null, request.location || ""];
+  if (locSystem) {
+    materialLocationSystemSelect.value = locSystem;
+  }
+  updateMaterialLocationFilters();
+  if (locPlanet) {
+    materialLocationPlanetSelect.value = locPlanet;
+  }
+  updateMaterialLocationOptions();
+  materialLocationInput.value = locText || "";
+
+  const materials = request.materials?.length
+    ? request.materials
+    : [{ material: request.material, quantity: request.quantity, quality: request.quality }];
+
+  materialLineItemsContainer.innerHTML = "";
+  materials.forEach((item) => {
+    addMaterialLineItem();
+    const row = materialLineItemsContainer.lastElementChild;
+    const anyQuantity = Boolean(item.anyQuantity) || item.quantity === "Any quantity";
+    row.querySelector("[name='material']").value = item.material || "";
+    row.querySelector(".material-any-quantity").checked = anyQuantity;
+    row.querySelector("[name='quantity']").value = anyQuantity ? "" : parseFloat(item.quantity) || "";
+    row.querySelector("[name='quality']").value = item.quality || "";
+    if (item.pricePerScu) {
+      row.querySelector("[name='linePrice']").value = formatCreditInputValue(item.pricePerScu);
+    }
+    updateMaterialQuantityMode(row);
+    updateMaterialPriceHint(row);
+  });
+  updateMaterialPricingMode();
+
+  if (materials.length === 1) {
+    const isPerScu = /UEC\s*\/\s*SCU/i.test(request.price || "");
+    materialPaymentType.value = isPerScu ? "perscu" : "total";
+    materialPaymentValue.value = formatCreditInputValue(parseCredits(request.price));
+  }
+
+  updateMaterialListingTypeUI();
+  updateMaterialPaymentUI();
+  materialRequestTitle.textContent = "Update Material Listing";
+  materialSubmitButton.textContent = "Update Listing";
+}
+
 function closeMaterialRequestModal() {
+  editingMaterialId = null;
   materialRequestModal.classList.add("is-hidden");
   if (
     ownerConfiguratorModal.classList.contains("is-hidden") &&

@@ -84,9 +84,27 @@ npm run sync:ships -- --limit=4
 
 ## Testing/build commands
 
-There is no `test`, `lint`, or `typecheck` script and no test files exist. `npm run build` is the
-only automated check. Validate changes by building, then manually exercising the relevant panel(s)
-in a browser (see Known issues below for what needs real Supabase/Discord credentials vs. what
+```bash
+npm test    # node --test, auto-discovers tests/**/*.test.js. No lint/typecheck script exists.
+```
+
+Added 2026-08-19 using Node's built-in test runner (zero new dependencies — appropriate for how
+small and dependency-light this project otherwise is). Current coverage is deliberately narrow but
+high-value: `tests/api-auth-gate.test.js` calls each write route's handler directly with a mocked
+request/response (see `tests/helpers/http-mock.js`) and asserts an unauthenticated request gets
+`401` — this needs no env vars or network access, because `requirePostingAccount()`/`requireUser()`
+reject before any Supabase call happens. `tests/function-count.test.js` asserts `api/*.js` route
+files stay under Vercel's 12-function cap. Both were written specifically because they'd have
+caught real bugs found this session (the unauthenticated-DELETE hole, and the deploy-blocking
+function count) — verified by deliberately reintroducing each bug and confirming the test fails.
+
+Not yet covered: ownership checks that require a real Supabase round-trip (`requireOwnedRow`
+403s), rate-limit trigger behavior, and anything in `app.js` (it's a monolithic global-scope
+browser script, not structured as testable modules — would need a refactor or a DOM-simulation
+harness to test meaningfully; out of scope until that's actually needed).
+
+Beyond `npm test`, validate changes by building, then manually exercising the relevant panel(s) in
+a browser (see Known issues below for what needs real Supabase/Discord credentials vs. what
 doesn't).
 
 ## Important conventions
@@ -196,9 +214,39 @@ finishing partially-built workflows, roughly in this order:
 4. ~~Fix the `sharp` high-severity advisory.~~ Done 2026-08-19 (`0.33.5` → `0.35.3`).
 5. Build the real scheduling/reservation system (`rental_availability` table exists but isn't
    wired up) and replace the calendar's placeholder request builder.
-6. Add edit/pause controls for crew and material listings (ship listings already have them).
-7. Add at least basic smoke tests for API route validation and core frontend flows — worth
-   prioritizing given how many silent breakages (missing tables, a deploy-blocking function count)
-   this session found that a five-minute smoke test would have caught immediately.
+6. ~~Add edit controls for crew and material listings.~~ Done 2026-08-19 — see "Edit support for
+   crew/material listings" below. **Pause** buttons remain disabled placeholders for all three
+   listing types (ship/crew/material); that was out of scope for this pass.
+7. ~~Add at least basic smoke tests for API route validation.~~ Started 2026-08-19 — see
+   Testing/build commands above. Frontend flows (`app.js`) still have no automated coverage.
 8. Confirm the Discord OAuth login flow actually works end-to-end on the live site — not yet
    manually verified as of 2026-08-19.
+
+## Edit support for crew/material listings (added 2026-08-19)
+
+Mirrors the pattern ship listings already used: one shared modal for create+edit, an
+`editing<Type>Id` global (`editingCrewId`/`editingMaterialId`, alongside the pre-existing
+`editingShipIndex`) that's `null` when creating, and the client always `POST`s — the server decides
+`PATCH` vs `INSERT` based on whether `listing.id`/`request.id` is present, exactly like
+`api/ship-listings.js` already did. `api/crew-listings.js` and `api/material-requests.js` now have
+the same `if (id) { requireOwnedRow(...); PATCH } else { POST }` branch (material's owner column is
+`requester_id`, not `owner_id` — don't copy-paste that column name by mistake).
+
+`populateMaterialRequestForm()` is the fiddliest part: it reconstructs the dynamic material line
+items (one per `request.materials[i]`, via repeated `addMaterialLineItem()` calls) and tries to
+reverse-populate the System/Planet `<select>` elements by splitting `request.location` on `" / "`
+(the same separator `formatMaterialRequestLocation()` joins with on save). If the split values
+don't match a currently-loaded UEX option — data drift, or `materialLocationOptions` hasn't loaded
+yet — the selects just stay unselected; the free-text trade-location field still gets the full
+original string either way, so nothing breaks, the user just may need to reselect System/Planet
+before saving again. This degraded-but-safe path was exercised directly in testing (empty
+`materialLocationOptions` in a no-network test environment) and behaves as designed.
+
+Verified working end-to-end in-browser (not via `npm test` — `app.js` isn't structured as testable
+modules, see Testing/build commands above): injected a fake `authState.user` and fake owned
+listings via the console, clicked each Edit button, confirmed the modal pre-fills correctly and
+titles/buttons switch to "Update...", intercepted `fetch` to confirm the submitted payload includes
+the right `id`, and confirmed the array is replaced in place (not duplicated) after save. Also
+confirmed opening the modal fresh afterward (create mode) resets cleanly with no leftover editing
+state. Not exercised: the actual Supabase round-trip (needs a real authenticated session, same
+limitation as the rate-limit verification above).
