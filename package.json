@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",
-    "sync:ships": "node scripts/sync-ship-images.mjs"
+    "sync:ships": "node scripts/sync-ship-images.mjs",
+    "test": "node --test"
   },
   "dependencies": {
     "p-limit": "^6.2.0",
