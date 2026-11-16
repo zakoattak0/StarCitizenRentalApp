@@ -653,6 +653,15 @@ const generateRequestButton = document.querySelector("#generate-request-button")
 const fleetList = document.querySelector("#fleet-list");
 const shipMarketForm = document.querySelector("#ship-market-form");
 const shipMarketResults = document.querySelector("#ship-market-results");
+const shipMarketStartDate = document.querySelector("#ship-market-start-date");
+const shipMarketEndDate = document.querySelector("#ship-market-end-date");
+const shipMarketClearDates = document.querySelector("#ship-market-clear-dates");
+const shipDateSummary = document.querySelector("#ship-date-summary");
+const shipDetailsModal = document.querySelector("#ship-details-modal");
+const shipDetailsTitle = document.querySelector("#ship-details-title");
+const shipDetailsPanel = document.querySelector("#ship-details-panel");
+const shipOwnerPanel = document.querySelector("#ship-owner-panel");
+const shipDetailsActions = document.querySelector("#ship-details-actions");
 const shipRoleFilter = document.querySelector("#ship-role-filter");
 const shipMarketManufacturerSelect = document.querySelector("#ship-market-manufacturer");
 const crewMarketForm = document.querySelector("#crew-market-form");
@@ -888,6 +897,9 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("click", (event) => {
   const protectedAction = event.target.closest("[data-auth-action]");
+  if (protectedAction && shipDetailsModal.contains(protectedAction)) {
+    shipDetailsModal.close();
+  }
   if (!protectedAction || canCreatePosting(authState.user)) {
     return;
   }
@@ -1044,6 +1056,55 @@ ownerManufacturerSelect.addEventListener("change", () => {
 shipMarketForm.addEventListener("input", renderShipMarketplace);
 shipMarketForm.addEventListener("change", renderShipMarketplace);
 shipMarketForm.addEventListener("submit", (event) => event.preventDefault());
+document.querySelector("#ship-market-next-weekend").addEventListener("click", () => {
+  const saturday = startOfDay(new Date());
+  saturday.setDate(saturday.getDate() + ((6 - saturday.getDay() + 7) % 7 || 7));
+  const sunday = new Date(saturday);
+  sunday.setDate(sunday.getDate() + 1);
+  shipMarketStartDate.value = dateToKey(saturday);
+  shipMarketEndDate.value = dateToKey(sunday);
+  renderShipMarketplace();
+});
+shipMarketClearDates.addEventListener("click", () => {
+  shipMarketStartDate.value = "";
+  shipMarketEndDate.value = "";
+  renderShipMarketplace();
+  shipMarketStartDate.focus();
+});
+shipMarketResults.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ship-details]");
+  if (button) {
+    openShipDetails(button.dataset.shipDetails);
+  }
+});
+document.querySelector("#ship-details-close").addEventListener("click", () => shipDetailsModal.close());
+shipDetailsModal.addEventListener("click", (event) => {
+  if (event.target === shipDetailsModal) {
+    const bounds = shipDetailsModal.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+      shipDetailsModal.close();
+    }
+  }
+  const tab = event.target.closest("[data-ship-details-tab]");
+  if (tab) {
+    setShipDetailsTab(tab.dataset.shipDetailsTab);
+  }
+});
+shipDetailsModal.addEventListener("keydown", (event) => {
+  const tab = event.target.closest("[data-ship-details-tab]");
+  if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  const target = event.key === "Home" ? "ship" : event.key === "End" ? "owner" : tab.dataset.shipDetailsTab === "ship" ? "owner" : "ship";
+  setShipDetailsTab(target);
+  shipDetailsModal.querySelector(`[data-ship-details-tab="${target}"]`).focus();
+});
+shipDetailsModal.addEventListener("close", () => {
+  if (!document.querySelector(".modal-backdrop:not(.is-hidden)")) {
+    document.body.classList.remove("modal-open");
+  }
+});
 crewMarketForm.addEventListener("input", renderCrewMarketplace);
 crewMarketForm.addEventListener("change", renderCrewMarketplace);
 crewMarketForm.addEventListener("submit", (event) => event.preventDefault());
@@ -3254,6 +3315,35 @@ function fleetShipActions(ship) {
 
 function renderShipMarketplace() {
   const form = new FormData(shipMarketForm);
+  const startDate = String(form.get("startDate") || "");
+  const endDate = String(form.get("endDate") || "");
+  const today = dateToKey(new Date());
+  shipMarketStartDate.min = today;
+  shipMarketEndDate.min = startDate > today ? startDate : today;
+  shipMarketClearDates.disabled = !startDate && !endDate;
+
+  const startError = startDate && startDate < today ? "Choose today or a future start date." : "";
+  const endError = endDate && endDate < today
+    ? "Choose today or a future end date."
+    : startDate && endDate && endDate < startDate
+      ? "End date must be on or after the start date."
+      : "";
+  shipMarketStartDate.setCustomValidity(startError);
+  shipMarketEndDate.setCustomValidity(endError);
+  shipMarketStartDate.setAttribute("aria-invalid", String(Boolean(startError)));
+  shipMarketEndDate.setAttribute("aria-invalid", String(Boolean(endError)));
+  shipDateSummary.classList.toggle("form-error", Boolean(startError || endError));
+  if (startError || endError) {
+    shipDateSummary.textContent = startError || endError;
+    shipMarketResults.innerHTML = `<div class="empty-state">Choose a valid date range to find available ships.</div>`;
+    return;
+  }
+
+  shipDateSummary.textContent = startDate || endDate
+    ? `Showing ships available ${startDate && endDate && startDate !== endDate
+      ? `from ${formatDateTime(parseDateKey(startDate))} through ${formatDateTime(parseDateKey(endDate))}`
+      : `on ${formatDateTime(parseDateKey(startDate || endDate))}`}.`
+    : "";
   const role = String(form.get("role") || "");
   const manufacturer = String(form.get("manufacturer") || "");
   const minCargo = Number(form.get("cargo") || 0);
@@ -3275,7 +3365,7 @@ function renderShipMarketplace() {
         (!needsMedical || hasMedicalCapability(ship)) &&
         (!needsHangar || Boolean(ship.hangarServices?.length)) &&
         (!needsPilot || Boolean(ship.pilotIncluded)) &&
-        isShipAvailable(ship)
+        isShipAvailable(ship, startDate, endDate)
       );
     })
     .sort((first, second) => availabilityRank(first) - availabilityRank(second) || second.rating - first.rating);
@@ -3292,7 +3382,9 @@ function renderShipMarketplace() {
 
   shipMarketResults.innerHTML = listings.length
     ? listings.map(shipMarketplaceCard).join("")
-    : `<div class="empty-state">No available ship providers match those filters yet.</div>`;
+    : `<div class="empty-state">${startDate || endDate
+      ? "No ships are available for every selected date with these filters. Try other dates or clear the date filter."
+      : "No available ship providers match those filters yet."}</div>`;
 }
 
 function renderCrewMarketplace() {
@@ -3588,7 +3680,7 @@ function playerBadges(player) {
 
 function playerListingRows(player) {
   const rows = [
-    ...player.shipListings.map((ship) => playerListingRow("Ship", ship.ship, `${formatCredits(getShipRate(ship, "hour") || ship.rates?.hour || 0)} UEC / hour`, ship.availabilityStatus || "Schedule pending")),
+    ...player.shipListings.map((ship) => playerListingRow("Ship", ship.ship, `${formatCredits(getShipRate(ship, "hour") || ship.rates?.hour || 0)} UEC / hour`, ship.availabilityStatus || (ship.dates?.length ? "Dates listed" : "Schedule pending"))),
     ...player.crewListings.map((crew) => playerListingRow("Crew", crew.role, crewPayLabel(crew), crew.availabilityStatus || "Available")),
     ...player.materialListings.map((request) => {
       const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
@@ -3675,9 +3767,96 @@ function shipMarketplaceCard(ship) {
       <div class="capability-list">
         ${capabilities.map((capability) => `<span>${escapeHtml(capability)}</span>`).join("")}
       </div>
-      ${ship.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="primary-button" type="button" data-auth-action="request a ship rental" data-deal-request data-deal-type="ship_rental" data-listing-type="ship" data-listing-id="${escapeHtml(ship.id || "")}" data-listing-name="${escapeHtml(ship.ship || "Ship rental")}" data-provider-id="${escapeHtml(ship.ownerId || "")}" data-provider-name="${escapeHtml(ship.owner || "Provider")}">Request Rental</button>`}
+      <div class="ship-market-actions">
+        <button class="secondary-button" type="button" data-ship-details="${escapeHtml(ship.id || "")}" aria-haspopup="dialog" aria-label="Details for ${escapeHtml(ship.ship)}">Details</button>
+        ${shipRentalRequestButton(ship)}
+      </div>
     </article>
   `;
+}
+
+function shipRentalRequestButton(ship) {
+  return ship.isDemo
+    ? demoOnlyButton("Fake Demo Only")
+    : `<button class="primary-button" type="button" data-auth-action="request a ship rental" data-deal-request data-deal-type="ship_rental" data-listing-type="ship" data-listing-id="${escapeHtml(ship.id || "")}" data-listing-name="${escapeHtml(ship.ship || "Ship rental")}" data-provider-id="${escapeHtml(ship.ownerId || "")}" data-provider-name="${escapeHtml(ship.owner || "Provider")}">Request Rental</button>`;
+}
+
+function openShipDetails(listingId) {
+  const ship = marketplaceShipListings().find((listing) => listing.id === listingId);
+  if (!ship) {
+    return;
+  }
+  const availableDates = uniqueSorted(ship.dates || [])
+    .filter((date) => date >= dateToKey(new Date()) && isShipAvailable(ship, date, date));
+  const configuration = configurationSummary(ship);
+  shipDetailsTitle.textContent = ship.ship;
+  shipDetailsPanel.innerHTML = `
+    <div class="ship-details-overview">
+      ${shipImage(ship)}
+      <div>
+        <h3>Ship specifications</h3>
+        <ul class="meta-list">
+          <li>Role: ${escapeHtml(ship.role || "General")}</li>
+          <li>Manufacturer: ${escapeHtml(ship.manufacturer || ship.vehicle?.company || "Not listed")}</li>
+          <li>Cargo: ${formatCredits(ship.cargoScu || ship.vehicle?.scu || 0)} SCU</li>
+          <li>Crew: ${escapeHtml(String(ship.vehicle?.crew || "Not listed").replace(",", "–"))}</li>
+          <li>Landing pad: ${escapeHtml(ship.vehicle?.padType || "Not listed")}</li>
+        </ul>
+        <div class="capability-list">${marketplaceShipCapabilities(ship).map((value) => `<span>${escapeHtml(value)}</span>`).join("")}</div>
+      </div>
+    </div>
+    <section class="ship-details-section">
+      <h3>Rental rates</h3>
+      <ul class="meta-list">${rateFacts(ship) || "<li>Rates not listed. Negotiate with the owner.</li>"}
+        <li>Pilot: ${ship.pilotIncluded ? `Available${ship.pilotRate ? ` at ${formatCredits(ship.pilotRate)} UEC / hour` : "; rate to be negotiated"}` : "Not offered"}</li>
+      </ul>
+      <p class="market-summary">Rental start and end times are at the owner's discretion and should be negotiated.</p>
+    </section>
+    <section class="ship-details-section">
+      <h3>Availability</h3>
+      <div class="capability-list">${availableDates.length
+        ? availableDates.map((date) => `<span>${escapeHtml(formatDateTime(parseDateKey(date)))}</span>`).join("")
+        : "<p class=\"market-summary\">No upcoming availability listed.</p>"}</div>
+    </section>
+    <section class="ship-details-section">
+      <h3>Configuration and owner notes</h3>
+      ${configuration || "<p class=\"market-summary\">No additional configuration or owner notes listed.</p>"}
+    </section>
+    <section class="ship-details-section">
+      <h3>Hangar services</h3>
+      ${hangarServicesSummary(ship) || "<p class=\"market-summary\">No hangar services offered.</p>"}
+    </section>
+  `;
+
+  const player = buildPlayerDirectory().find((entry) => ship.ownerId
+    ? entry.id === ship.ownerId
+    : entry.name === ship.owner);
+  const profile = marketplaceUsers.find((user) => user.id === ship.ownerId);
+  shipOwnerPanel.innerHTML = `
+    ${profile ? `<ul class="meta-list">
+      ${profile.publicProfileName ? `<li>Public name: ${escapeHtml(profile.publicProfileName)}</li>` : ""}
+      ${profile.displayName ? `<li>Display name: ${escapeHtml(profile.displayName)}</li>` : ""}
+      ${profile.rsiHandle ? `<li>RSI handle: <a href="https://robertsspaceindustries.com/citizens/${encodeURIComponent(profile.rsiHandle)}" target="_blank" rel="noopener noreferrer">${escapeHtml(profile.rsiHandle)}</a></li>` : ""}
+      ${profile.createdAt ? `<li>Member since: ${escapeHtml(formatDateTime(profile.createdAt))}</li>` : ""}
+    </ul>` : ""}
+    ${player ? playerDetailCard(player) : `<p class="market-summary">Provider: ${escapeHtml(ship.owner || "Independent provider")}. No additional public profile details available.</p>`}
+  `;
+  shipDetailsActions.innerHTML = shipRentalRequestButton(ship);
+  setShipDetailsTab("ship");
+  shipDetailsModal.showModal();
+  document.body.classList.add("modal-open");
+  document.querySelector("#ship-details-tab").focus();
+}
+
+function setShipDetailsTab(selectedTab) {
+  shipDetailsModal.querySelectorAll("[data-ship-details-tab]").forEach((tab) => {
+    const active = tab.dataset.shipDetailsTab === selectedTab;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
+  shipDetailsPanel.classList.toggle("is-hidden", selectedTab !== "ship");
+  shipOwnerPanel.classList.toggle("is-hidden", selectedTab !== "owner");
 }
 
 function crewMarketplaceCard(crew) {
@@ -3971,8 +4150,33 @@ function hasMedicalCapability(ship) {
   return normalizeFilterValue(ship.role).includes("medical") || normalizeFilterValue(ship.ship).includes("apollo") || Boolean(ship.medical);
 }
 
-function isShipAvailable(ship) {
-  return Boolean(ship.dates?.length) && !normalizeFilterValue(ship.availabilityStatus).includes("unavailable");
+function isShipAvailable(ship, startDate = "", endDate = "") {
+  if (!ship.dates?.length || normalizeFilterValue(ship.availabilityStatus).includes("unavailable")) {
+    return false;
+  }
+  if (!startDate && !endDate) {
+    return true;
+  }
+
+  const firstDay = parseDateKey(startDate || endDate);
+  const lastDay = parseDateKey(endDate || startDate);
+  if (Number.isNaN(firstDay.getTime()) || Number.isNaN(lastDay.getTime()) || firstDay > lastDay) {
+    return false;
+  }
+
+  const availableDates = new Set(ship.dates);
+  for (const day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
+    const dateKey = dateToKey(day);
+    const isBooked = bookings.some((booking) => booking.date === dateKey && (
+      booking.listingId
+        ? booking.listingId === ship.id
+        : booking.ship === ship.ship && booking.owner === ship.owner
+    ));
+    if (!availableDates.has(dateKey) || isBooked) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function availabilityRank(ship) {

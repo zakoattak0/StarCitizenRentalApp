@@ -453,6 +453,36 @@ main {
   padding: 0 11px;
 }
 
+.ship-date-filter {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+}
+
+.ship-date-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.ship-date-fields label {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.ship-date-fields input {
+  min-width: 0;
+}
+
+.ship-date-filter .api-status {
+  margin: 10px 0 0;
+}
+
+#ship-date-summary:empty {
+  display: none;
+}
+
 .market-card {
   display: grid;
   align-content: start;
@@ -465,6 +495,80 @@ main {
 .market-card .primary-button,
 .market-card .secondary-button {
   width: 100%;
+}
+
+.ship-market-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 10px;
+  margin-top: auto;
+}
+
+.ship-details-dialog {
+  width: min(880px, calc(100% - 36px));
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.ship-details-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.ship-details-dialog .modal-heading {
+  align-items: start;
+  flex-direction: row;
+}
+
+.ship-details-dialog .icon-button {
+  flex-shrink: 0;
+}
+
+.ship-details-dialog h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ship-details-dialog h3 {
+  margin: 0 0 12px;
+}
+
+.ship-details-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin: 18px 0;
+  padding-bottom: 12px;
+}
+
+.ship-details-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.ship-details-section {
+  border-top: 1px solid var(--line-soft);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.ship-details-section .config-summary p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ship-details-actions {
+  display: flex;
+  justify-content: end;
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 16px;
 }
 
 .demo-button {

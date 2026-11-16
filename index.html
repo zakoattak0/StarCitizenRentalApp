@@ -135,6 +135,23 @@
           <details class="filter-drawer" open>
             <summary>Ship filters</summary>
             <form class="market-filter-grid" id="ship-market-form">
+              <fieldset class="ship-date-filter">
+                <legend>Rental dates</legend>
+                <div class="ship-date-fields">
+                  <label>
+                    Start date
+                    <input type="date" name="startDate" id="ship-market-start-date" aria-describedby="ship-date-help ship-date-summary" />
+                  </label>
+                  <label>
+                    End date
+                    <input type="date" name="endDate" id="ship-market-end-date" aria-describedby="ship-date-help ship-date-summary" />
+                  </label>
+                  <button class="secondary-button" id="ship-market-next-weekend" type="button">Next weekend</button>
+                  <button class="secondary-button" id="ship-market-clear-dates" type="button" disabled>Clear dates</button>
+                </div>
+                <p class="api-status" id="ship-date-help">Choose one date or a range. Ships must be available every day, including the end date. Start and end times are at the owner's discretion and should be negotiated.</p>
+                <p class="api-status" id="ship-date-summary" role="status"></p>
+              </fieldset>
               <label>
                 Ship type / role
                 <select name="role" id="ship-role-filter">
@@ -184,6 +201,23 @@
 
           <div class="market-results" id="ship-market-results" aria-live="polite"></div>
         </section>
+
+        <dialog class="ship-details-dialog" id="ship-details-modal" aria-labelledby="ship-details-title">
+          <div class="modal-heading">
+            <div>
+              <p class="eyebrow">Ship listing</p>
+              <h2 id="ship-details-title">Ship details</h2>
+            </div>
+            <button class="icon-button" id="ship-details-close" type="button" aria-label="Close ship details">&times;</button>
+          </div>
+          <div class="ship-details-tabs" role="tablist" aria-label="Listing details">
+            <button class="sub-tab active" id="ship-details-tab" type="button" role="tab" aria-selected="true" aria-controls="ship-details-panel" data-ship-details-tab="ship">Ship details</button>
+            <button class="sub-tab" id="ship-owner-tab" type="button" role="tab" aria-selected="false" aria-controls="ship-owner-panel" tabindex="-1" data-ship-details-tab="owner">Owner details</button>
+          </div>
+          <div id="ship-details-panel" role="tabpanel" aria-labelledby="ship-details-tab" tabindex="0"></div>
+          <div class="is-hidden" id="ship-owner-panel" role="tabpanel" aria-labelledby="ship-owner-tab" tabindex="0"></div>
+          <div class="ship-details-actions" id="ship-details-actions"></div>
+        </dialog>
 
         <section class="panel" id="crew-panel" data-panel="crew">
           <div class="section-heading">
@@ -675,6 +709,7 @@
               <p class="api-status" id="ship-api-status">Loading UEX ship list...</p>
               <fieldset>
                 <legend>Rental rates</legend>
+                <p class="api-status">Rental start and end times are at the owner's discretion and should be negotiated.</p>
                 <div class="rate-base-grid">
                   <label>
                     Base period
