@@ -1056,15 +1056,6 @@ ownerManufacturerSelect.addEventListener("change", () => {
 shipMarketForm.addEventListener("input", renderShipMarketplace);
 shipMarketForm.addEventListener("change", renderShipMarketplace);
 shipMarketForm.addEventListener("submit", (event) => event.preventDefault());
-document.querySelector("#ship-market-next-weekend").addEventListener("click", () => {
-  const saturday = startOfDay(new Date());
-  saturday.setDate(saturday.getDate() + ((6 - saturday.getDay() + 7) % 7 || 7));
-  const sunday = new Date(saturday);
-  sunday.setDate(sunday.getDate() + 1);
-  shipMarketStartDate.value = dateToKey(saturday);
-  shipMarketEndDate.value = dateToKey(sunday);
-  renderShipMarketplace();
-});
 shipMarketClearDates.addEventListener("click", () => {
   shipMarketStartDate.value = "";
   shipMarketEndDate.value = "";
