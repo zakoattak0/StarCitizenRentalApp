@@ -10,7 +10,6 @@ const MATERIAL_OPTIONS_URL = "/api/reference-data?type=material-options";
 const DEALS_URL = "/api/deals";
 const RATING_STATS_URL = "/api/reference-data?type=rating-stats";
 const USERS_URL = "/api/users";
-const testDealStorageKey = "fsx.testDeals";
 
 const hangarServiceOptions = [
   { key: "size-1-ammo", label: "Size 1 Ammo", uexNames: ["Ship Ammunition - Size 1"] },
@@ -223,392 +222,11 @@ const fallbackVehicles = [
 
 const ships = [];
 
-const bookings = [];
-
 const crewListings = [];
 
 const materialRequests = [];
 
 const marketplaceUsers = [];
-
-const demoOwnerPrefix = "FAKE DEMO - ";
-const dismissedDemoShipStorageKey = "fsx.dismissedDemoShipListings";
-
-const demoShipListings = [
-  {
-    id: "fake-demo-ship-cargo-c2",
-    ownerId: "fake-demo-provider-cargo",
-    owner: `${demoOwnerPrefix}Cargo Placeholder`,
-    ship: "C2 Hercules Starlifter",
-    role: "Cargo",
-    manufacturer: "Crusader Industries",
-    rates: { hour: 18000, day: 115000, week: 620000 },
-    offeredRates: ["hour", "day", "week"],
-    rateBasePeriod: "hour",
-    rateBase: 18000,
-    rateAdjustments: { day: -15, week: -30 },
-    pilotIncluded: false,
-    pilotRate: 0,
-    notes: "FAKE DEMO POST - placeholder cargo rental. Delete/replace with real listing data before launch.",
-    dates: demoDateKeys([1, 2, 4, 6, 8]),
-    rating: 4.8,
-    completedJobs: 42,
-  },
-  {
-    id: "fake-demo-ship-mining-mole",
-    ownerId: "fake-demo-provider-mining",
-    owner: `${demoOwnerPrefix}Mining Placeholder`,
-    ship: "MOLE Carbon Edition",
-    role: "Mining",
-    manufacturer: "Argo Astronautics",
-    rates: { hour: 24000, day: 155000, week: 820000 },
-    offeredRates: ["hour", "day", "week"],
-    rateBasePeriod: "hour",
-    rateBase: 24000,
-    rateAdjustments: { day: -12, week: -28 },
-    pilotIncluded: true,
-    pilotRate: 8000,
-    notes: "FAKE DEMO POST - placeholder mining rental with pretend loadout data.",
-    dates: demoDateKeys([0, 1, 3, 5, 9]),
-    shipConfig: {
-      type: "mining",
-      headCapacity: 3,
-      headSize: 2,
-      currentHeads: { left: "Helix II Mining Laser", center: "Lancet MH2 Mining Laser", right: "Helix II Mining Laser" },
-      availableHeads: [{ name: "Hofstede-S2 Mining Laser", quantity: 2 }],
-      availableModules: [{ name: "Rieger-C2 Module", quantity: 4 }],
-    },
-    rating: 4.6,
-    completedJobs: 27,
-  },
-  {
-    id: "fake-demo-ship-combat-redeemer",
-    ownerId: "fake-demo-provider-combat",
-    owner: `${demoOwnerPrefix}Combat Placeholder`,
-    ship: "Redeemer",
-    role: "Combat",
-    manufacturer: "Aegis Dynamics",
-    rates: { hour: 30000, day: 190000 },
-    offeredRates: ["hour", "day"],
-    rateBasePeriod: "hour",
-    rateBase: 30000,
-    rateAdjustments: { day: -10 },
-    pilotIncluded: true,
-    pilotRate: 12000,
-    notes: "FAKE DEMO POST - placeholder escort/gunship rental. Not an actual offer.",
-    dates: demoDateKeys([2, 3, 4, 7]),
-    rating: 4.9,
-    completedJobs: 58,
-  },
-  {
-    id: "fake-demo-ship-exploration-carrack",
-    ownerId: "fake-demo-provider-exploration",
-    owner: `${demoOwnerPrefix}Exploration Placeholder`,
-    ship: "Carrack Expedition",
-    role: "Exploration",
-    manufacturer: "Anvil Aerospace",
-    rates: { hour: 36000, day: 225000, week: 1200000 },
-    offeredRates: ["hour", "day", "week"],
-    rateBasePeriod: "hour",
-    rateBase: 36000,
-    rateAdjustments: { day: -14, week: -32 },
-    pilotIncluded: true,
-    pilotRate: 10000,
-    notes: "FAKE DEMO POST - placeholder expedition listing for UI testing.",
-    dates: demoDateKeys([1, 5, 6, 10, 11]),
-    rating: 4.7,
-    completedJobs: 19,
-  },
-  {
-    id: "fake-demo-ship-medical-apollo",
-    ownerId: "fake-demo-provider-medical",
-    owner: `${demoOwnerPrefix}Medical Placeholder`,
-    ship: "Apollo Medivac",
-    role: "Medical",
-    manufacturer: "Roberts Space Industries",
-    rates: { hour: 22000, day: 140000 },
-    offeredRates: ["hour", "day"],
-    rateBasePeriod: "hour",
-    rateBase: 22000,
-    rateAdjustments: { day: -12 },
-    pilotIncluded: true,
-    pilotRate: 9000,
-    notes: "FAKE DEMO POST - placeholder med-run support. This is not a real service.",
-    dates: demoDateKeys([0, 2, 5, 8]),
-    shipConfig: {
-      type: "apollo",
-      leftModules: ["tier-2"],
-      rightModules: ["tier-3"],
-    },
-    rating: 4.5,
-    completedJobs: 13,
-    medical: true,
-  },
-  {
-    id: "fake-demo-ship-hangar-600i",
-    ownerId: "fake-demo-provider-hangar",
-    owner: `${demoOwnerPrefix}Hangar Services Placeholder`,
-    ship: "600i Touring",
-    role: "Touring",
-    manufacturer: "Origin Jumpworks",
-    rates: { hour: 28000, day: 175000 },
-    offeredRates: ["hour", "day"],
-    rateBasePeriod: "hour",
-    rateBase: 28000,
-    rateAdjustments: { day: -12 },
-    pilotIncluded: false,
-    pilotRate: 0,
-    hangarLoadCost: 15000,
-    hangarLoadMode: "flat",
-    hangarFeeTreatment: "add",
-    hangarServices: [
-      { label: "Hydrogen Fuel", quantity: 300, price: 50, total: 15000, system: "Stanton", planet: "microTech", terminal: "FAKE DEMO terminal" },
-      { label: "Quantum Fuel", quantity: 120, price: 120, total: 14400, system: "Stanton", planet: "ArcCorp", terminal: "FAKE DEMO terminal" },
-    ],
-    notes: "FAKE DEMO POST - placeholder luxury transport with fake hangar service prices.",
-    dates: demoDateKeys([1, 2, 6, 9]),
-    rating: 4.4,
-    completedJobs: 11,
-  },
-].map(markDemoPost);
-
-const demoCrewListings = [
-  {
-    id: "fake-demo-crew-pilot",
-    ownerId: "fake-demo-crew-provider-pilot",
-    name: `${demoOwnerPrefix}Pilot Placeholder`,
-    role: "Pilot",
-    price: 7000,
-    payType: "flat",
-    rating: 4.8,
-    completedJobs: 36,
-    availabilityStatus: "Available now",
-    summary: "FAKE DEMO POST - pretend pilot listing for testing the crew marketplace.",
-  },
-  {
-    id: "fake-demo-crew-gunner",
-    ownerId: "fake-demo-crew-provider-gunner",
-    name: `${demoOwnerPrefix}Gunner Placeholder`,
-    role: "Gunner",
-    price: 5000,
-    payType: "flat",
-    rating: 4.6,
-    completedJobs: 24,
-    availabilityStatus: "Available today",
-    summary: "FAKE DEMO POST - pretend turret/gunner service. Not a real player.",
-  },
-  {
-    id: "fake-demo-crew-engineer",
-    ownerId: "fake-demo-crew-provider-engineer",
-    name: `${demoOwnerPrefix}Engineer Placeholder`,
-    role: "Engineer",
-    price: 8000,
-    payType: "flat",
-    rating: 4.7,
-    completedJobs: 18,
-    availabilityStatus: "Scheduled",
-    summary: "FAKE DEMO POST - placeholder repair and power-management crew listing.",
-  },
-  {
-    id: "fake-demo-crew-box-jockey",
-    ownerId: "fake-demo-crew-provider-box",
-    name: `${demoOwnerPrefix}Box Jockey Placeholder`,
-    role: "Box Jockey",
-    price: 4500,
-    payType: "flat",
-    rating: 4.3,
-    completedJobs: 15,
-    availabilityStatus: "Available now",
-    summary: "FAKE DEMO POST - placeholder cargo loading/unloading helper.",
-  },
-  {
-    id: "fake-demo-crew-ground-team",
-    ownerId: "fake-demo-crew-provider-ground",
-    name: `${demoOwnerPrefix}FPS Ground Team Placeholder`,
-    role: "FPS Ground Team",
-    price: 15,
-    payType: "cut",
-    rating: 4.9,
-    completedJobs: 31,
-    availabilityStatus: "Available today",
-    summary: "FAKE DEMO POST - pretend bunker/security squad listing for UI testing.",
-  },
-  {
-    id: "fake-demo-crew-medic",
-    ownerId: "fake-demo-crew-provider-medic",
-    name: `${demoOwnerPrefix}Medic Placeholder`,
-    role: "Medic",
-    price: 6000,
-    payType: "flat",
-    rating: 4.5,
-    completedJobs: 22,
-    availabilityStatus: "Scheduled",
-    summary: "FAKE DEMO POST - placeholder rescue/medical crew listing. Not real.",
-  },
-].map(markDemoPost);
-
-const demoMaterialRequests = [
-  ["rmc-700-01", "Recycled Material Composite", 96, "700+", 6400, "Stanton / Crusader / Orison"],
-  ["rmc-700-02", "Recycled Material Composite", 140, "725+", 6800, "Stanton / Crusader / Seraphim Station"],
-  ["rmc-700-03", "Recycled Material Composite", 72, "735+", 7100, "Stanton / Hurston / Everus Harbor"],
-  ["rmc-700-outlier", "Recycled Material Composite", 10, "740+", 99000, "Stanton / ArcCorp / Baijini Point"],
-  ["rmc-750-01", "Recycled Material Composite", 120, "765+", 7600, "Stanton / ArcCorp / Area 18"],
-  ["rmc-750-02", "Recycled Material Composite", 80, "790+", 8050, "Stanton / Hurston / Lorville"],
-  ["quant-700-01", "Quantainium", 32, "700+", 18200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station", "wts"],
-  ["quant-700-02", "Quantainium", 48, "735+", 19100, "Stanton / Hurston / HUR-L2 Faithful Dream Station", "wts"],
-  ["quant-750-01", "Quantainium", 24, "765+", 21400, "Stanton / MicroTech / MIC-L1 Shallow Frontier Station", "wts"],
-  ["quant-800-01", "Quantainium", 18, "820+", 24000, "Stanton / Crusader / CRU-L1 Ambitious Dream Station", "wts"],
-  ["bex-650-01", "Bexalite", 35, "650+", 8200, "Stanton / ArcCorp / ARC-L1 Wide Forest Station", "wts"],
-  ["bex-650-02", "Bexalite", 44, "680+", 8700, "Stanton / Hurston / HUR-L1 Green Glade Station", "wts"],
-  ["bex-700-01", "Bexalite", 28, "710+", 9300, "Stanton / MicroTech / MIC-L2 Long Forest Station", "wts"],
-  ["bex-750-01", "Bexalite", 22, "760+", 10100, "Stanton / Crusader / CRU-L5 Beautiful Glen Station", "wts"],
-  ["gold-500-01", "Gold", 100, "500+", 7100, "Stanton / ArcCorp / Area 18", "wts"],
-  ["gold-500-02", "Gold", 64, "545+", 7600, "Stanton / Hurston / Lorville", "wts"],
-  ["taranite-700-01", "Taranite", 30, "735+", 7800, "Stanton / ArcCorp / ARC-L2 Lively Pathway Station", "wts"],
-  ["diamond-450-01", "Diamond", 200, "450+", 6200, "Stanton / MicroTech / New Babbage", "wts"],
-  ["agricium-750-01", "Agricium", 40, "750+", 9800, "Stanton / Crusader / Orison", "wts"],
-  ["laranite-600-01", "Laranite", 55, "600+", 6500, "Stanton / Hurston / Everus Harbor", "wts"],
-].map(([id, material, quantity, quality, price, location, listingType = "wtb"]) => markDemoPost({
-  id: `fake-demo-material-stileron-${id}`,
-  requesterId: "fake-demo-material-requester-stileron",
-  postedBy: `${demoOwnerPrefix}Stileron`,
-  location: `FAKE DEMO trade - ${location}`,
-  neededBy: "FAKE DEMO date - benchmark sample",
-  price: `FAKE DEMO: ${price.toLocaleString("en-US")} UEC / SCU`,
-  listingType,
-  materials: [{ material, quantity, quality, listingType }],
-}));
-
-const johnDoePlayer = {
-  id: "test-player-john-doe",
-  name: "John Doe",
-};
-
-const johnDoeShipListings = [
-  {
-    id: "test-john-doe-ship-c2",
-    ownerId: johnDoePlayer.id,
-    owner: johnDoePlayer.name,
-    ship: "C2 Hercules Starlifter",
-    role: "Cargo",
-    manufacturer: "Crusader Industries",
-    rates: { hour: 16000, day: 98000, week: 520000 },
-    offeredRates: ["hour", "day", "week"],
-    rateBasePeriod: "hour",
-    rateBase: 16000,
-    rateAdjustments: { day: -18, week: -35 },
-    pilotIncluded: true,
-    pilotRate: 6000,
-    notes: "TEST PLAYER POST - John Doe cargo hauler for scheduling and deal flow testing.",
-    dates: demoDateKeys([1, 2, 3, 5, 8, 9, 12]),
-    rating: 4.6,
-    completedJobs: 17,
-    isTest: true,
-  },
-  {
-    id: "test-john-doe-ship-prospector",
-    ownerId: johnDoePlayer.id,
-    owner: johnDoePlayer.name,
-    ship: "Prospector",
-    role: "Mining",
-    manufacturer: "MISC",
-    rates: { hour: 9000, day: 54000 },
-    offeredRates: ["hour", "day"],
-    rateBasePeriod: "hour",
-    rateBase: 9000,
-    rateAdjustments: { day: -20 },
-    pilotIncluded: false,
-    pilotRate: 0,
-    notes: "TEST PLAYER POST - John Doe mining ship for rental request testing.",
-    dates: demoDateKeys([0, 4, 6, 7, 10]),
-    shipConfig: {
-      type: "mining",
-      headCapacity: 1,
-      headSize: 1,
-      currentHeads: { center: "Lancet MH1 Mining Laser" },
-      availableHeads: [{ name: "Hofstede-S1 Mining Laser", quantity: 1 }],
-      availableModules: [{ name: "Rieger-C1 Module", quantity: 2 }],
-    },
-    rating: 4.4,
-    completedJobs: 9,
-    isTest: true,
-  },
-];
-
-const johnDoeCrewListings = [
-  {
-    id: "test-john-doe-crew-pilot",
-    ownerId: johnDoePlayer.id,
-    name: johnDoePlayer.name,
-    role: "Pilot",
-    price: 5500,
-    payType: "flat",
-    rating: 4.7,
-    completedJobs: 21,
-    availabilityStatus: "Available now",
-    summary: "TEST PLAYER POST - John Doe is available for cargo runs, escorts, and pickup/drop-off testing.",
-    isTest: true,
-  },
-  {
-    id: "test-john-doe-crew-engineer",
-    ownerId: johnDoePlayer.id,
-    name: johnDoePlayer.name,
-    role: "Engineer",
-    price: 1,
-    payType: "share",
-    rating: 4.5,
-    completedJobs: 13,
-    availabilityStatus: "Scheduled",
-    summary: "TEST PLAYER POST - John Doe engineering support for share-pay deal testing.",
-    isTest: true,
-  },
-];
-
-const johnDoeMaterialListings = [
-  {
-    id: "test-john-doe-material-wts-gold",
-    requesterId: johnDoePlayer.id,
-    postedBy: johnDoePlayer.name,
-    listingType: "wts",
-    location: "Stanton / ArcCorp / Area 18",
-    neededBy: demoDateKeys([14])[0],
-    price: "7,250 UEC / SCU",
-    material: "Gold",
-    quantity: "120 SCU",
-    quality: "545+",
-    materials: [{ material: "Gold", quantity: 120, quality: "545+", listingType: "wts", price: "7,250 UEC / SCU", pricePerScu: 7250 }],
-    isTest: true,
-  },
-  {
-    id: "test-john-doe-material-wtb-rmc",
-    requesterId: johnDoePlayer.id,
-    postedBy: johnDoePlayer.name,
-    listingType: "wtb",
-    location: "Stanton / Crusader / Seraphim Station",
-    neededBy: demoDateKeys([7])[0],
-    price: "6,900 UEC / SCU",
-    material: "Recycled Material Composite",
-    quantity: "80 SCU",
-    quality: "700+",
-    materials: [{ material: "Recycled Material Composite", quantity: 80, quality: "700+", listingType: "wtb", price: "6,900 UEC / SCU", pricePerScu: 6900 }],
-    isTest: true,
-  },
-];
-
-bookings.push(
-  {
-    date: demoDateKeys([2])[0],
-    ship: "C2 Hercules Starlifter",
-    owner: johnDoePlayer.name,
-    status: "booked",
-  },
-  {
-    date: demoDateKeys([6])[0],
-    ship: "Prospector",
-    owner: johnDoePlayer.name,
-    status: "booked",
-  },
-);
 
 const deals = [];
 
@@ -627,8 +245,7 @@ const dataStatus = {
 };
 
 const state = {
-  activeDate: new Date(2026, 5, 1),
-  calendarMode: "availability",
+  activeDate: new Date(),
   calendarFilters: {
     owner: "",
     ship: "",
@@ -643,7 +260,6 @@ const authState = {
 
 const monthLabel = document.querySelector("#month-label");
 const calendarGrid = document.querySelector("#calendar-grid");
-const calendarModeSelect = document.querySelector("#calendar-mode");
 const calendarFilterButton = document.querySelector("#calendar-filter-button");
 const calendarFilterModal = document.querySelector("#calendar-filter-modal");
 const calendarFilterForm = document.querySelector("#calendar-filter-form");
@@ -652,7 +268,6 @@ const calendarFilterClear = document.querySelector("#calendar-filter-clear");
 const calendarOwnerOptions = document.querySelector("#calendar-owner-options");
 const calendarShipOptions = document.querySelector("#calendar-ship-options");
 const filterSummary = document.querySelector("#filter-summary");
-const generateRequestButton = document.querySelector("#generate-request-button");
 const fleetList = document.querySelector("#fleet-list");
 const shipMarketForm = document.querySelector("#ship-market-form");
 const shipMarketResults = document.querySelector("#ship-market-results");
@@ -1007,11 +622,6 @@ document.querySelector("#next-month").addEventListener("click", () => {
   renderOwnerSchedule();
 });
 
-calendarModeSelect.addEventListener("change", () => {
-  state.calendarMode = calendarModeSelect.value;
-  renderCalendar();
-});
-
 calendarFilterButton.addEventListener("click", () => {
   renderCalendarFilterOptions();
   calendarFilterModal.classList.remove("is-hidden");
@@ -1043,13 +653,6 @@ calendarFilterForm.addEventListener("submit", (event) => {
   calendarFilterModal.classList.add("is-hidden");
   updateFilterSummary();
   renderCalendar();
-});
-
-generateRequestButton.addEventListener("click", () => {
-  generateRequestButton.textContent = "Request builder coming soon";
-  window.setTimeout(() => {
-    generateRequestButton.textContent = "Generate Request";
-  }, 1800);
 });
 
 ownerManufacturerSelect.addEventListener("change", () => {
@@ -1240,11 +843,7 @@ removeShipConfirm.addEventListener("click", async () => {
   removeShipConfirm.textContent = "Removing...";
 
   try {
-    if (listing.isDemo) {
-      dismissDemoShipListing(listing.id);
-    } else {
-      await deleteShipListing(listing);
-    }
+    await deleteShipListing(listing);
     ships.splice(removeIndex, 1);
     closeRemoveConfirmation();
     resetOwnerForm();
@@ -1421,9 +1020,6 @@ availabilityPicker.addEventListener("click", (event) => {
 
   const dateKey = dateButton.dataset.availabilityDate;
   const currentStatus = availabilityDraft.get(dateKey) || "unavailable";
-  if (currentStatus === "rented") {
-    return;
-  }
   if (currentStatus === "available") {
     availabilityDraft.delete(dateKey);
   } else {
@@ -1562,7 +1158,7 @@ crewPostingForm.addEventListener("submit", async (event) => {
     role: data.get("role"),
     price: parseCredits(rawValue),
     payType,
-    rating: existingListing?.rating ?? 5.0,
+    rating: existingListing?.rating ?? 0,
     completedJobs: existingListing?.completedJobs ?? 0,
     availabilityStatus: existingListing?.availabilityStatus || "Available now",
     summary: data.get("summary"),
@@ -1750,7 +1346,7 @@ async function loadVehicles() {
       .filter((vehicle) => vehicle.nameFull && !vehicle.isAddon && !vehicle.isConcept)
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    enrichSeedShips();
+    enrichShipListings();
     renderManufacturerOptions();
     renderShipOptions();
     shipApiStatus.textContent = `${vehicleCatalog.length.toLocaleString()} ships loaded from UEX`;
@@ -2214,7 +1810,7 @@ function dealNeedsCurrentUserAction(deal) {
     return false;
   }
   if (deal.status === "pending") {
-    return deal.providerUserId === userId || (isLocalTestDeal(deal) && deal.requesterUserId === userId);
+    return deal.providerUserId === userId;
   }
   if (deal.status === "completion_requested") {
     return (
@@ -2328,10 +1924,6 @@ function dealActionButtons(deal) {
   if (deal.status === "pending" && deal.requesterUserId === userId) {
     buttons.push(`<button class="secondary-button danger-button" type="button" data-deal-action="cancel" data-deal-id="${escapedId}">Cancel Request</button>`);
   }
-  if (deal.status === "pending" && isLocalTestDeal(deal) && deal.requesterUserId === userId) {
-    buttons.push(`<button class="primary-button" type="button" data-deal-action="test_accept" data-deal-id="${escapedId}">Test Accept as John Doe</button>`);
-    buttons.push(`<button class="secondary-button danger-button" type="button" data-deal-action="test_reject" data-deal-id="${escapedId}">Test Reject as John Doe</button>`);
-  }
   if (deal.status === "pending" && deal.providerUserId === userId) {
     buttons.push(`<button class="primary-button" type="button" data-deal-action="accept" data-deal-id="${escapedId}">Accept</button>`);
     buttons.push(`<button class="secondary-button danger-button" type="button" data-deal-action="reject" data-deal-id="${escapedId}">Reject</button>`);
@@ -2347,9 +1939,6 @@ function dealActionButtons(deal) {
     buttons.push(needsConfirmation
       ? `<button class="primary-button" type="button" data-deal-action="mark_complete" data-deal-id="${escapedId}">Confirm Complete</button>`
       : `<button class="secondary-button" type="button" disabled>Waiting for other party</button>`);
-    if (isLocalTestDeal(deal) && !deal.providerConfirmedComplete) {
-      buttons.push(`<button class="primary-button" type="button" data-deal-action="test_provider_complete" data-deal-id="${escapedId}">Test Confirm as John Doe</button>`);
-    }
   }
   if (deal.status === "completed") {
     return "";
@@ -2450,7 +2039,6 @@ function accountServiceCard(listing) {
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" data-account-action="edit-crew" data-listing-id="${escapeHtml(listing.id)}">Edit</button>
-        <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-crew" data-listing-id="${escapeHtml(listing.id)}">Delete</button>
       </div>
     </article>
@@ -2471,7 +2059,6 @@ function accountShipListingCard(ship) {
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" data-account-action="edit-ship" data-listing-id="${escapeHtml(ship.id)}">Edit</button>
-        <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-ship" data-listing-id="${escapeHtml(ship.id)}">Delete</button>
       </div>
     </article>
@@ -2492,7 +2079,6 @@ function accountCrewListingCard(listing) {
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" data-account-action="edit-crew" data-listing-id="${escapeHtml(listing.id)}">Edit</button>
-        <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-crew" data-listing-id="${escapeHtml(listing.id)}">Delete</button>
       </div>
     </article>
@@ -2517,7 +2103,6 @@ function accountMaterialListingCard(request) {
       </div>
       <div class="card-actions">
         <button class="secondary-button" type="button" data-account-action="edit-material" data-listing-id="${escapeHtml(request.id)}">Edit</button>
-        <button class="secondary-button" type="button" disabled>Pause</button>
         <button class="secondary-button danger-button" type="button" data-account-action="delete-material" data-listing-id="${escapeHtml(request.id)}">Delete</button>
       </div>
     </article>
@@ -2526,249 +2111,6 @@ function accountMaterialListingCard(request) {
 
 function replaceCollection(target, source) {
   target.splice(0, target.length, ...(Array.isArray(source) ? source : []));
-}
-
-function isTestProviderId(providerUserId) {
-  return String(providerUserId || "").startsWith("test-player-");
-}
-
-function isLocalTestDeal(dealOrId) {
-  const dealId = typeof dealOrId === "string" ? dealOrId : dealOrId?.id;
-  const providerUserId = typeof dealOrId === "string" ? "" : dealOrId?.providerUserId;
-  return String(dealId || "").startsWith("local-test-deal-") || isTestProviderId(providerUserId);
-}
-
-function localDealParticipantsMatch(deal, userId = authState.user?.id) {
-  return Boolean(userId && (deal.requesterUserId === userId || deal.providerUserId === userId));
-}
-
-function readLocalTestDeals() {
-  try {
-    const storedDeals = JSON.parse(localStorage.getItem(testDealStorageKey) || "[]");
-    return Array.isArray(storedDeals) ? storedDeals : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalTestDeals(storedDeals) {
-  try {
-    localStorage.setItem(testDealStorageKey, JSON.stringify(storedDeals));
-  } catch {
-    // Local test deals are a convenience only; production deals still use Supabase.
-  }
-}
-
-function localTestDealsForCurrentUser() {
-  return readLocalTestDeals().filter((deal) => localDealParticipantsMatch(deal));
-}
-
-function mergeDealsWithLocalTestDeals(remoteDeals = []) {
-  const localDeals = localTestDealsForCurrentUser();
-  const remoteIds = new Set(remoteDeals.map((deal) => deal.id).filter(Boolean));
-  return [
-    ...localDeals,
-    ...remoteDeals.filter((deal) => !remoteIds.has(deal.id) || !isLocalTestDeal(deal)),
-  ];
-}
-
-function createLocalTestDeal(deal) {
-  if (!authState.user) {
-    throw new Error("Sign in before requesting a test deal.");
-  }
-  if (deal.providerUserId === authState.user.id) {
-    throw new Error("You cannot create a deal with your own listing.");
-  }
-
-  const now = new Date().toISOString();
-  const localDeal = {
-    id: `local-test-deal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    requesterUserId: authState.user.id,
-    requesterName: preferredDisplayName(authState.user),
-    providerUserId: deal.providerUserId,
-    providerName: deal.providerName || "John Doe",
-    listingId: deal.listingId || "",
-    listingType: deal.listingType || "",
-    listingName: deal.listingName || "Test deal",
-    dealType: deal.dealType || "general",
-    status: "pending",
-    requesterConfirmedComplete: false,
-    providerConfirmedComplete: false,
-    requesterConfirmedAt: null,
-    providerConfirmedAt: null,
-    completedAt: null,
-    requestedAt: now,
-    updatedAt: now,
-    myRating: null,
-    isTest: true,
-  };
-
-  saveLocalTestDeals([localDeal, ...readLocalTestDeals()]);
-  return localDeal;
-}
-
-function updateLocalTestDeal(action, dealId) {
-  const storedDeals = readLocalTestDeals();
-  const dealIndex = storedDeals.findIndex((deal) => deal.id === dealId);
-  if (dealIndex === -1 || !localDealParticipantsMatch(storedDeals[dealIndex])) {
-    throw new Error("Test deal not found.");
-  }
-
-  const now = new Date().toISOString();
-  const deal = { ...storedDeals[dealIndex], updatedAt: now };
-
-  if (action === "cancel") {
-    if (deal.requesterUserId !== authState.user?.id || deal.status !== "pending") {
-      throw new Error("Only the requester can cancel a pending deal.");
-    }
-    deal.status = "cancelled";
-  } else if (action === "test_accept") {
-    if (deal.status !== "pending") {
-      throw new Error("Only pending test deals can be accepted.");
-    }
-    deal.status = "in_progress";
-  } else if (action === "test_reject") {
-    if (deal.status !== "pending") {
-      throw new Error("Only pending test deals can be rejected.");
-    }
-    deal.status = "rejected";
-  } else if (action === "mark_complete") {
-    if (!["in_progress", "completion_requested"].includes(deal.status)) {
-      throw new Error("Only active deals can be marked complete.");
-    }
-    if (deal.requesterUserId === authState.user?.id) {
-      deal.requesterConfirmedComplete = true;
-      deal.requesterConfirmedAt = now;
-    } else if (deal.providerUserId === authState.user?.id) {
-      deal.providerConfirmedComplete = true;
-      deal.providerConfirmedAt = now;
-    }
-    deal.status = deal.requesterConfirmedComplete && deal.providerConfirmedComplete ? "completed" : "completion_requested";
-    deal.completedAt = deal.status === "completed" ? now : null;
-  } else if (action === "test_provider_complete") {
-    if (!["in_progress", "completion_requested"].includes(deal.status)) {
-      throw new Error("Only active test deals can be completed.");
-    }
-    deal.providerConfirmedComplete = true;
-    deal.providerConfirmedAt = now;
-    deal.status = deal.requesterConfirmedComplete ? "completed" : "completion_requested";
-    deal.completedAt = deal.status === "completed" ? now : null;
-  } else {
-    throw new Error("Unsupported test deal action.");
-  }
-
-  storedDeals[dealIndex] = deal;
-  saveLocalTestDeals(storedDeals);
-  return deal;
-}
-
-function rateLocalTestDeal(dealId, rating, comment) {
-  const storedDeals = readLocalTestDeals();
-  const dealIndex = storedDeals.findIndex((deal) => deal.id === dealId);
-  if (dealIndex === -1 || !localDealParticipantsMatch(storedDeals[dealIndex])) {
-    throw new Error("Test deal not found.");
-  }
-  const deal = { ...storedDeals[dealIndex] };
-  if (deal.status !== "completed" || !deal.requesterConfirmedComplete || !deal.providerConfirmedComplete) {
-    throw new Error("Ratings are only allowed after both parties complete the deal.");
-  }
-
-  deal.myRating = {
-    rating,
-    comment: comment || "",
-    created_at: new Date().toISOString(),
-  };
-  storedDeals[dealIndex] = deal;
-  saveLocalTestDeals(storedDeals);
-  return deal.myRating;
-}
-
-function applyDemoPostsWhenEmpty(target, demoPosts, dismissedDemoIds = new Set()) {
-  if (!target.length) {
-    replaceCollection(
-      target,
-      demoPosts
-        .filter((post) => !dismissedDemoIds.has(post.id))
-        .map(cloneDemoPost),
-    );
-  }
-}
-
-function prependMissingDemoPosts(target, demoPosts) {
-  prependMissingPosts(target, demoPosts);
-}
-
-function prependMissingPosts(target, posts) {
-  const existingIds = new Set(target.map((post) => post.id).filter(Boolean));
-  const missingPosts = posts
-    .filter((post) => !existingIds.has(post.id))
-    .map(cloneDemoPost);
-
-  if (missingPosts.length) {
-    target.unshift(...missingPosts);
-  }
-}
-
-function getDismissedDemoShipIds() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(dismissedDemoShipStorageKey) || "[]");
-    return new Set(Array.isArray(stored) ? stored : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveDismissedDemoShipIds(ids) {
-  try {
-    localStorage.setItem(dismissedDemoShipStorageKey, JSON.stringify([...ids]));
-  } catch {
-    // Demo removal is best-effort; browsers can block localStorage in some privacy modes.
-  }
-}
-
-function dismissDemoShipListing(id) {
-  if (!id) {
-    return;
-  }
-
-  const dismissedIds = getDismissedDemoShipIds();
-  dismissedIds.add(id);
-  saveDismissedDemoShipIds(dismissedIds);
-}
-
-function cloneDemoPost(post) {
-  return JSON.parse(JSON.stringify(post));
-}
-
-function markDemoPost(post) {
-  return {
-    ...post,
-    isDemo: true,
-  };
-}
-
-function demoDateKeys(dayOffsets) {
-  return dayOffsets.map((offset) => {
-    const date = new Date();
-    date.setDate(date.getDate() + offset);
-    return dateToKey(date);
-  });
-}
-
-function demoOnlyButton(label) {
-  return `<button class="primary-button demo-button" type="button" disabled title="FAKE DEMO POST - placeholder only">${escapeHtml(label)}</button>`;
-}
-
-function testOnlyButton(label) {
-  return `<button class="secondary-button test-button" type="button" disabled title="Seeded test player listing">${escapeHtml(label)}</button>`;
-}
-
-function demoBadge() {
-  return `<span class="tag demo-tag">FAKE DEMO</span>`;
-}
-
-function testBadge() {
-  return `<span class="tag test-tag">TEST PLAYER</span>`;
 }
 
 function setListingSaving(statusKey, isSaving) {
@@ -2829,14 +2171,10 @@ async function loadShipListings() {
   try {
     const payload = await fetch(SHIP_LISTINGS_URL, { cache: "no-store" }).then(readJson);
     replaceCollection(ships, payload.listings);
-    applyDemoPostsWhenEmpty(ships, demoShipListings, getDismissedDemoShipIds());
-    prependMissingPosts(ships, johnDoeShipListings);
-    enrichSeedShips();
+    enrichShipListings();
   } catch (error) {
     dataStatus.shipListings.error = error instanceof Error ? error.message : "Unable to load ship listings";
-    applyDemoPostsWhenEmpty(ships, demoShipListings, getDismissedDemoShipIds());
-    prependMissingPosts(ships, johnDoeShipListings);
-    enrichSeedShips();
+    enrichShipListings();
   } finally {
     dataStatus.shipListings.loading = false;
     renderFleet();
@@ -2861,8 +2199,6 @@ async function loadCrewListings() {
   } catch (error) {
     dataStatus.crewListings.error = error instanceof Error ? error.message : "Unable to load crew listings";
   } finally {
-    applyDemoPostsWhenEmpty(crewListings, demoCrewListings);
-    prependMissingPosts(crewListings, johnDoeCrewListings);
     dataStatus.crewListings.loading = false;
     renderCrewMarketplace();
     renderAccountServices();
@@ -2882,8 +2218,6 @@ async function loadMaterialRequests() {
   } catch (error) {
     dataStatus.materialRequests.error = error instanceof Error ? error.message : "Unable to load material requests";
   } finally {
-    prependMissingDemoPosts(materialRequests, demoMaterialRequests);
-    prependMissingPosts(materialRequests, johnDoeMaterialListings);
     dataStatus.materialRequests.loading = false;
     renderMaterialRequests();
     updateMaterialPriceHints();
@@ -2906,13 +2240,10 @@ async function loadDeals() {
 
   try {
     const payload = await fetch(DEALS_URL, { cache: "no-store" }).then(readJson);
-    replaceCollection(deals, mergeDealsWithLocalTestDeals(payload.deals));
+    replaceCollection(deals, payload.deals);
   } catch (error) {
-    const localDeals = localTestDealsForCurrentUser();
-    replaceCollection(deals, localDeals);
-    dataStatus.deals.error = localDeals.length
-      ? ""
-      : (error instanceof Error ? error.message : "Unable to load deals");
+    replaceCollection(deals, []);
+    dataStatus.deals.error = error instanceof Error ? error.message : "Unable to load deals";
   } finally {
     dataStatus.deals.loading = false;
     renderAccountDeals();
@@ -3052,10 +2383,6 @@ async function saveMaterialRequest(request) {
 }
 
 async function createDeal(deal) {
-  if (isTestProviderId(deal.providerUserId)) {
-    return createLocalTestDeal(deal);
-  }
-
   const payload = await fetch(DEALS_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -3066,10 +2393,6 @@ async function createDeal(deal) {
 }
 
 async function updateDeal(action, dealId) {
-  if (isLocalTestDeal(dealId)) {
-    return updateLocalTestDeal(action, dealId);
-  }
-
   const payload = await fetch(DEALS_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -3080,10 +2403,6 @@ async function updateDeal(action, dealId) {
 }
 
 async function rateDeal(dealId, rating, comment) {
-  if (isLocalTestDeal(dealId)) {
-    return rateLocalTestDeal(dealId, rating, comment);
-  }
-
   const payload = await fetch(DEALS_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -3141,6 +2460,11 @@ function showAuthErrorFromUrl() {
 }
 
 function renderCalendar() {
+  const status = document.querySelector("#calendar-status");
+  status.textContent = dataStatus.shipListings.loading ? "Loading ship availability..."
+    : dataStatus.shipListings.error ? "Ship availability is temporarily unavailable. Please try again shortly."
+      : ships.length ? "Availability is set by ship owners. Negotiate rental start and end times with the owner."
+        : "No ship availability has been posted yet. Add a ship and set its available dates to get started.";
   const year = state.activeDate.getFullYear();
   const month = state.activeDate.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -3168,9 +2492,7 @@ function renderCalendar() {
         : dayNumber - daysInMonth;
     const dateKey = isCurrentMonth ? toDateKey(year, month, dayNumber) : "";
     const dayShips = filterCalendarShips(ships).filter((ship) => ship.dates.includes(dateKey));
-    const dayBookings = filterCalendarBookings(bookings).filter((booking) => booking.date === dateKey);
-    const activeCount = state.calendarMode === "rentals" ? dayBookings.length : dayShips.length;
-    const countLabel = activeCount ? `${activeCount} ${state.calendarMode === "rentals" ? "rentals" : "ships"}` : "Open";
+    const countLabel = dayShips.length ? `${dayShips.length} ships` : "";
 
     const cell = document.createElement("article");
     cell.className = `day-cell${isCurrentMonth ? "" : " is-muted"}`;
@@ -3182,21 +2504,9 @@ function renderCalendar() {
     `;
 
     if (isCurrentMonth) {
-      if (state.calendarMode === "rentals") {
-        dayBookings.forEach((booking) => {
-          cell.insertAdjacentHTML("beforeend", availabilityPill(booking.ship, booking.owner, booking.status));
-        });
-
-        if (!dayBookings.length) {
-          cell.insertAdjacentHTML("beforeend", availabilityPill("No rentals scheduled", "Requests will appear here", "owner"));
-        }
-      } else {
-        const visibleShips = dayShips.slice(0, 3);
-        visibleShips.forEach((ship) => {
-          cell.insertAdjacentHTML("beforeend", availabilityPill(ship.ship, ship.owner, "available"));
-        });
-
-      }
+      dayShips.slice(0, 3).forEach((ship) => {
+        cell.insertAdjacentHTML("beforeend", availabilityPill(ship.ship, ship.owner, "available"));
+      });
     }
 
     calendarGrid.appendChild(cell);
@@ -3216,17 +2526,6 @@ function filterCalendarShips(sourceShips) {
   });
 }
 
-function filterCalendarBookings(sourceBookings) {
-  const ownerFilter = normalizeFilterValue(state.calendarFilters.owner);
-  const shipFilter = normalizeFilterValue(state.calendarFilters.ship);
-
-  return sourceBookings.filter((booking) => {
-    const matchesOwner = !ownerFilter || normalizeFilterValue(booking.owner).includes(ownerFilter);
-    const matchesShip = !shipFilter || normalizeFilterValue(booking.ship).includes(shipFilter);
-    return matchesOwner && matchesShip;
-  });
-}
-
 function availabilityPill(title, subtitle, status) {
   return `
     <div class="availability-pill ${status}">
@@ -3243,7 +2542,7 @@ function renderFleet() {
   }
 
   if (dataStatus.shipListings.error && !ships.length) {
-    fleetList.innerHTML = `<div class="empty-state error-state">Supabase listings unavailable: ${escapeHtml(dataStatus.shipListings.error)}</div>`;
+    fleetList.innerHTML = `<div class="empty-state error-state">Ship listings are temporarily unavailable. Please try again shortly.</div>`;
     return;
   }
 
@@ -3256,8 +2555,6 @@ function renderFleet() {
               <div class="card-top">
                 <h2>${escapeHtml(ship.ship)}</h2>
                 <div class="card-tags">
-                  ${ship.isDemo ? demoBadge() : ""}
-                  ${ship.isTest ? testBadge() : ""}
                   <span class="tag">${escapeHtml(ship.role)}</span>
                 </div>
               </div>
@@ -3279,23 +2576,6 @@ function renderFleet() {
 
 function fleetShipActions(ship) {
   const shipIndex = ships.indexOf(ship);
-
-  if (ship.isDemo) {
-    return `
-      <div class="card-actions">
-        ${demoOnlyButton("Fake Demo Only")}
-        <button class="secondary-button danger-button" type="button" data-fleet-action="remove" data-ship-index="${shipIndex}">Remove</button>
-      </div>
-    `;
-  }
-
-  if (ship.isTest) {
-    return `
-      <div class="card-actions">
-        ${testOnlyButton("Test Player Listing")}
-      </div>
-    `;
-  }
 
   return `
     <div class="card-actions">
@@ -3369,7 +2649,7 @@ function renderShipMarketplace() {
   }
 
   if (dataStatus.shipListings.error && !ships.length) {
-    shipMarketResults.innerHTML = `<div class="empty-state error-state">Supabase ship listings unavailable: ${escapeHtml(dataStatus.shipListings.error)}</div>`;
+    shipMarketResults.innerHTML = `<div class="empty-state error-state">Ship listings are temporarily unavailable. Please try again shortly.</div>`;
     return;
   }
 
@@ -3397,7 +2677,7 @@ function renderCrewMarketplace() {
   }
 
   if (dataStatus.crewListings.error && !crewListings.length) {
-    crewMarketResults.innerHTML = `<div class="empty-state error-state">Supabase crew listings unavailable: ${escapeHtml(dataStatus.crewListings.error)}</div>`;
+    crewMarketResults.innerHTML = `<div class="empty-state error-state">Crew listings are temporarily unavailable. Please try again shortly.</div>`;
     return;
   }
 
@@ -3441,7 +2721,7 @@ function renderMaterialRequests() {
   }
 
   if (dataStatus.materialRequests.error && !materialRequests.length) {
-    materialRequestResults.innerHTML = `<div class="empty-state error-state">Supabase material listings unavailable: ${escapeHtml(dataStatus.materialRequests.error)}</div>`;
+    materialRequestResults.innerHTML = `<div class="empty-state error-state">Material listings are temporarily unavailable. Please try again shortly.</div>`;
     return;
   }
 
@@ -3473,7 +2753,11 @@ function renderPlayerSearch() {
 
   playerSearchResults.innerHTML = players.length
     ? players.map(playerSearchCard).join("")
-    : `<div class="empty-state">No players match that search yet.</div>`;
+    : dataStatus.users.loading
+      ? `<div class="empty-state">Loading player profiles...</div>`
+      : dataStatus.users.error
+        ? `<div class="empty-state error-state">Player profiles are temporarily unavailable. Please try again shortly.</div>`
+        : `<div class="empty-state">No players match that search yet.</div>`;
 
   const selectedPlayer = players.find((player) => player.id === activePlayerId);
   playerDetailPanel.innerHTML = selectedPlayer
@@ -3495,8 +2779,6 @@ function buildPlayerDirectory() {
         crewListings: [],
         materialListings: [],
         deals: [],
-        isDemo: false,
-        isTest: false,
         searchValues: [],
       });
     }
@@ -3524,24 +2806,18 @@ function buildPlayerDirectory() {
   ships.forEach((ship) => {
     const player = ensurePlayer(ship.ownerId, ship.owner);
     player.shipListings.push(ship);
-    player.isDemo = player.isDemo || Boolean(ship.isDemo);
-    player.isTest = player.isTest || Boolean(ship.isTest);
     addPlayerSearchValues(player, [ship.ship, ship.role, ship.manufacturer, ship.vehicle?.company]);
   });
 
   crewListings.forEach((crew) => {
     const player = ensurePlayer(crew.ownerId, crew.name);
     player.crewListings.push(crew);
-    player.isDemo = player.isDemo || Boolean(crew.isDemo);
-    player.isTest = player.isTest || Boolean(crew.isTest);
     addPlayerSearchValues(player, [crew.role, crew.summary, crew.availabilityStatus]);
   });
 
   materialRequests.forEach((request) => {
     const player = ensurePlayer(request.requesterId, request.postedBy);
     player.materialListings.push(request);
-    player.isDemo = player.isDemo || Boolean(request.isDemo);
-    player.isTest = player.isTest || Boolean(request.isTest);
     addPlayerSearchValues(player, [
       request.material,
       request.location,
@@ -3557,8 +2833,6 @@ function buildPlayerDirectory() {
     if (provider.id !== requester.id) {
       provider.deals.push(deal);
     }
-    requester.isTest = requester.isTest || Boolean(deal.isTest);
-    provider.isTest = provider.isTest || Boolean(deal.isTest);
     addPlayerSearchValues(requester, [deal.listingName, dealTypeLabel(deal.dealType), dealStatusLabel(deal.status), deal.providerName]);
     addPlayerSearchValues(provider, [deal.listingName, dealTypeLabel(deal.dealType), dealStatusLabel(deal.status), deal.requesterName]);
   });
@@ -3600,8 +2874,7 @@ function playerMatchesSearch(player, query, scope) {
   const matchesScope = (
     scope === "all" ||
     (scope === "listings" && player.listingCount > 0) ||
-    (scope === "deals" && player.dealCount > 0) ||
-    (scope === "test" && (player.isTest || player.isDemo))
+    (scope === "deals" && player.dealCount > 0)
   );
   return matchesQuery && matchesScope;
 }
@@ -3665,9 +2938,7 @@ function playerDetailCard(player) {
 function playerBadges(player) {
   return [
     player.isCurrentUser ? `<span class="tag">You</span>` : "",
-    player.isRegistered && !player.isDemo && !player.isTest ? `<span class="tag">Registered</span>` : "",
-    player.isTest ? testBadge() : "",
-    player.isDemo ? demoBadge() : "",
+    player.isRegistered ? `<span class="tag">Registered</span>` : "",
   ].join("");
 }
 
@@ -3721,7 +2992,7 @@ function playerDealRow(deal, player) {
 function marketplaceShipListings() {
   const ownerListings = ships.map((ship) => ({
     ...ship,
-    rating: ship.rating || 4.5,
+    rating: ship.rating || 0,
     completedJobs: ship.completedJobs || 0,
     availabilityStatus: ship.dates?.length ? "Available" : "Schedule pending",
     cargoScu: ship.vehicle?.scu || ship.cargoScu || 0,
@@ -3743,8 +3014,6 @@ function shipMarketplaceCard(ship) {
       <div class="card-top">
         <h2>${escapeHtml(ship.ship)}</h2>
         <div class="card-tags">
-          ${ship.isDemo ? demoBadge() : ""}
-          ${ship.isTest ? testBadge() : ""}
           <span class="tag">${escapeHtml(ship.availabilityStatus || "Available")}</span>
         </div>
       </div>
@@ -3769,9 +3038,7 @@ function shipMarketplaceCard(ship) {
 }
 
 function shipRentalRequestButton(ship) {
-  return ship.isDemo
-    ? demoOnlyButton("Fake Demo Only")
-    : `<button class="primary-button" type="button" data-auth-action="request a ship rental" data-deal-request data-deal-type="ship_rental" data-listing-type="ship" data-listing-id="${escapeHtml(ship.id || "")}" data-listing-name="${escapeHtml(ship.ship || "Ship rental")}" data-provider-id="${escapeHtml(ship.ownerId || "")}" data-provider-name="${escapeHtml(ship.owner || "Provider")}">Request Rental</button>`;
+  return `<button class="primary-button" type="button" data-auth-action="request a ship rental" data-deal-request data-deal-type="ship_rental" data-listing-type="ship" data-listing-id="${escapeHtml(ship.id || "")}" data-listing-name="${escapeHtml(ship.ship || "Ship rental")}" data-provider-id="${escapeHtml(ship.ownerId || "")}" data-provider-name="${escapeHtml(ship.owner || "Provider")}">Request Rental</button>`;
 }
 
 function openShipDetails(listingId) {
@@ -3895,8 +3162,6 @@ function crewMarketplaceCard(crew) {
       <div class="card-top">
         <h2>${escapeHtml(crew.name)}</h2>
         <div class="card-tags">
-          ${crew.isDemo ? demoBadge() : ""}
-          ${crew.isTest ? testBadge() : ""}
           <span class="tag">${escapeHtml(crew.availabilityStatus)}</span>
         </div>
       </div>
@@ -3917,9 +3182,7 @@ function crewMarketplaceCard(crew) {
 }
 
 function crewRequestButton(crew) {
-  return crew.isDemo
-    ? demoOnlyButton("Fake Demo Only")
-    : `<button class="primary-button" type="button" data-auth-action="request crew services" data-deal-request data-deal-type="crew_service" data-listing-type="crew" data-listing-id="${escapeHtml(crew.id || "")}" data-listing-name="${escapeHtml(crew.role || crew.name || "Crew service")}" data-provider-id="${escapeHtml(crew.ownerId || "")}" data-provider-name="${escapeHtml(crew.name || "Provider")}">Request Crew</button>`;
+  return `<button class="primary-button" type="button" data-auth-action="request crew services" data-deal-request data-deal-type="crew_service" data-listing-type="crew" data-listing-id="${escapeHtml(crew.id || "")}" data-listing-name="${escapeHtml(crew.role || crew.name || "Crew service")}" data-provider-id="${escapeHtml(crew.ownerId || "")}" data-provider-name="${escapeHtml(crew.name || "Provider")}">Request Crew</button>`;
 }
 
 function openCrewDetails(listingId) {
@@ -3930,7 +3193,6 @@ function openCrewDetails(listingId) {
     <div class="price-line"><strong>${escapeHtml(crewPayLabel(crew))}</strong></div>
     <section class="ship-details-section">
       <h3>Service overview</h3>
-      <div class="card-tags">${crew.isDemo ? demoBadge() : ""}${crew.isTest ? testBadge() : ""}</div>
       <ul class="meta-list">
         <li>Provider: ${escapeHtml(crew.name || "Independent provider")}</li>
         <li>Role: ${escapeHtml(crew.role || "General")}</li>
@@ -3979,8 +3241,6 @@ function materialRequestCard(request) {
       <div class="card-top">
         <h2>${multiMaterial ? `Multi-Material ${listingLabel}` : escapeHtml(materials[0].material)}</h2>
         <div class="card-tags">
-          ${request.isDemo ? demoBadge() : ""}
-          ${request.isTest ? testBadge() : ""}
           <span class="tag">${listingLabel}</span>
           <span class="tag">${multiMaterial ? `${materials.length} Items` : escapeHtml(primaryQuantity)}</span>
         </div>
@@ -3997,7 +3257,7 @@ function materialRequestCard(request) {
         <li>Posted by: ${escapeHtml(request.postedBy)}</li>
       </ul>
       <div class="card-actions">
-        ${request.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="secondary-button" type="button" data-auth-action="${listingType === "wts" ? "buy listed materials" : "offer material fulfillment"}" data-deal-request data-deal-type="material_order" data-listing-type="material" data-listing-id="${escapeHtml(request.id || "")}" data-listing-name="${escapeHtml(multiMaterial ? `Multi-Material ${listingLabel}` : materials[0].material || "Material listing")}" data-provider-id="${escapeHtml(request.requesterId || "")}" data-provider-name="${escapeHtml(request.postedBy || "Provider")}">${listingType === "wts" ? "Buy Materials" : "Offer Fulfillment"}</button>`}
+        <button class="secondary-button" type="button" data-auth-action="${listingType === "wts" ? "buy listed materials" : "offer material fulfillment"}" data-deal-request data-deal-type="material_order" data-listing-type="material" data-listing-id="${escapeHtml(request.id || "")}" data-listing-name="${escapeHtml(multiMaterial ? `Multi-Material ${listingLabel}` : materials[0].material || "Material listing")}" data-provider-id="${escapeHtml(request.requesterId || "")}" data-provider-name="${escapeHtml(request.postedBy || "Provider")}">${listingType === "wts" ? "Buy Materials" : "Offer Fulfillment"}</button>
       </div>
     </article>
   `;
@@ -4053,7 +3313,7 @@ function materialDateValueLabel(request) {
 }
 
 function simpleMaterialLocation(location) {
-  const normalized = String(location || "").replace(/^FAKE DEMO trade -\s*/i, "").trim();
+  const normalized = String(location || "").trim();
   if (!normalized) {
     return "";
   }
@@ -4234,12 +3494,7 @@ function isShipAvailable(ship, startDate = "", endDate = "") {
   const availableDates = new Set(ship.dates);
   for (const day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
     const dateKey = dateToKey(day);
-    const isBooked = bookings.some((booking) => booking.date === dateKey && (
-      booking.listingId
-        ? booking.listingId === ship.id
-        : booking.ship === ship.ship && booking.owner === ship.owner
-    ));
-    if (!availableDates.has(dateKey) || isBooked) {
+    if (!availableDates.has(dateKey)) {
       return false;
     }
   }
@@ -4353,13 +3608,11 @@ function shiftSchedulePeriod(date, direction) {
 function renderCalendarFilterOptions() {
   calendarOwnerOptions.innerHTML = uniqueSorted([
     ...ships.map((ship) => ship.owner),
-    ...bookings.map((booking) => booking.owner),
   ])
     .map((owner) => `<option value="${escapeHtml(owner)}"></option>`)
     .join("");
   calendarShipOptions.innerHTML = uniqueSorted([
     ...ships.map((ship) => ship.ship),
-    ...bookings.map((booking) => booking.ship),
   ])
     .map((ship) => `<option value="${escapeHtml(ship)}"></option>`)
     .join("");
@@ -4382,7 +3635,6 @@ function updateFilterSummary() {
   }
 
   filterSummary.textContent = filters.length ? filters.join(" · ") : "No filters applied";
-  generateRequestButton.classList.toggle("is-hidden", filters.length === 0);
 }
 
 function renderHangarServiceRows() {
@@ -5242,10 +4494,6 @@ async function saveShipAvailability(ship, dates) {
   const originalIndex = ships.indexOf(ship);
   const updatedListing = { ...ship, dates };
 
-  if (ship.isDemo) {
-    return { originalIndex, listing: updatedListing };
-  }
-
   const savedListing = await saveShipListing(updatedListing);
   return { originalIndex, listing: savedListing };
 }
@@ -5274,7 +4522,7 @@ function renderAvailabilityPicker() {
       const mutedClass = availabilityView === "month" && date.getMonth() !== visibleMonth ? " is-muted" : "";
       const todayClass = dateKey === todayKey ? " is-today" : "";
       const pastClass = isPast ? " is-past" : "";
-      const disabledAttribute = isPast || status === "rented" ? " disabled" : "";
+      const disabledAttribute = isPast ? " disabled" : "";
       return `
         <button class="availability-date ${status}${mutedClass}${todayClass}${pastClass}" type="button" data-availability-date="${dateKey}" aria-label="${escapeHtml(date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }))}: ${statusLabel}"${disabledAttribute}>
           <strong>${date.getDate()}</strong>
@@ -5294,29 +4542,18 @@ function getSelectableAvailabilityDays() {
   const visibleDays = availabilityView === "month"
     ? days.filter((date) => date.getMonth() === availabilityCursor.getMonth())
     : days;
-  return visibleDays.filter((date) => !isPastAvailabilityDate(date) && getAvailabilityDateStatus(dateToKey(date)) !== "rented");
+  return visibleDays.filter((date) => !isPastAvailabilityDate(date));
 }
 
 function getAvailabilityDateStatus(dateKey) {
-  if (isAvailabilityDateRented(dateKey)) {
-    return "rented";
-  }
   return availabilityDraft.get(dateKey) === "available" ? "available" : "unavailable";
 }
 
 function availabilityStatusLabel(status) {
   return {
     available: "Available",
-    rented: "Rented",
     unavailable: "Unavailable",
   }[status] || "Unavailable";
-}
-
-function isAvailabilityDateRented(dateKey) {
-  const targetShips = availabilityTargetShips(availabilityShipIndex);
-  return targetShips.some((ship) =>
-    bookings.some((booking) => booking.date === dateKey && booking.ship === ship.ship),
-  );
 }
 
 function availabilityTargetShips(index = availabilityShipIndex) {
@@ -5411,9 +4648,7 @@ function openRemoveConfirmation(index) {
   }
 
   pendingRemoveShipIndex = index;
-  removeShipMessage.textContent = ship.isDemo
-    ? `Remove the fake demo listing for ${ship.ship} from this browser?`
-    : `Are you sure you want to remove ${ship.ship} from your fleet?`;
+  removeShipMessage.textContent = `Are you sure you want to remove ${ship.ship} from your fleet?`;
   removeShipModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
   removeShipCancel.focus();
@@ -6195,7 +5430,7 @@ function syncOwnerShipFields(value) {
   updateHangarEligibility(vehicle);
 }
 
-function enrichSeedShips() {
+function enrichShipListings() {
   ships.forEach((ship) => {
     const vehicle = findVehicle(ship.ship);
     if (vehicle) {
@@ -6546,6 +5781,16 @@ function cssEscape(value) {
   return window.CSS?.escape ? CSS.escape(String(value)) : String(value).replaceAll('"', '\\"');
 }
 
+function clearLegacyDevelopmentStorage() {
+  try {
+    localStorage.removeItem("fsx.testDeals");
+    localStorage.removeItem("fsx.dismissedDemoShipListings");
+  } catch {
+    // A browser that blocks storage can still browse the beta.
+  }
+}
+
+clearLegacyDevelopmentStorage();
 renderCalendar();
 renderFleet();
 renderShipMarketplace();

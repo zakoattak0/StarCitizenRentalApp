@@ -1,6 +1,8 @@
 # FSX Frontier Service Exchange
 
-A Vercel-ready static prototype for the Star Citizen Services Exchange.
+A small-group beta of the Star Citizen player service exchange.
+
+The marketplace starts without sample listings or simulated players. Listings, profiles, and deals come from the connected database. See [BETA_TESTING.md](BETA_TESTING.md) for the tester handoff and launch checks.
 
 ## Run locally
 

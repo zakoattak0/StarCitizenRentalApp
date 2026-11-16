@@ -100,7 +100,7 @@
             <div class="hero-brand">
               <img src="fsx-frontier-service-exchange-logo.webp" alt="FSX Frontier Service Exchange" />
             </div>
-            <p class="eyebrow">Player service exchange</p>
+            <p class="eyebrow">Player service exchange · Small-group beta</p>
             <h1>Find ships, crew, and materials from players in the verse.</h1>
             <p class="hero-copy">Search the services you need first, then send a request once the provider, price, and availability line up.</p>
           </div>
@@ -403,7 +403,6 @@
                 <option value="all">All players</option>
                 <option value="listings">Has listings</option>
                 <option value="deals">Has visible deals</option>
-                <option value="test">Test players</option>
               </select>
             </label>
             <label>
@@ -634,7 +633,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Live availability board</p>
-              <h1>Ship rental calendar</h1>
+              <h1>Ship availability calendar</h1>
             </div>
             <div class="calendar-controls">
               <button class="icon-button" id="prev-month" aria-label="Previous month">‹</button>
@@ -644,25 +643,15 @@
           </div>
 
           <div class="calendar-toolbar">
-            <label>
-              Calendar view
-              <select id="calendar-mode">
-                <option value="availability">Availability</option>
-                <option value="rentals">Rentals</option>
-              </select>
-            </label>
             <button class="secondary-button" id="calendar-filter-button" type="button">Filter</button>
-            <button class="primary-button is-hidden" id="generate-request-button" type="button">Generate Request</button>
             <span class="filter-summary" id="filter-summary">No filters applied</span>
           </div>
 
           <div class="status-row" aria-label="Calendar legend">
             <span><i class="dot available"></i>Available</span>
-            <span><i class="dot partial"></i>Limited</span>
-            <span><i class="dot booked"></i>Booked</span>
-            <span><i class="dot owner"></i>Owner pending</span>
           </div>
 
+          <p class="market-summary" id="calendar-status" role="status"></p>
           <div class="calendar-grid" id="calendar-grid" aria-label="Ship availability calendar"></div>
         </section>
 
@@ -919,11 +908,10 @@
                 </div>
                 <strong id="availability-period-label"></strong>
               </div>
-              <p class="availability-instruction">Select future dates the ship is available. Contracted dates will show as rented later; all other dates are unavailable.</p>
+              <p class="availability-instruction">Select future dates the ship is available. All other dates are unavailable.</p>
               <div class="availability-picker" id="availability-picker" aria-label="Choose ship availability dates"></div>
               <div class="availability-legend" aria-label="Availability legend">
                 <span><i class="available"></i> Available</span>
-                <span><i class="rented"></i> Rented</span>
                 <span><i class="unavailable"></i> Unavailable</span>
               </div>
               <div class="modal-actions availability-actions">

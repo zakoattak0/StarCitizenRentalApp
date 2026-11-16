@@ -2,6 +2,16 @@
 
 Guide for future Claude Code sessions working on this repository.
 
+## Small-group beta update — November 16, 2026
+
+The owner explicitly requested removing development mockups for a real small-group beta. All injected demo listings, John Doe data, simulated bookings, and local two-party deal/rating handlers have been removed. Do not restore them. Empty responses must stay empty; failed requests must show an unavailable-service message. Only real backend data should appear in the marketplace. The app removes the two legacy development localStorage keys on startup without clearing authentication.
+
+Inactive Pause controls and the placeholder calendar rental/request-builder mode were removed. The calendar shows owner-posted availability and starts on the current month. Date searches do not automatically reserve dates. Ship/crew Details dialogs, real request/accept/complete/rate flows, listing editing, and wiki exterior images remain.
+
+`tests/beta-marketplace.test.js` exercises the real listing/deal loaders with empty, failed, and populated responses, and guards against shipping simulated controls. `BETA_TESTING.md` contains the tester handoff. These beta instructions supersede historical demo-flow notes below.
+
+The owner restored the paused Supabase project during cleanup. Its existing schema was intact after startup. With explicit confirmation, nine saved development listings were backed up locally and removed by exact IDs; no deals or ratings existed. A backup and reset SQL are under `.cache/beta-cleanup/` (untracked). Do not repeat the reset or restore old listings unless asked. Recheck live API health before a beta handoff; never hide failures with sample data.
+
 ## Project purpose
 
 FSX Frontier Service Exchange — a Star Citizen player marketplace. Players rent ships, hire
