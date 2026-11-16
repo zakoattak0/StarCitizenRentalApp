@@ -669,6 +669,7 @@ const shipRoleFilter = document.querySelector("#ship-role-filter");
 const shipMarketManufacturerSelect = document.querySelector("#ship-market-manufacturer");
 const crewMarketForm = document.querySelector("#crew-market-form");
 const crewMarketResults = document.querySelector("#crew-market-results");
+const crewDetailsModal = document.querySelector("#crew-details-modal");
 const materialMarketForm = document.querySelector("#material-market-form");
 const materialRequestResults = document.querySelector("#material-request-results");
 const materialListingFilters = document.querySelector("#material-listing-filters");
@@ -900,8 +901,9 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("click", (event) => {
   const protectedAction = event.target.closest("[data-auth-action]");
-  if (protectedAction && shipDetailsModal.contains(protectedAction)) {
-    shipDetailsModal.close();
+  const detailsDialog = protectedAction?.closest("dialog.ship-details-dialog");
+  if (detailsDialog?.open) {
+    detailsDialog.close();
   }
   if (!protectedAction || canCreatePosting(authState.user)) {
     return;
@@ -1071,32 +1073,12 @@ shipMarketResults.addEventListener("click", (event) => {
     openShipDetails(button.dataset.shipDetails);
   }
 });
-document.querySelector("#ship-details-close").addEventListener("click", () => shipDetailsModal.close());
-shipDetailsModal.addEventListener("click", (event) => {
-  if (event.target === shipDetailsModal) {
-    const bounds = shipDetailsModal.getBoundingClientRect();
-    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
-      shipDetailsModal.close();
-    }
-  }
-  const tab = event.target.closest("[data-ship-details-tab]");
-  if (tab) {
-    setShipDetailsTab(tab.dataset.shipDetailsTab);
-  }
-});
-shipDetailsModal.addEventListener("keydown", (event) => {
-  const tab = event.target.closest("[data-ship-details-tab]");
-  if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
-    return;
-  }
-  event.preventDefault();
-  const target = event.key === "Home" ? "ship" : event.key === "End" ? "owner" : tab.dataset.shipDetailsTab === "ship" ? "owner" : "ship";
-  setShipDetailsTab(target);
-  shipDetailsModal.querySelector(`[data-ship-details-tab="${target}"]`).focus();
-});
-shipDetailsModal.addEventListener("close", () => {
-  if (!document.querySelector(".modal-backdrop:not(.is-hidden)")) {
-    document.body.classList.remove("modal-open");
+setupListingDetailsDialog(shipDetailsModal);
+setupListingDetailsDialog(crewDetailsModal);
+crewMarketResults.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-crew-details]");
+  if (button) {
+    openCrewDetails(button.dataset.crewDetails);
   }
 });
 crewMarketForm.addEventListener("input", renderCrewMarketplace);
@@ -3843,35 +3825,65 @@ function openShipDetails(listingId) {
     </section>
   `;
 
-  const player = buildPlayerDirectory().find((entry) => ship.ownerId
-    ? entry.id === ship.ownerId
-    : entry.name === ship.owner);
-  const profile = marketplaceUsers.find((user) => user.id === ship.ownerId);
-  shipOwnerPanel.innerHTML = `
+  shipOwnerPanel.innerHTML = providerDetailsContent(ship.ownerId, ship.owner);
+  shipDetailsActions.innerHTML = shipRentalRequestButton(ship);
+  setListingDetailsTab(shipDetailsModal, "ship-details-tab");
+  shipDetailsModal.showModal();
+  document.body.classList.add("modal-open");
+  document.querySelector("#ship-details-tab").focus();
+}
+
+function providerDetailsContent(ownerId, ownerName) {
+  const player = buildPlayerDirectory().find((entry) => ownerId
+    ? entry.id === ownerId
+    : entry.name === ownerName);
+  const profile = marketplaceUsers.find((user) => user.id === ownerId);
+  return `
     ${profile ? `<ul class="meta-list">
       ${profile.publicProfileName ? `<li>Public name: ${escapeHtml(profile.publicProfileName)}</li>` : ""}
       ${profile.displayName ? `<li>Display name: ${escapeHtml(profile.displayName)}</li>` : ""}
       ${profile.rsiHandle ? `<li>RSI handle: <a href="https://robertsspaceindustries.com/citizens/${encodeURIComponent(profile.rsiHandle)}" target="_blank" rel="noopener noreferrer">${escapeHtml(profile.rsiHandle)}</a></li>` : ""}
       ${profile.createdAt ? `<li>Member since: ${escapeHtml(formatDateTime(profile.createdAt))}</li>` : ""}
     </ul>` : ""}
-    ${player ? playerDetailCard(player) : `<p class="market-summary">Provider: ${escapeHtml(ship.owner || "Independent provider")}. No additional public profile details available.</p>`}
+    ${player ? playerDetailCard(player) : `<p class="market-summary">Provider: ${escapeHtml(ownerName || "Independent provider")}. No additional public profile details available.</p>`}
   `;
-  shipDetailsActions.innerHTML = shipRentalRequestButton(ship);
-  setShipDetailsTab("ship");
-  shipDetailsModal.showModal();
-  document.body.classList.add("modal-open");
-  document.querySelector("#ship-details-tab").focus();
 }
 
-function setShipDetailsTab(selectedTab) {
-  shipDetailsModal.querySelectorAll("[data-ship-details-tab]").forEach((tab) => {
-    const active = tab.dataset.shipDetailsTab === selectedTab;
+function setListingDetailsTab(dialog, selectedTabId) {
+  dialog.querySelectorAll('[role="tab"]').forEach((tab) => {
+    const active = tab.id === selectedTabId;
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-selected", String(active));
     tab.tabIndex = active ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).classList.toggle("is-hidden", !active);
   });
-  shipDetailsPanel.classList.toggle("is-hidden", selectedTab !== "ship");
-  shipOwnerPanel.classList.toggle("is-hidden", selectedTab !== "owner");
+}
+
+function setupListingDetailsDialog(dialog) {
+  dialog.querySelector("[data-details-close]").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      const bounds = dialog.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+    }
+    const tab = event.target.closest('[role="tab"]');
+    if (tab) setListingDetailsTab(dialog, tab.id);
+  });
+  dialog.addEventListener("keydown", (event) => {
+    const tab = event.target.closest('[role="tab"]');
+    if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = Array.from(dialog.querySelectorAll('[role="tab"]'));
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+      : (tabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    setListingDetailsTab(dialog, tabs[nextIndex].id);
+    tabs[nextIndex].focus();
+  });
+  dialog.addEventListener("close", () => {
+    if (!document.querySelector('.modal-backdrop:not(.is-hidden), dialog.ship-details-dialog[open]')) {
+      document.body.classList.remove("modal-open");
+    }
+  });
 }
 
 function crewMarketplaceCard(crew) {
@@ -3896,9 +3908,49 @@ function crewMarketplaceCard(crew) {
         <li>${ratingLine}</li>
       </ul>
       <p class="market-summary">${escapeHtml(crew.summary)}</p>
-      ${crew.isDemo ? demoOnlyButton("Fake Demo Only") : `<button class="primary-button" type="button" data-auth-action="request crew services" data-deal-request data-deal-type="crew_service" data-listing-type="crew" data-listing-id="${escapeHtml(crew.id || "")}" data-listing-name="${escapeHtml(crew.role || crew.name || "Crew service")}" data-provider-id="${escapeHtml(crew.ownerId || "")}" data-provider-name="${escapeHtml(crew.name || "Provider")}">Request Crew</button>`}
+      <div class="ship-market-actions">
+        <button class="secondary-button" type="button" data-crew-details="${escapeHtml(crew.id || "")}" aria-haspopup="dialog" aria-label="Details for ${escapeHtml(crew.name)}: ${escapeHtml(crew.role)}">Details</button>
+        ${crewRequestButton(crew)}
+      </div>
     </article>
   `;
+}
+
+function crewRequestButton(crew) {
+  return crew.isDemo
+    ? demoOnlyButton("Fake Demo Only")
+    : `<button class="primary-button" type="button" data-auth-action="request crew services" data-deal-request data-deal-type="crew_service" data-listing-type="crew" data-listing-id="${escapeHtml(crew.id || "")}" data-listing-name="${escapeHtml(crew.role || crew.name || "Crew service")}" data-provider-id="${escapeHtml(crew.ownerId || "")}" data-provider-name="${escapeHtml(crew.name || "Provider")}">Request Crew</button>`;
+}
+
+function openCrewDetails(listingId) {
+  const crew = crewListings.find((listing) => listing.id === listingId);
+  if (!crew) return;
+  document.querySelector("#crew-details-title").textContent = `${crew.role || "Crew service"} · ${crew.name || "Provider"}`;
+  document.querySelector("#crew-service-panel").innerHTML = `
+    <div class="price-line"><strong>${escapeHtml(crewPayLabel(crew))}</strong></div>
+    <section class="ship-details-section">
+      <h3>Service overview</h3>
+      <div class="card-tags">${crew.isDemo ? demoBadge() : ""}${crew.isTest ? testBadge() : ""}</div>
+      <ul class="meta-list">
+        <li>Provider: ${escapeHtml(crew.name || "Independent provider")}</li>
+        <li>Role: ${escapeHtml(crew.role || "General")}</li>
+        <li>Availability: ${escapeHtml(crew.availabilityStatus || "Not listed")}</li>
+        <li>${ratingSummaryLine(crew.ownerId, crew.rating, crew.completedJobs)}</li>
+        ${crew.createdAt ? `<li>Posted: ${escapeHtml(formatDateTime(crew.createdAt))}</li>` : ""}
+        ${crew.updatedAt ? `<li>Updated: ${escapeHtml(formatDateTime(crew.updatedAt))}</li>` : ""}
+      </ul>
+    </section>
+    <section class="ship-details-section">
+      <h3>Service description</h3>
+      <p class="market-summary crew-service-summary">${escapeHtml(crew.summary || "No additional service details listed.")}</p>
+    </section>
+  `;
+  document.querySelector("#crew-provider-panel").innerHTML = providerDetailsContent(crew.ownerId, crew.name);
+  document.querySelector("#crew-details-actions").innerHTML = crewRequestButton(crew);
+  setListingDetailsTab(crewDetailsModal, "crew-service-tab");
+  crewDetailsModal.showModal();
+  document.body.classList.add("modal-open");
+  document.querySelector("#crew-service-tab").focus();
 }
 
 function crewPayLabel(listing) {

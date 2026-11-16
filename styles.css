@@ -558,7 +558,8 @@ main {
   padding-top: 18px;
 }
 
-.ship-details-section .config-summary p {
+.ship-details-section .config-summary p,
+.crew-service-summary {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

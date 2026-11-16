@@ -207,7 +207,7 @@
               <p class="eyebrow">Ship listing</p>
               <h2 id="ship-details-title">Ship details</h2>
             </div>
-            <button class="icon-button" id="ship-details-close" type="button" aria-label="Close ship details">&times;</button>
+            <button class="icon-button" id="ship-details-close" type="button" data-details-close aria-label="Close ship details">&times;</button>
           </div>
           <div class="ship-details-tabs" role="tablist" aria-label="Listing details">
             <button class="sub-tab active" id="ship-details-tab" type="button" role="tab" aria-selected="true" aria-controls="ship-details-panel" data-ship-details-tab="ship">Ship details</button>
@@ -291,6 +291,23 @@
 
           <div class="market-results" id="crew-market-results" aria-live="polite"></div>
         </section>
+
+        <dialog class="ship-details-dialog" id="crew-details-modal" aria-labelledby="crew-details-title">
+          <div class="modal-heading">
+            <div>
+              <p class="eyebrow">Crew service</p>
+              <h2 id="crew-details-title">Crew details</h2>
+            </div>
+            <button class="icon-button" type="button" data-details-close aria-label="Close crew details">&times;</button>
+          </div>
+          <div class="ship-details-tabs" role="tablist" aria-label="Crew listing details">
+            <button class="sub-tab active" id="crew-service-tab" type="button" role="tab" aria-selected="true" aria-controls="crew-service-panel">Service details</button>
+            <button class="sub-tab" id="crew-provider-tab" type="button" role="tab" aria-selected="false" aria-controls="crew-provider-panel" tabindex="-1">Provider details</button>
+          </div>
+          <div id="crew-service-panel" role="tabpanel" aria-labelledby="crew-service-tab" tabindex="0"></div>
+          <div class="is-hidden" id="crew-provider-panel" role="tabpanel" aria-labelledby="crew-provider-tab" tabindex="0"></div>
+          <div class="ship-details-actions" id="crew-details-actions"></div>
+        </dialog>
 
         <section class="panel" id="materials-panel" data-panel="materials">
           <div class="section-heading">
