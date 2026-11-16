@@ -3831,9 +3831,7 @@ function resetOwnerForm() {
   Object.values(rateOfferInputs).forEach((input) => {
     input.checked = true;
   });
-  Object.values(rateAdjustmentInputs).forEach((input) => {
-    input.value = "0";
-  });
+  Object.keys(rateAdjustmentInputs).forEach((period) => setRateAdjustment(period, 0));
   hangarLoadModeSelect.value = "flat";
   hangarLoadCostInput.value = "0";
   hangarLoadPercentInput.value = "0";
@@ -4633,8 +4631,8 @@ function populateOwnerForm(index) {
   Object.entries(rateOfferInputs).forEach(([period, input]) => {
     input.checked = offeredRates.includes(period);
   });
-  Object.entries(rateAdjustmentInputs).forEach(([period, input]) => {
-    input.value = String(ship.rateAdjustments?.[period] || 0);
+  Object.keys(rateAdjustmentInputs).forEach((period) => {
+    setRateAdjustment(period, Number(ship.rateAdjustments?.[period] || 0));
   });
   ownerForm.elements.pilotRate.value = formatCreditInputValue(ship.pilotRate || 0);
   ownerForm.elements.pilotIncluded.checked = Boolean(ship.pilotIncluded);
@@ -5475,8 +5473,19 @@ function parseCredits(value) {
 }
 
 function formatCreditInput(input) {
-  const digits = String(input.value || "").replace(/[^0-9]/g, "");
+  const value = String(input.value || "");
+  const digitsBeforeCaret = input.selectionStart == null ? null : value.slice(0, input.selectionStart).replace(/[^0-9]/g, "").length;
+  const digits = value.replace(/[^0-9]/g, "");
   input.value = digits ? Number(digits).toLocaleString("en-US") : "";
+  if (digitsBeforeCaret !== null && input.setSelectionRange) {
+    let caret = 0;
+    let remaining = digitsBeforeCaret;
+    while (caret < input.value.length && remaining > 0) {
+      if (/[0-9]/.test(input.value[caret])) remaining -= 1;
+      caret += 1;
+    }
+    input.setSelectionRange(caret, caret);
+  }
 }
 
 function formatCreditInputValue(value) {
@@ -5496,10 +5505,11 @@ function updatePilotRateVisibility() {
   }
 }
 
-function updateRateCalculator() {
+function updateRateCalculator({ preservePeriod = "" } = {}) {
   const basePeriod = rateBasePeriodSelect.value;
   const baseRate = parseCredits(rateBaseInput.value);
   rateOfferInputs[basePeriod].checked = true;
+  setRateAdjustment(basePeriod, 0);
   rateError.classList.add("is-hidden");
 
   const rates = calculateRates();
@@ -5509,7 +5519,9 @@ function updateRateCalculator() {
     const isBase = period === basePeriod;
     const adjustment = Number(rateAdjustmentInputs[period].value || 0);
 
-    rateInputs[period].value = baseRate ? formatCreditInputValue(rates[period]) : "";
+    if (period !== preservePeriod) {
+      rateInputs[period].value = baseRate ? formatCreditInputValue(rates[period]) : "";
+    }
     rateInputs[period].disabled = !offered;
     rateAdjustmentInputs[period].disabled = isBase || !offered;
     row.classList.toggle("is-disabled", !offered);
@@ -5526,32 +5538,31 @@ function syncManualRateInput(period) {
   const input = rateInputs[period];
   formatCreditInput(input);
   const manualRate = parseCredits(input.value);
-  if (!manualRate) {
-    updateRateCalculator();
-    return;
-  }
-
   rateOfferInputs[period].checked = true;
   const basePeriod = rateBasePeriodSelect.value;
   const baseRate = parseCredits(rateBaseInput.value);
 
   if (!baseRate || period === basePeriod) {
     rateBasePeriodSelect.value = period;
-    rateBaseInput.value = formatCreditInputValue(manualRate);
-    updateRateCalculator();
+    rateBaseInput.value = input.value;
+    updateRateCalculator({ preservePeriod: period });
     return;
   }
 
   const convertedRate = convertPeriodRate(baseRate, basePeriod, period);
   if (convertedRate > 0) {
-    const rawAdjustment = Math.round((manualRate / convertedRate - 1) * 100);
-    const slider = rateAdjustmentInputs[period];
-    const min = Number(slider.min || -100);
-    const max = Number(slider.max || 100);
-    slider.value = String(Math.min(max, Math.max(min, rawAdjustment)));
+    setRateAdjustment(period, (manualRate / convertedRate - 1) * 100);
   }
 
-  updateRateCalculator();
+  updateRateCalculator({ preservePeriod: period });
+}
+
+function setRateAdjustment(period, adjustment) {
+  const slider = rateAdjustmentInputs[period];
+  // Manual prices can exceed a 100% markup. Expand before assigning so the
+  // browser does not clamp the saved percentage or change the entered price.
+  slider.max = String(Math.max(100, Math.ceil(adjustment / 100) * 100));
+  slider.value = String(Math.max(-100, adjustment));
 }
 
 function calculateRates() {
@@ -5581,7 +5592,8 @@ function getOfferedRatePeriods() {
 }
 
 function formatAdjustment(value) {
-  return `${value > 0 ? "+" : ""}${value}%`;
+  const rounded = Math.round(value * 100) / 100;
+  return `${rounded > 0 ? "+" : ""}${rounded.toLocaleString("en-US", { maximumFractionDigits: 2 })}%`;
 }
 
 function positiveShipRatePeriods(ship) {
