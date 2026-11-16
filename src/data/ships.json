@@ -3394,5 +3394,38 @@
     "is_concept": 0,
     "game_version": "4.10.2",
     "image": "/ships/constellation-mk-v-centaurus.webp"
+  },
+  {
+    "id": "wiki:skylark",
+    "name": "Skylark",
+    "name_full": "RSI Skylark",
+    "slug": "skylark",
+    "company_name": "Roberts Space Industries",
+    "is_spaceship": 1,
+    "is_ground_vehicle": 0,
+    "is_concept": 0,
+    "image": "/ships/skylark.webp"
+  },
+  {
+    "id": "wiki:marauder",
+    "name": "Marauder",
+    "name_full": "Drake Marauder",
+    "slug": "marauder",
+    "company_name": "Drake Interplanetary",
+    "is_spaceship": 1,
+    "is_ground_vehicle": 0,
+    "is_concept": 0,
+    "image": "/ships/marauder.webp"
+  },
+  {
+    "id": "wiki:hyun",
+    "name": "Hyūn",
+    "name_full": "Gatac Hyūn",
+    "slug": "hyun",
+    "company_name": "Gatac Manufacture",
+    "is_spaceship": 1,
+    "is_ground_vehicle": 0,
+    "is_concept": 0,
+    "image": "/ships/hyun.webp"
   }
 ]

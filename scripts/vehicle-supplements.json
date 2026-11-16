@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-11-16",
+  "notes": "Verified launches missing from UEX. Null specifications are unknown, not zero. Release dates follow CIG's IAE announcement. Keep source links when updating.",
+  "releaseSource": "https://www.gamespress.com/uk-UA/PLAY-STAR-CITIZEN-FOR-FREE-DURING-INTERGALACTIC-AEROSPACE-EXPO-2956-FE",
+  "vehicles": [
+    {
+      "id": "wiki:skylark",
+      "name": "Skylark",
+      "name_full": "RSI Skylark",
+      "slug": "skylark",
+      "company_name": "Roberts Space Industries",
+      "is_spaceship": 1,
+      "is_ground_vehicle": 0,
+      "is_concept": 0,
+      "is_addon": 0,
+      "is_military": 1,
+      "crew": "1",
+      "scu": null,
+      "release_date": "2026-11-13",
+      "reference_url": "https://starcitizen.tools/Skylark"
+    },
+    {
+      "id": "wiki:marauder",
+      "name": "Marauder",
+      "name_full": "Drake Marauder",
+      "slug": "marauder",
+      "company_name": "Drake Interplanetary",
+      "is_spaceship": 1,
+      "is_ground_vehicle": 0,
+      "is_concept": 0,
+      "is_addon": 0,
+      "is_military": 1,
+      "crew": "1",
+      "scu": null,
+      "release_date": "2026-11-17",
+      "reference_url": "https://starcitizen.tools/Marauder"
+    },
+    {
+      "id": "wiki:hyun",
+      "name": "Hyūn",
+      "name_full": "Gatac Hyūn",
+      "slug": "hyun",
+      "aliases": ["Hyun", "Gatac Hyun", "Gatac Manufacture Hyūn"],
+      "company_name": "Gatac Manufacture",
+      "is_spaceship": 1,
+      "is_ground_vehicle": 0,
+      "is_concept": 0,
+      "is_addon": 0,
+      "is_mining": 1,
+      "is_salvage": 1,
+      "crew": null,
+      "scu": null,
+      "release_date": "2026-11-21",
+      "reference_url": "https://starcitizen.tools/Hyun"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import pLimit from "p-limit";
 import sharp from "sharp";
 import { decodeHtml, selectWikiShipImage, wikiImageCandidates } from "./lib/wiki-ship-images.mjs";
+import { mergeVehicleCatalogs } from "../public/vehicle-catalog.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cacheDir = path.join(root, ".cache", "ship-images");
@@ -20,8 +21,10 @@ const overrides = JSON.parse(await fs.readFile(path.join(root, "scripts", "ship-
 
 await fs.mkdir(cacheDir, { recursive: true });
 await fs.mkdir(shipsDir, { recursive: true });
-const vehicles = (await cachedJson("https://api.uexcorp.uk/2.0/vehicles", "vehicles.json")).data;
-if (!Array.isArray(vehicles) || !vehicles.length) throw new Error("UEX returned no vehicles");
+const uexVehicles = (await cachedJson("https://api.uexcorp.uk/2.0/vehicles", "vehicles.json")).data;
+if (!Array.isArray(uexVehicles) || !uexVehicles.length) throw new Error("UEX returned no vehicles");
+const supplements = JSON.parse(await fs.readFile(path.join(root, "scripts", "vehicle-supplements.json"), "utf8"));
+const vehicles = mergeVehicleCatalogs(uexVehicles, supplements.vehicles);
 const oldMetadata = JSON.parse(await fs.readFile(path.join(root, "src", "data", "ships.json"), "utf8"));
 let previousImages = [];
 try { previousImages = JSON.parse(await fs.readFile(path.join(root, "public", "ship-images.json"), "utf8")).ships; } catch { /* First sync has no manifest. */ }
@@ -33,6 +36,7 @@ const records = await Promise.all(vehicles.map((vehicle) => limit(async () => {
   const record = {
     id: vehicle.id, name: decodeHtml(vehicle.name), nameFull: decodeHtml(vehicle.name_full || vehicle.name),
     slug: vehicle.slug, aliases: [...new Set([
+      ...(vehicle.aliases || []),
       ...oldMetadata.filter((old) => old.id === vehicle.id).flatMap((old) => [old.name, old.name_full, old.slug]),
       ...(previousImages.find((old) => old.id === vehicle.id)?.aliases || []),
     ].filter(Boolean))],
@@ -90,6 +94,10 @@ if (records.some((record) => ["wiki-request-failed", "download-failed"].includes
 }
 const manifest = { source: "Star Citizen Wiki", sourceUrl: "https://starcitizen.tools/", checkedAt: new Date().toISOString(), ships: records };
 await fs.writeFile(path.join(root, "public", "ship-images.json"), JSON.stringify(manifest, null, 2) + "\n");
+const catalogFields = ["id", "name", "name_full", "slug", "aliases", "company_name", "scu", "crew", "pad_type", "game_version", "release_date", "reference_url",
+  "is_addon", "is_concept", "is_spaceship", "is_ground_vehicle", "is_cargo", "is_mining", "is_salvage", "is_medical", "is_refuel", "is_repair", "is_exploration", "is_racing", "is_passenger", "is_bomber", "is_military", "is_industrial", "is_starter"];
+await fs.writeFile(path.join(root, "public", "vehicles.json"), JSON.stringify({ checkedAt: manifest.checkedAt, sources: ["https://api.uexcorp.uk/2.0/vehicles", supplements.releaseSource],
+  supplements: supplements.vehicles, vehicles: vehicles.map((vehicle) => Object.fromEntries(catalogFields.filter((key) => vehicle[key] !== undefined).map((key) => [key, vehicle[key]]))) }, null, 2) + "\n");
 await fs.writeFile(path.join(root, "src", "data", "ships.json"), JSON.stringify(vehicles.map((vehicle) => ({
   id: vehicle.id, name: vehicle.name, name_full: vehicle.name_full, slug: vehicle.slug, company_name: vehicle.company_name,
   is_spaceship: Number(vehicle.is_spaceship), is_ground_vehicle: Number(vehicle.is_ground_vehicle), is_concept: Number(vehicle.is_concept),

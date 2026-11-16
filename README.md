@@ -22,6 +22,10 @@ Run `npm run sync:ships` to validate the UEX vehicle catalog against Star Citize
 
 Use `npm run sync:ships -- --audit-only` to inspect mappings without changing published assets, `--force` to refresh cached sources, and `--limit=3` to control request concurrency. Source pages and audit output are cached under `.cache/ship-images/`. Run `npm test` after a sync to check complete coverage and local asset integrity.
 
+The same sync publishes `public/vehicles.json`, a full catalog for browsers where UEX is unavailable. Verified launches missing from UEX live in `scripts/vehicle-supplements.json`, with source links and scheduled release dates. The browser merges the bundled catalog, fresh UEX records and these supplements; when UEX adds a supplemented ship, name/slug aliases reconcile it to its real UEX ID. Concepts and ship modules remain excluded from the owner selector. Check release dates and specifications against the linked sources before updating supplements.
+
+The Gatac Hyūn has a combined mining and salvage configuration. Owners can record equipped heads, mining modules, additional equipment and switching instructions together. These are owner descriptions, not a compatibility calculator: hardpoint counts and permitted attachments are deliberately not assumed while published specifications are incomplete.
+
 ## Supabase setup
 
 Run the SQL in `supabase/schema.sql` in your Supabase SQL editor, then add these environment variables in Vercel:

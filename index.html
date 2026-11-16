@@ -711,7 +711,8 @@
                   <option value="">Select ship</option>
                 </select>
               </label>
-              <p class="api-status" id="ship-api-status">Loading UEX ship list...</p>
+              <p class="api-status" id="ship-api-status">Loading ship catalog...</p>
+              <p class="api-status is-hidden" id="ship-release-status" role="status"></p>
               <fieldset>
                 <legend>Rental rates</legend>
                 <p class="api-status">Rental start and end times are at the owner's discretion and should be negotiated.</p>
@@ -765,6 +766,23 @@
               </fieldset>
               <fieldset class="ship-config-fieldset is-hidden" id="ship-config-fieldset">
                 <legend>Ship configuration</legend>
+                <div class="is-hidden" id="hybrid-config">
+                  <p class="api-status">Hyūn mining &amp; salvage loadout. List the equipment fitted to your ship and any alternatives included with the rental.</p>
+                  <div class="form-grid">
+                    <div class="mining-config-section">
+                      <strong>Mining equipment</strong>
+                      <label>Equipped mining heads / lasers<textarea name="hybridMiningHeads" rows="2" maxlength="2000" placeholder="Head names and quantities"></textarea></label>
+                      <label>Equipped mining modules<textarea name="hybridMiningModules" rows="2" maxlength="2000" placeholder="Module names and which head they are fitted to"></textarea></label>
+                      <label>Additional mining equipment available<textarea name="hybridMiningAvailable" rows="2" maxlength="2000" placeholder="Spare heads, modules and quantities"></textarea></label>
+                    </div>
+                    <div class="mining-config-section">
+                      <strong>Salvage equipment</strong>
+                      <label>Equipped salvage heads / scrapers<textarea name="hybridSalvageHeads" rows="2" maxlength="2000" placeholder="Head names and quantities"></textarea></label>
+                      <label>Additional salvage equipment available<textarea name="hybridSalvageAvailable" rows="2" maxlength="2000" placeholder="Alternative scrapers, attachments and quantities"></textarea></label>
+                    </div>
+                  </div>
+                  <label>Mining / salvage switching notes<textarea name="hybridSwitchingNotes" rows="3" maxlength="2000" placeholder="How to switch roles, operating limits and what is included"></textarea></label>
+                </div>
                 <div class="is-hidden" id="apollo-config">
                   <div class="form-grid apollo-module-grid">
                     <div class="config-check-group">

@@ -1,7 +1,7 @@
 {
   "source": "Star Citizen Wiki",
   "sourceUrl": "https://starcitizen.tools/",
-  "checkedAt": "2026-11-16T20:34:48.592Z",
+  "checkedAt": "2026-11-16T21:22:45.051Z",
   "ships": [
     {
       "id": 1,
@@ -5915,6 +5915,72 @@
       "sourceUrl": "https://media.starcitizen.tools/e/e7/RSI_Constellation_Mk_V_Centaurus_flying_and_firing.png?0it4w",
       "filePage": "https://starcitizen.tools/File:RSI_Constellation_Mk_V_Centaurus_flying_and_firing.png",
       "sha256": "a57aa0e236f581f4279c554091dd6b8cd9be0d14491dd1343a4213ab398d05b6"
+    },
+    {
+      "id": "wiki:skylark",
+      "name": "Skylark",
+      "nameFull": "RSI Skylark",
+      "slug": "skylark",
+      "aliases": [
+        "Skylark",
+        "RSI Skylark",
+        "skylark"
+      ],
+      "wikiPage": "https://starcitizen.tools/Skylark",
+      "isConcept": false,
+      "isAddon": false,
+      "status": "resolved",
+      "image": "/ships/skylark.webp",
+      "kind": "exterior-fallback",
+      "sourceFile": "Rsi skylark - two RSI Skylarks in close proximity.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/4/45/Rsi_skylark_-_two_RSI_Skylarks_in_close_proximity.jpg?srjtf",
+      "filePage": "https://starcitizen.tools/File:Rsi_skylark_-_two_RSI_Skylarks_in_close_proximity.jpg",
+      "sha256": "13f711dd7c14138956b95f3cdc7e62f2a9de756d849b954bb773a567c3e75ede"
+    },
+    {
+      "id": "wiki:marauder",
+      "name": "Marauder",
+      "nameFull": "Drake Marauder",
+      "slug": "marauder",
+      "aliases": [
+        "Marauder",
+        "Drake Marauder",
+        "marauder"
+      ],
+      "wikiPage": "https://starcitizen.tools/Marauder",
+      "isConcept": false,
+      "isAddon": false,
+      "status": "resolved",
+      "image": "/ships/marauder.webp",
+      "kind": "exterior-fallback",
+      "sourceFile": "IAE 2956 Drake Marauder.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/a/ae/IAE_2956_Drake_Marauder.jpg?74tuf",
+      "filePage": "https://starcitizen.tools/File:IAE_2956_Drake_Marauder.jpg",
+      "sha256": "8e0f92532a559b53b5d5deef22f7ea590899572bd15dfa4bcabcb36e23a4d391"
+    },
+    {
+      "id": "wiki:hyun",
+      "name": "Hyūn",
+      "nameFull": "Gatac Hyūn",
+      "slug": "hyun",
+      "aliases": [
+        "Hyun",
+        "Gatac Hyun",
+        "Gatac Manufacture Hyūn",
+        "Hyūn",
+        "Gatac Hyūn",
+        "hyun"
+      ],
+      "wikiPage": "https://starcitizen.tools/Hy%C5%ABn",
+      "isConcept": false,
+      "isAddon": false,
+      "status": "resolved",
+      "image": "/ships/hyun.webp",
+      "kind": "exterior-fallback",
+      "sourceFile": "IAE 2956 Gatac Hyūn.jpg",
+      "sourceUrl": "https://media.starcitizen.tools/7/70/IAE_2956_Gatac_Hy%C5%ABn.jpg?9guw4",
+      "filePage": "https://starcitizen.tools/File:IAE_2956_Gatac_Hy%C5%ABn.jpg",
+      "sha256": "4532cb4f7d295033426f31e0818dabe9b7c3f516e8fe494176ca7df32858065d"
     }
   ]
 }

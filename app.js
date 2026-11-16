@@ -1,4 +1,5 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
+const VEHICLE_CATALOG_URL = "/vehicles.json";
 const SHIP_IMAGES_URL = "/ship-images.json";
 const shipImagesById = new Map();
 const shipImagesByName = new Map();
@@ -47,6 +48,15 @@ const miningShips = new Map([
   ["prospector", { headCapacity: 1, headSize: 1 }],
   ["golem", { headCapacity: 1, headSize: 1 }],
 ]);
+
+const hybridLoadoutFields = [
+  { field: "hybridMiningHeads", group: "mining", key: "heads", label: "Equipped mining heads / lasers" },
+  { field: "hybridMiningModules", group: "mining", key: "modules", label: "Equipped mining modules" },
+  { field: "hybridMiningAvailable", group: "mining", key: "availableEquipment", label: "Additional mining equipment" },
+  { field: "hybridSalvageHeads", group: "salvage", key: "heads", label: "Equipped salvage heads / scrapers" },
+  { field: "hybridSalvageAvailable", group: "salvage", key: "availableEquipment", label: "Additional salvage equipment" },
+  { field: "hybridSwitchingNotes", key: "switchingNotes", label: "Mining / salvage switching notes" },
+];
 
 const miningHeads = [
   { name: "Arbor MH1 Mining Laser", size: 1, moduleSlots: 1 },
@@ -167,59 +177,6 @@ let scheduleCursor = startOfDay(new Date());
 let availabilityCursor = startOfDay(new Date());
 let availabilityDraft = new Map();
 
-const fallbackVehicles = [
-  {
-    name: "C2 Hercules Starlifter",
-    nameFull: "Crusader C2 Hercules Starlifter",
-    company: "Crusader Industries",
-    role: "Cargo",
-    scu: 696,
-    crew: "1-2",
-    padType: "XL",
-    photo: "",
-  },
-  {
-    name: "MOLE Carbon Edition",
-    nameFull: "Argo MOLE Carbon Edition",
-    company: "Argo Astronautics",
-    role: "Mining",
-    scu: 0,
-    crew: "1-4",
-    padType: "L",
-    photo: "",
-  },
-  {
-    name: "Redeemer",
-    nameFull: "Aegis Redeemer",
-    company: "Aegis Dynamics",
-    role: "Combat",
-    scu: 2,
-    crew: "3-4",
-    padType: "M",
-    photo: "",
-  },
-  {
-    name: "Carrack Expedition",
-    nameFull: "Anvil Carrack Expedition",
-    company: "Anvil Aerospace",
-    role: "Exploration",
-    scu: 456,
-    crew: "4-6",
-    padType: "L",
-    photo: "",
-  },
-  {
-    name: "600i Touring",
-    nameFull: "Origin 600i Touring",
-    company: "Origin Jumpworks",
-    role: "Touring",
-    scu: 16,
-    crew: "1-5",
-    padType: "L",
-    photo: "",
-  },
-];
-
 const ships = [];
 
 const crewListings = [];
@@ -291,6 +248,7 @@ const materialListingFilters = document.querySelector("#material-listing-filters
 const ownerForm = document.querySelector("#owner-form");
 const ownerShipOptions = document.querySelector("#owner-ship-options");
 const shipApiStatus = document.querySelector("#ship-api-status");
+const shipReleaseStatus = document.querySelector("#ship-release-status");
 const ownerShipInput = ownerForm.querySelector("[name='ship']");
 const ownerManufacturerSelect = document.querySelector("#owner-manufacturer");
 const availabilityForm = document.querySelector("#availability-form");
@@ -298,6 +256,7 @@ const availabilityShipSelect = document.querySelector("#availability-ship");
 const ownerCalendar = document.querySelector("#owner-calendar");
 const shipConfigFieldset = document.querySelector("#ship-config-fieldset");
 const apolloConfig = document.querySelector("#apollo-config");
+const hybridConfig = document.querySelector("#hybrid-config");
 const salvageConfig = document.querySelector("#salvage-config");
 const salvageConfigDescription = document.querySelector("#salvage-config-description");
 const salvageHeadGrid = document.querySelector("#salvage-head-grid");
@@ -1332,36 +1291,30 @@ async function loadShipImages() {
 }
 
 async function loadVehicles() {
-  shipApiStatus.textContent = "Loading UEX ship list...";
-
+  shipApiStatus.textContent = "Loading ship catalog...";
   try {
-    const response = await fetch(UEX_VEHICLES_URL);
-    if (!response.ok) {
-      throw new Error(`UEX returned ${response.status}`);
-    }
-
-    const payload = await response.json();
-    vehicleCatalog = payload.data
+    const { mergeVehicleCatalogs } = await import("/vehicle-catalog.mjs");
+    const [bundled, live] = await Promise.allSettled([
+      fetch(VEHICLE_CATALOG_URL).then(readJson),
+      fetch(UEX_VEHICLES_URL, { signal: AbortSignal.timeout(10000) }).then(readJson),
+    ]);
+    const snapshot = bundled.status === "fulfilled" ? bundled.value : {};
+    const liveRows = live.status === "fulfilled" && Array.isArray(live.value.data) ? live.value.data : [];
+    vehicleCatalog = mergeVehicleCatalogs(snapshot.vehicles, liveRows, snapshot.supplements)
       .map(normalizeVehicle)
       .filter((vehicle) => vehicle.nameFull && !vehicle.isAddon && !vehicle.isConcept)
       .sort((a, b) => a.name.localeCompare(b.name));
-
+    if (!vehicleCatalog.length) throw new Error("No ship catalog is available");
     enrichShipListings();
     renderManufacturerOptions();
     renderShipOptions();
-    shipApiStatus.textContent = `${vehicleCatalog.length.toLocaleString()} ships loaded from UEX`;
+    shipApiStatus.textContent = `${vehicleCatalog.length.toLocaleString()} ships loaded${liveRows.length ? " · IAE catalog + UEX" : " · saved ship catalog; live feed unavailable"}`;
   } catch (error) {
-    vehicleCatalog = fallbackVehicles.map((vehicle) => ({
-      ...vehicle,
-      name: stripManufacturer(vehicle.name, vehicle.company),
-      searchText: [vehicle.name, vehicle.nameFull, vehicle.company, vehicle.role, vehicle.padType]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase(),
-    }));
+    vehicleCatalog = [];
     renderManufacturerOptions();
     renderShipOptions();
-    shipApiStatus.textContent = "Using fallback ship list; UEX is not reachable from this browser";
+    shipApiStatus.textContent = "Unable to load the ship catalog. Please reload to try again.";
+    console.warn("Ship catalog could not be loaded:", error.message);
   }
 
   renderFleet();
@@ -2630,7 +2583,7 @@ function renderShipMarketplace() {
     .filter((ship) => {
       const hourlyRate = getShipRate(ship, "hour");
       return (
-        (!role || ship.role === role) &&
+        (!role || String(ship.role || "").split(" / ").includes(role)) &&
         (!manufacturer || ship.manufacturer === manufacturer || ship.vehicle?.company === manufacturer) &&
         Number(ship.cargoScu || ship.vehicle?.scu || 0) >= minCargo &&
         (!Number.isFinite(maxHourlyPrice) || (hourlyRate > 0 && hourlyRate <= maxHourlyPrice)) &&
@@ -4793,6 +4746,13 @@ function configurationSummary(ship) {
 
 function collectShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   const configType = getShipConfigurationType(vehicle);
+  if (configType === "hybrid") {
+    const config = { type: "hybrid", mining: {}, salvage: {} };
+    hybridLoadoutFields.forEach(({ field, group, key }) => {
+      (group ? config[group] : config)[key] = ownerForm.elements[field].value.trim();
+    });
+    return config;
+  }
   if (configType === "apollo") {
     return {
       type: "apollo",
@@ -4843,6 +4803,12 @@ function applyShipConfiguration(config) {
     return;
   }
 
+  if (config.type === "hybrid") {
+    hybridLoadoutFields.forEach(({ field, group, key }) => {
+      ownerForm.elements[field].value = (group ? config[group]?.[key] : config[key]) || "";
+    });
+  }
+
   if (config.type === "apollo") {
     const leftModules = config.leftModules || (config.leftModule ? [config.leftModule] : []);
     const rightModules = config.rightModules || (config.rightModule ? [config.rightModule] : []);
@@ -4869,6 +4835,11 @@ function applyShipConfiguration(config) {
 }
 
 function shipConfigurationLines(config) {
+  if (config?.type === "hybrid") {
+    return hybridLoadoutFields.map(({ group, key, label }) => ({
+      label, value: (group ? config[group]?.[key] : config[key]) || "None specified",
+    }));
+  }
   if (config?.type === "apollo") {
     const leftModules = config.leftModules || (config.leftModule ? [config.leftModule] : []);
     const rightModules = config.rightModules || (config.rightModule ? [config.rightModule] : []);
@@ -5135,6 +5106,9 @@ function configOptionLabels(values, labels) {
 
 function getShipConfigurationType(vehicleOrName) {
   const name = normalizeConfigShipName(typeof vehicleOrName === "string" ? vehicleOrName : vehicleOrName?.name);
+  if (name === "hyun") {
+    return "hybrid";
+  }
   if (name === "apollo medivac" || name === "apollo triage") {
     return "apollo";
   }
@@ -5149,7 +5123,13 @@ function getShipConfigurationType(vehicleOrName) {
 
 function updateShipConfiguration(vehicle = findVehicle(ownerShipInput.value)) {
   const configType = getShipConfigurationType(vehicle || ownerShipInput.value);
+  const upcoming = vehicle?.releaseDate && vehicle.releaseDate > dateToKey(new Date());
+  shipReleaseStatus.classList.toggle("is-hidden", !upcoming);
+  shipReleaseStatus.textContent = upcoming
+    ? `Scheduled IAE release: ${formatDateTime(parseDateKey(vehicle.releaseDate))}. Set rental availability after release.` : "";
   shipConfigFieldset.classList.toggle("is-hidden", !configType);
+  hybridConfig.classList.toggle("is-hidden", configType !== "hybrid");
+  hybridLoadoutFields.forEach(({ field }) => { ownerForm.elements[field].value = ""; });
   apolloConfig.classList.toggle("is-hidden", configType !== "apollo");
   salvageConfig.classList.toggle("is-hidden", configType !== "salvage");
   miningConfig.classList.toggle("is-hidden", configType !== "mining");
@@ -5304,6 +5284,7 @@ function normalizeVehicle(vehicle) {
     name: modelName,
     nameFull: vehicle.name_full || vehicle.name || "",
     slug: vehicle.slug || "",
+    releaseDate: vehicle.release_date || "",
     company: vehicle.company_name || "",
     role: inferVehicleRole(vehicle),
     scu: Number(vehicle.scu || 0),
@@ -5312,20 +5293,21 @@ function normalizeVehicle(vehicle) {
     photo: vehicle.url_photo || "",
     isAddon: Boolean(Number(vehicle.is_addon || 0)),
     isConcept: Boolean(Number(vehicle.is_concept || 0)),
-    searchText: [
+    searchText: normalizeShipName([
       modelName,
       vehicle.name_full,
       vehicle.company_name,
       inferVehicleRole(vehicle),
       vehicle.pad_type,
+      ...(vehicle.aliases || []),
     ]
       .filter(Boolean)
-      .join(" ")
-      .toLowerCase(),
+      .join(" ")),
   };
 }
 
 function inferVehicleRole(vehicle) {
+  if (Number(vehicle.is_mining) === 1 && Number(vehicle.is_salvage) === 1) return "Mining / Salvage";
   const roleFlags = [
     ["is_cargo", "Cargo"],
     ["is_mining", "Mining"],
@@ -5354,7 +5336,7 @@ function renderShipOptions() {
   ownerShipOptions.innerHTML = [
     `<option value="">Select ship</option>`,
     ...filteredVehicles(ownerManufacturerSelect.value).map(
-      (vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.name)}</option>`,
+      (vehicle) => `<option value="${vehicle.id}">${escapeHtml(vehicle.name)}${vehicle.releaseDate > dateToKey(new Date()) ? " (upcoming IAE release)" : ""}</option>`,
     ),
   ].join("");
 
@@ -5369,8 +5351,8 @@ function renderShipOptions() {
 
 function renderShipRoleOptions(selectedRole = shipRoleFilter.value) {
   const roles = uniqueSorted([
-    ...vehicleCatalog.map((vehicle) => vehicle.role),
-    ...ships.map((ship) => ship.role),
+    ...vehicleCatalog.flatMap((vehicle) => vehicle.role.split(" / ")),
+    ...ships.flatMap((ship) => String(ship.role || "").split(" / ")),
   ]);
 
   shipRoleFilter.innerHTML = [`<option value="">Any role</option>`]
@@ -5392,12 +5374,12 @@ function findVehicle(value, manufacturer = ownerManufacturerSelect.value) {
     vehicleCatalog.find((vehicle) => String(vehicle.id) === query) ||
     vehicleCatalog.find(
       (vehicle) =>
-        vehicle.name.toLowerCase() === query &&
+        normalizeShipName(vehicle.name) === normalizeShipName(query) &&
         (!manufacturer || vehicle.company === manufacturer),
     ) ||
-    vehicleCatalog.find((vehicle) => vehicle.nameFull.toLowerCase() === query) ||
-    vehicleCatalog.find((vehicle) => vehicle.name.toLowerCase() === query) ||
-    vehicleCatalog.find((vehicle) => vehicle.searchText.includes(query))
+    vehicleCatalog.find((vehicle) => normalizeShipName(vehicle.nameFull) === normalizeShipName(query)) ||
+    vehicleCatalog.find((vehicle) => normalizeShipName(vehicle.name) === normalizeShipName(query)) ||
+    vehicleCatalog.find((vehicle) => vehicle.searchText.includes(normalizeShipName(query)))
   );
 }
 
@@ -5658,6 +5640,8 @@ function totalRateLabel(period = "hour") {
 
 function normalizeShipName(value) {
   return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\b(rsi|roberts space industries)\b/g, "rsi")
@@ -5667,6 +5651,7 @@ function normalizeShipName(value) {
 
 function normalizeConfigShipName(value) {
   return normalizeShipName(value)
+    .replace(/^(gatac manufacture|gatac)\s+/, "")
     .replace(/\bbest in show edition\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
