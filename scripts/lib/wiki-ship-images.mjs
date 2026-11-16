@@ -23,11 +23,11 @@ export function selectWikiShipImage(html) {
     const sectionEnd = following.search(/<h[234]\b[^>]*id="(?:Interior|Paints|Gallery|Variants|Development)/);
     const end = sectionEnd >= 0 ? exteriorStart + sectionEnd : html.length;
     const profile = images.filter((image) => image.offset >= exteriorStart && image.offset < end);
-    const isometric = profile.find((image) => /isometric/i.test(image.file) && !/placeholder|line.?drawing|blueprint|schematic|floor.?plan|interior|cockpit/i.test(image.file));
+    const isometric = profile.find((image) => /isometric/i.test(image.file) && !/placeholder|line.?drawing|blueprint|schematic|floor.?plan|interior|cockpit|cutaway|cross.?section|cutout with black BG/i.test(image.file));
     if (isometric) return { ...isometric, kind: "isometric" };
   }
   const headerEnd = html.indexOf('<div class="t-infobox-header-content"');
   const infobox = images.find((image) => image.offset < headerEnd);
-  if (infobox && !/interior|cockpit|cargo.?hold|placeholder|logo|icon|schematic|floor.?plan/i.test(infobox.file)) return { ...infobox, kind: /isometric|[- ]iso[- .]/i.test(infobox.file) ? "isometric" : "exterior-fallback" };
+  if (infobox && !/interior|cockpit|cargo.?hold|placeholder|logo|icon|schematic|floor.?plan|cutaway|cross.?section|cutout with black BG/i.test(infobox.file)) return { ...infobox, kind: /isometric|[- ]iso[- .]/i.test(infobox.file) ? "isometric" : "exterior-fallback" };
   return null;
 }

@@ -38,6 +38,22 @@ test("wiki selector prefers an exterior photo over an isometric blueprint", asyn
   assert.equal(selectWikiShipImage(html).kind, "exterior-fallback");
 });
 
+test("wiki selector rejects cutaways even when their filenames say isometric", async () => {
+  const { selectWikiShipImage } = await import("../scripts/lib/wiki-ship-images.mjs");
+  for (const file of ["Ironclad cutout with black BG - Isometric.jpg", "Ship cutaway Isometric.png", "Ship cross-section Isometric.jpg"]) {
+    const html = image("Ship_landed_in_hangar.jpg") + '<div class="t-infobox-header-content"></div><h3 id="Ship_profile">Ship profile</h3>' + image(file);
+    assert.equal(selectWikiShipImage(html).file, "Ship landed in hangar.jpg");
+  }
+});
+
+test("both Ironclad variants use their own intact exterior views", async () => {
+  const { ships } = JSON.parse(await fs.readFile(path.join(root, "public", "ship-images.json"), "utf8"));
+  for (const [id, file] of [[230, "Ironclad landed in hangar - Cropped.png"], [231, "Ironclad Assault landed in hangar - Cropped.png"]]) {
+    assert.equal(ships.find((ship) => ship.id === id).sourceFile, file);
+  }
+  assert.notEqual(ships.find((ship) => ship.id === 230).sha256, ships.find((ship) => ship.id === 231).sha256);
+});
+
 test("every vehicle has a decoded local exterior image with matching provenance", async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(root, "public", "ship-images.json"), "utf8"));
   const catalog = JSON.parse(await fs.readFile(path.join(root, "src", "data", "ships.json"), "utf8"));

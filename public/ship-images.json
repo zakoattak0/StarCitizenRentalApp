@@ -1,7 +1,7 @@
 {
   "source": "Star Citizen Wiki",
   "sourceUrl": "https://starcitizen.tools/",
-  "checkedAt": "2026-11-16T21:22:45.051Z",
+  "checkedAt": "2026-11-16T23:46:28.680Z",
   "ships": [
     {
       "id": 1,
@@ -4777,11 +4777,11 @@
       "isAddon": false,
       "status": "resolved",
       "image": "/ships/ironclad.webp",
-      "kind": "isometric",
-      "sourceFile": "Ironclad cutout with black BG - Isometric.jpg",
-      "sourceUrl": "https://media.starcitizen.tools/1/14/Ironclad_cutout_with_black_BG_-_Isometric.jpg?m95lc",
-      "filePage": "https://starcitizen.tools/File:Ironclad_cutout_with_black_BG_-_Isometric.jpg",
-      "sha256": "9f3f6cb89e934734cdc19745f7aa54ab07d9a9303bcdf711330c0a8f249c57bb"
+      "kind": "exterior-fallback",
+      "sourceFile": "Ironclad landed in hangar - Cropped.png",
+      "sourceUrl": "https://media.starcitizen.tools/1/16/Ironclad_landed_in_hangar_-_Cropped.png?afo4f",
+      "filePage": "https://starcitizen.tools/File:Ironclad_landed_in_hangar_-_Cropped.png",
+      "sha256": "e8bc9bdbae6876c0132d2f49271e873b519a11e8c001bb94c3e030e54fbe65a0"
     },
     {
       "id": 231,
@@ -4798,11 +4798,11 @@
       "isAddon": false,
       "status": "resolved",
       "image": "/ships/ironclad-assault.webp",
-      "kind": "isometric",
-      "sourceFile": "Ironclad Assault cutout with black BG - Isometric.jpg",
-      "sourceUrl": "https://media.starcitizen.tools/5/51/Ironclad_Assault_cutout_with_black_BG_-_Isometric.jpg?4s07s",
-      "filePage": "https://starcitizen.tools/File:Ironclad_Assault_cutout_with_black_BG_-_Isometric.jpg",
-      "sha256": "311237d0600b6979cec5d2c679040d4ffd731536d2831676ae481379cfd48443"
+      "kind": "exterior-fallback",
+      "sourceFile": "Ironclad Assault landed in hangar - Cropped.png",
+      "sourceUrl": "https://media.starcitizen.tools/2/24/Ironclad_Assault_landed_in_hangar_-_Cropped.png?nykpa",
+      "filePage": "https://starcitizen.tools/File:Ironclad_Assault_landed_in_hangar_-_Cropped.png",
+      "sha256": "17b3862e929424d3791e154aa7f55811fe1ae53b21543991020f3104e9541135"
     },
     {
       "id": 232,
