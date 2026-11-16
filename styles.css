@@ -2237,11 +2237,15 @@ legend {
 .ship-image {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 8;
-  object-fit: cover;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
   border: 1px solid var(--line-soft);
   background: #090909;
   margin-bottom: 12px;
+}
+
+.ship-image-credit {
+  font-size: 0.75rem;
 }
 
 .ship-image.placeholder {

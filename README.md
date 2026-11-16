@@ -12,6 +12,14 @@ npm run build
 
 The app is static, but Discord auth requires the Vercel API routes and environment variables.
 
+## Ship exterior images
+
+Run `npm run sync:ships` to validate the UEX vehicle catalog against Star Citizen Wiki and download local exterior images. The sync prefers the wiki's isometric ship profile; models without one use a reviewed exterior image. Special-edition mappings live in `scripts/ship-image-overrides.json`.
+
+`public/ship-images.json` records each image's wiki page, original file, image type, content hash, and legacy names/slugs. The app resolves images through this catalog rather than UEX's generic photos. This also supports saved listings whose ship slug has changed.
+
+Use `npm run sync:ships -- --audit-only` to inspect mappings without changing published assets, `--force` to refresh cached sources, and `--limit=3` to control request concurrency. Source pages and audit output are cached under `.cache/ship-images/`. Run `npm test` after a sync to check complete coverage and local asset integrity.
+
 ## Supabase setup
 
 Run the SQL in `supabase/schema.sql` in your Supabase SQL editor, then add these environment variables in Vercel:

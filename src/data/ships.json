@@ -87,13 +87,13 @@
     "id": 8,
     "name": "400i",
     "name_full": "Origin 400i",
-    "slug": "orig-400i",
+    "slug": "400i",
     "company_name": "Origin Jumpworks",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
-    "image": "/ships/orig-400i.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/400i.webp"
   },
   {
     "id": 9,
@@ -104,7 +104,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
+    "game_version": "4.10.1",
     "image": "/ships/600i-executive-edition.webp"
   },
   {
@@ -147,13 +147,13 @@
     "id": 13,
     "name": "890 Jump",
     "name_full": "Origin 890 Jump",
-    "slug": "orig-890jump",
+    "slug": "890-jump",
     "company_name": "Origin Jumpworks",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/orig-890jump.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/890-jump.webp"
   },
   {
     "id": 14,
@@ -176,7 +176,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
+    "game_version": "4.10.1",
     "image": "/ships/apollo-medivac.webp"
   },
   {
@@ -188,32 +188,32 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
+    "game_version": "4.10.1",
     "image": "/ships/apollo-triage.webp"
   },
   {
     "id": 17,
-    "name": "Ares Inferno Starfighter",
-    "name_full": "Crusader Ares Inferno Starfighter",
-    "slug": "ares-inferno-starfighter",
+    "name": "Ares Star Fighter Inferno",
+    "name_full": "Crusader Ares Star Fighter Inferno",
+    "slug": "ares-star-fighter-inferno",
     "company_name": "Crusader Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "3.22.0b",
-    "image": "/ships/ares-inferno-starfighter.webp"
+    "game_version": "4.10.3",
+    "image": "/ships/ares-star-fighter-inferno.webp"
   },
   {
     "id": 18,
-    "name": "Ares Ion Starfighter",
-    "name_full": "Crusader Ares Ion Starfighter",
-    "slug": "ares-ion-starfighter",
+    "name": "Ares Star Fighter Ion",
+    "name_full": "Crusader Ares Star Fighter Ion",
+    "slug": "ares-star-fighter-ion",
     "company_name": "Crusader Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "3.22.0b",
-    "image": "/ships/ares-ion-starfighter.webp"
+    "game_version": "4.10.3",
+    "image": "/ships/ares-star-fighter-ion.webp"
   },
   {
     "id": 19,
@@ -224,7 +224,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 1,
-    "game_version": "3.24.1",
+    "game_version": "4.10.0",
     "image": "/ships/arrastra.webp"
   },
   {
@@ -349,15 +349,15 @@
   },
   {
     "id": 30,
-    "name": "Ballista",
-    "name_full": "Anvil Ballista",
-    "slug": "anvl-ballista",
+    "name": "HM6 Ballista",
+    "name_full": "Anvil HM6 Ballista",
+    "slug": "hm6-ballista",
     "company_name": "Anvil Aerospace",
     "is_spaceship": 0,
     "is_ground_vehicle": 1,
     "is_concept": 0,
-    "game_version": "3.6.0",
-    "image": "/ships/anvl-ballista.webp"
+    "game_version": "4.10.3",
+    "image": "/ships/hm6-ballista.webp"
   },
   {
     "id": 31,
@@ -483,13 +483,13 @@
     "id": 41,
     "name": "Caterpillar",
     "name_full": "Drake Caterpillar",
-    "slug": "drak-caterpillar",
+    "slug": "caterpillar",
     "company_name": "Drake Interplanetary",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/drak-caterpillar.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/caterpillar.webp"
   },
   {
     "id": 42,
@@ -500,92 +500,92 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
+    "game_version": "4.10.1",
     "image": "/ships/caterpillar-best-in-show-edition.webp"
   },
   {
     "id": 43,
     "name": "Caterpillar Pirate Edition",
     "name_full": "Drake Caterpillar Pirate Edition",
-    "slug": "drak-caterpillar-pirate-edition",
+    "slug": "caterpillar-pirate-edition",
     "company_name": "Drake Interplanetary",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/drak-caterpillar-pirate-edition.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/caterpillar-pirate-edition.webp"
   },
   {
     "id": 44,
-    "name": "Centurion",
-    "name_full": "Anvil Centurion",
-    "slug": "anvl-centurion",
+    "name": "HM6 Centurion",
+    "name_full": "Anvil HM6 Centurion",
+    "slug": "hm6-centurion",
     "company_name": "Anvil Aerospace",
     "is_spaceship": 0,
     "is_ground_vehicle": 1,
     "is_concept": 0,
-    "game_version": "3.22.0b",
-    "image": "/ships/anvl-centurion.webp"
+    "game_version": "4.10.3",
+    "image": "/ships/hm6-centurion.webp"
   },
   {
     "id": 45,
-    "name": "Constellation Andromeda",
-    "name_full": "RSI Constellation Andromeda",
-    "slug": "constellation-andromeda",
+    "name": "Constellation Mk IV Andromeda",
+    "name_full": "RSI Constellation Mk IV Andromeda",
+    "slug": "constellation-mk-iv-andromeda",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.8.2",
-    "image": "/ships/constellation-andromeda.webp"
+    "game_version": "4.10.2",
+    "image": "/ships/constellation-mk-iv-andromeda.webp"
   },
   {
     "id": 46,
-    "name": "Constellation Aquila",
-    "name_full": "RSI Constellation Aquila",
-    "slug": "rsi-constellation-aquila",
+    "name": "Constellation Mk IV Aquila",
+    "name_full": "RSI Constellation Mk IV Aquila",
+    "slug": "constellation-mk-iv-aquila",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/rsi-constellation-aquila.webp"
+    "game_version": "4.10.2",
+    "image": "/ships/constellation-mk-iv-aquila.webp"
   },
   {
     "id": 47,
-    "name": "Constellation Phoenix",
-    "name_full": "RSI Constellation Phoenix",
-    "slug": "rsi-constellation-phoenix",
+    "name": "Constellation Mk IV Phoenix",
+    "name_full": "RSI Constellation Mk IV Phoenix",
+    "slug": "constellation-mk-iv-phoenix",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/rsi-constellation-phoenix.webp"
+    "game_version": "4.10.2",
+    "image": "/ships/constellation-mk-iv-phoenix.webp"
   },
   {
     "id": 48,
-    "name": "Constellation Phoenix Emerald",
-    "name_full": "RSI Constellation Phoenix Emerald",
-    "slug": "rsi-constellation-phoenix-emerald",
+    "name": "Constellation Mk IV Phoenix Emerald",
+    "name_full": "RSI Constellation Mk IV Phoenix Emerald",
+    "slug": "constellation-mk-iv-phoenix-emerald",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/rsi-constellation-phoenix-emerald.webp"
+    "game_version": "4.10.2",
+    "image": "/ships/constellation-mk-iv-phoenix-emerald.webp"
   },
   {
     "id": 49,
-    "name": "Constellation Taurus",
-    "name_full": "RSI Constellation Taurus",
-    "slug": "rsi-constellation-taurus",
+    "name": "Constellation Mk IV Taurus",
+    "name_full": "RSI Constellation Mk IV Taurus",
+    "slug": "constellation-mk-iv-taurus",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/rsi-constellation-taurus.webp"
+    "game_version": "4.10.2",
+    "image": "/ships/constellation-mk-iv-taurus.webp"
   },
   {
     "id": 50,
@@ -1075,8 +1075,8 @@
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
-    "is_concept": 1,
-    "game_version": "4.0",
+    "is_concept": 0,
+    "game_version": "5.0.0",
     "image": "/ships/galaxy.webp"
   },
   {
@@ -1232,7 +1232,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
+    "game_version": "4.10.1",
     "image": "/ships/hull-b.webp"
   },
   {
@@ -1244,7 +1244,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.8.2",
+    "game_version": "4.10.1",
     "image": "/ships/hull-c.webp"
   },
   {
@@ -1268,7 +1268,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 1,
-    "game_version": "4.4",
+    "game_version": "4.10.0",
     "image": "/ships/hull-e.webp"
   },
   {
@@ -1375,8 +1375,8 @@
     "company_name": "Anvil Aerospace",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
-    "is_concept": 1,
-    "game_version": "4.8.0",
+    "is_concept": 0,
+    "game_version": "5.0.0",
     "image": "/ships/liberator.webp"
   },
   {
@@ -1923,13 +1923,13 @@
     "id": 161,
     "name": "Redeemer",
     "name_full": "Aegis Redeemer",
-    "slug": "aegs-redeemer",
+    "slug": "redeemer",
     "company_name": "Aegis Dynamics",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.0",
-    "image": "/ships/aegs-redeemer.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/redeemer.webp"
   },
   {
     "id": 162,
@@ -2065,27 +2065,27 @@
   },
   {
     "id": 173,
-    "name": "San tok.Yāi",
-    "name_full": "Aopoa San tok.Yāi",
+    "name": "San'tok.yāi",
+    "name_full": "Aopoa San'tok.yāi",
     "slug": "san-tok-y-i",
     "company_name": "Aopoa",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.8.2",
+    "game_version": "4.10.3",
     "image": "/ships/san-tok-y-i.webp"
   },
   {
     "id": 174,
     "name": "Scorpius",
     "name_full": "RSI Scorpius",
-    "slug": "rsi-scorpius",
+    "slug": "scorpius",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/rsi-scorpius.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/scorpius.webp"
   },
   {
     "id": 175,
@@ -2113,15 +2113,15 @@
   },
   {
     "id": 177,
-    "name": "Spartan",
-    "name_full": "Anvil Spartan",
-    "slug": "anvl-spartan",
+    "name": "HM6 Spartan",
+    "name_full": "Anvil HM6 Spartan",
+    "slug": "hm6-spartan",
     "company_name": "Anvil Aerospace",
     "is_spaceship": 0,
     "is_ground_vehicle": 1,
     "is_concept": 0,
-    "game_version": "3.22.0b",
-    "image": "/ships/anvl-spartan.webp"
+    "game_version": "4.10.3",
+    "image": "/ships/hm6-spartan.webp"
   },
   {
     "id": 178,
@@ -2163,13 +2163,13 @@
     "id": 181,
     "name": "SRV",
     "name_full": "Argo SRV",
-    "slug": "argo-srv",
+    "slug": "srv",
     "company_name": "Argo Astronautics",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "3.23",
-    "image": "/ships/argo-srv.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/srv.webp"
   },
   {
     "id": 182,
@@ -2223,13 +2223,13 @@
     "id": 187,
     "name": "STV",
     "name_full": "Greycat STV",
-    "slug": "grin-stv",
+    "slug": "stv",
     "company_name": "Greycat Industrial",
     "is_spaceship": 0,
     "is_ground_vehicle": 1,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/grin-stv.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/stv.webp"
   },
   {
     "id": 188,
@@ -2396,7 +2396,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.8.2",
+    "game_version": "4.10.1",
     "image": "/ships/vulture.webp"
   },
   {
@@ -2439,13 +2439,13 @@
     "id": 205,
     "name": "Zeus Mk II ES",
     "name_full": "RSI Zeus Mk II ES",
-    "slug": "rsi-zeus-es",
+    "slug": "zeus-mk-ii-es",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
-    "image": "/ships/rsi-zeus-es.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/zeus-mk-ii-es.webp"
   },
   {
     "id": 206,
@@ -2463,13 +2463,13 @@
     "id": 207,
     "name": "Zeus Mk II CL",
     "name_full": "RSI Zeus Mk II CL",
-    "slug": "rsi-zeus-cl",
+    "slug": "zeus-mk-ii-cl",
     "company_name": "Roberts Space Industries",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.7.1",
-    "image": "/ships/rsi-zeus-cl.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/zeus-mk-ii-cl.webp"
   },
   {
     "id": 208,
@@ -2577,7 +2577,7 @@
     "is_ground_vehicle": 0,
     "is_concept": 0,
     "game_version": "3.24.3",
-    "image": "/ships/retaliator-cargo-module---stern.webp"
+    "image": null
   },
   {
     "id": 217,
@@ -2589,7 +2589,7 @@
     "is_ground_vehicle": 0,
     "is_concept": 0,
     "game_version": "3.24.3",
-    "image": "/ships/retaliator-cargo-module---bow.webp"
+    "image": null
   },
   {
     "id": 218,
@@ -2625,7 +2625,7 @@
     "is_ground_vehicle": 0,
     "is_concept": 0,
     "game_version": "3.24.3",
-    "image": "/ships/retaliator-torpedo-module-bow.webp"
+    "image": null
   },
   {
     "id": 221,
@@ -2840,7 +2840,7 @@
     "is_spaceship": 0,
     "is_ground_vehicle": 1,
     "is_concept": 0,
-    "game_version": "4.1.1",
+    "game_version": "4.10.1",
     "image": "/ships/csv-sm.webp"
   },
   {
@@ -2852,20 +2852,20 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.9",
+    "game_version": "4.10.1",
     "image": "/ships/starlancer-tac.webp"
   },
   {
     "id": 242,
     "name": "Starlancer MAX",
     "name_full": "MISC Starlancer MAX",
-    "slug": "misc-starlancer-max",
+    "slug": "starlancer-max",
     "company_name": "Musashi Industrial and Starflight Concern",
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.1.1",
-    "image": "/ships/misc-starlancer-max.webp"
+    "game_version": "4.10.1",
+    "image": "/ships/starlancer-max.webp"
   },
   {
     "id": 243,
@@ -2876,7 +2876,7 @@
     "is_spaceship": 1,
     "is_ground_vehicle": 0,
     "is_concept": 1,
-    "game_version": "4.1.1",
+    "game_version": "4.10.1",
     "image": "/ships/starlancer-bld.webp"
   },
   {
@@ -2985,7 +2985,7 @@
     "is_ground_vehicle": 0,
     "is_concept": 0,
     "game_version": "4.1",
-    "image": "/ships/retaliator-torpedo-module-stern.webp"
+    "image": null
   },
   {
     "id": 255,
@@ -3033,7 +3033,7 @@
     "is_ground_vehicle": 1,
     "is_concept": 1,
     "game_version": "4.5",
-    "image": null
+    "image": "/ships/atls-ikti.webp"
   },
   {
     "id": 259,
@@ -3045,7 +3045,7 @@
     "is_ground_vehicle": 1,
     "is_concept": 1,
     "game_version": "4.5",
-    "image": null
+    "image": "/ships/atls-ikti-rad.webp"
   },
   {
     "id": 260,
@@ -3057,7 +3057,7 @@
     "is_ground_vehicle": 1,
     "is_concept": 1,
     "game_version": "4.5",
-    "image": null
+    "image": "/ships/atls-ikti-geo.webp"
   },
   {
     "id": 261,
@@ -3069,7 +3069,7 @@
     "is_ground_vehicle": 1,
     "is_concept": 1,
     "game_version": "4.5",
-    "image": null
+    "image": "/ships/atls-ikti-geo-rad.webp"
   },
   {
     "id": 262,
@@ -3201,19 +3201,19 @@
     "is_ground_vehicle": 0,
     "is_concept": 1,
     "game_version": "4.4",
-    "image": null
+    "image": "/ships/auxilia.webp"
   },
   {
     "id": 274,
-    "name": "Stingray",
-    "name_full": "Kruger Stingray",
-    "slug": "stingray",
+    "name": "S-65 Stingray",
+    "name_full": "Kruger S-65 Stingray",
+    "slug": "s-65-stingray",
     "company_name": "Kruger Intergalactic",
-    "is_spaceship": 0,
+    "is_spaceship": 1,
     "is_ground_vehicle": 0,
-    "is_concept": 1,
-    "game_version": "4.4",
-    "image": null
+    "is_concept": 0,
+    "game_version": "4.10.0",
+    "image": "/ships/s-65-stingray.webp"
   },
   {
     "id": 275,
@@ -3356,7 +3356,43 @@
     "is_spaceship": 0,
     "is_ground_vehicle": 0,
     "is_concept": 0,
-    "game_version": "4.9",
-    "image": null
+    "game_version": "4.10.1",
+    "image": "/ships/basher.webp"
+  },
+  {
+    "id": 290,
+    "name": "Sabre Raven EX",
+    "name_full": "Aegis Sabre Raven EX",
+    "slug": "sabre-raven-ex",
+    "company_name": "Aegis Dynamics",
+    "is_spaceship": 1,
+    "is_ground_vehicle": 0,
+    "is_concept": 0,
+    "game_version": "4.10.1",
+    "image": "/ships/sabre-raven-ex.webp"
+  },
+  {
+    "id": 291,
+    "name": "Sabre Raven EX",
+    "name_full": "Aegis Sabre Raven EX",
+    "slug": "sabre-raven-ex",
+    "company_name": "Aegis Dynamics",
+    "is_spaceship": 1,
+    "is_ground_vehicle": 0,
+    "is_concept": 0,
+    "game_version": "4.10.1",
+    "image": "/ships/sabre-raven-ex.webp"
+  },
+  {
+    "id": 292,
+    "name": "Constellation Mk V Centaurus",
+    "name_full": "RSI Constellation Mk V Centaurus",
+    "slug": "constellation-mk-v-centaurus",
+    "company_name": "Roberts Space Industries",
+    "is_spaceship": 1,
+    "is_ground_vehicle": 0,
+    "is_concept": 0,
+    "game_version": "4.10.2",
+    "image": "/ships/constellation-mk-v-centaurus.webp"
   }
 ]

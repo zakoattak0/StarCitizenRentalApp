@@ -1,4 +1,7 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
+const SHIP_IMAGES_URL = "/ship-images.json";
+const shipImagesById = new Map();
+const shipImagesByName = new Map();
 const HANGAR_SERVICES_URL = "/api/reference-data?type=hangar-services";
 const SHIP_LISTINGS_URL = "/api/ship-listings";
 const CREW_LISTINGS_URL = "/api/crew-listings";
@@ -844,7 +847,7 @@ window.handleShipImageError = (image) => {
 
   const placeholder = document.createElement("div");
   placeholder.className = "ship-image placeholder";
-  placeholder.textContent = "FSX";
+  placeholder.textContent = "Exterior image unavailable";
   image.replaceWith(placeholder);
 };
 
@@ -1732,6 +1735,23 @@ materialRequestForm.addEventListener("submit", async (event) => {
     setListingSaving("materialRequests", false);
   }
 });
+
+async function loadShipImages() {
+  try {
+    const manifest = await fetch(SHIP_IMAGES_URL).then(readJson);
+    if (!Array.isArray(manifest.ships)) throw new Error("Invalid ship image catalog");
+    manifest.ships.filter((entry) => entry.status === "resolved" && entry.image).forEach((entry) => {
+      shipImagesById.set(String(entry.id), entry);
+      [entry.name, entry.nameFull, entry.slug, ...(entry.aliases || [])].forEach((name) => {
+        if (name) shipImagesByName.set(normalizeShipName(name), entry);
+      });
+    });
+    renderFleet();
+    renderShipMarketplace();
+  } catch (error) {
+    console.warn("Ship exterior images could not be loaded:", error.message);
+  }
+}
 
 async function loadVehicles() {
   shipApiStatus.textContent = "Loading UEX ship list...";
@@ -3780,10 +3800,14 @@ function openShipDetails(listingId) {
   const availableDates = uniqueSorted(ship.dates || [])
     .filter((date) => date >= dateToKey(new Date()) && isShipAvailable(ship, date, date));
   const configuration = configurationSummary(ship);
+  const imageRecord = shipImageRecord(ship);
   shipDetailsTitle.textContent = ship.ship;
   shipDetailsPanel.innerHTML = `
     <div class="ship-details-overview">
-      ${shipImage(ship)}
+      <div>
+        ${shipImage(ship)}
+        ${imageRecord ? `<p class="market-summary ship-image-credit"><a href="${escapeHtml(imageRecord.filePage)}" target="_blank" rel="noopener noreferrer">Image: Star Citizen Wiki</a></p>` : ""}
+      </div>
       <div>
         <h3>Ship specifications</h3>
         <ul class="meta-list">
@@ -6138,27 +6162,20 @@ function enrichSeedShips() {
 }
 
 function shipImage(ship) {
-  const localPhoto = localShipImagePath(ship.vehicle);
-  const fallbackPhoto = ship.vehicle?.photo || "";
-  const photo = localPhoto || fallbackPhoto;
-  if (!photo) {
-    return `<div class="ship-image placeholder">FSX</div>`;
+  const record = shipImageRecord(ship);
+  if (!record) {
+    return `<div class="ship-image placeholder">Exterior image unavailable</div>`;
   }
 
-  const fallbackAttr = localPhoto && fallbackPhoto ? ` data-fallback-src="${escapeHtml(fallbackPhoto)}"` : "";
-  return `<img class="ship-image" src="${escapeHtml(photo)}" alt="${escapeHtml(ship.ship)}" loading="lazy"${fallbackAttr} onerror="handleShipImageError(this)" />`;
+  const fallbackAttr = record.sourceUrl ? ` data-fallback-src="${escapeHtml(record.sourceUrl)}"` : "";
+  return `<img class="ship-image" src="${escapeHtml(record.image)}?v=${record.sha256.slice(0, 12)}" alt="${escapeHtml(ship.ship)} exterior view" loading="lazy"${fallbackAttr} onerror="handleShipImageError(this)" />`;
 }
 
-function localShipImagePath(vehicle) {
-  if (vehicle?.image) {
-    return encodeURI(vehicle.image);
-  }
-
-  if (vehicle?.slug) {
-    return `/ships/${encodeURIComponent(vehicle.slug)}.webp`;
-  }
-
-  return "";
+function shipImageRecord(ship) {
+  return shipImagesById.get(String(ship.vehicle?.id || "")) ||
+    [ship.ship, ship.vehicle?.name, ship.vehicle?.nameFull, ship.vehicle?.slug]
+      .map((name) => shipImagesByName.get(normalizeShipName(name)))
+      .find(Boolean) || null;
 }
 
 function vehicleFacts(ship) {
@@ -6488,6 +6505,7 @@ renderCalendarFilterOptions();
 updateFilterSummary();
 setActiveTab(panelFromPath(window.location.pathname));
 showAuthErrorFromUrl();
+loadShipImages();
 loadVehicles();
 loadHangarServices();
 loadMaterialOptions();
