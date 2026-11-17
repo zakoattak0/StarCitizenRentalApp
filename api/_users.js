@@ -16,12 +16,16 @@ function toClient(row) {
     avatarUrl: row.avatar_url || "",
     rsiHandle: row.rsi_handle || "",
     publicProfileName: row.public_profile_name || "",
+    region: row.region || "",
+    timeZone: row.time_zone || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 function toRow(user) {
+  // Preferences are updated only by saveUserPreferences. Session cookies and
+  // fresh Discord logins must never overwrite newer values in the database.
   const profile = user?.profile || {};
   return {
     id: user.id,
@@ -61,7 +65,25 @@ async function upsertUser(user, options = {}) {
   }
 }
 
+function applyUserPreferences(user, savedUser) {
+  if (!savedUser) return;
+  user.profile = { ...(user.profile || {}), region: savedUser.region || "", timeZone: savedUser.timeZone || "" };
+}
+
+async function saveUserPreferences(user, preferences) {
+  await upsertUser(user, { required: true });
+  const rows = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ region: preferences.region || null, time_zone: preferences.timeZone || null }),
+    useServiceRole: true,
+  });
+  if (!rows[0]) throw new Error("Account preferences could not be saved.");
+  return toClient(rows[0]);
+}
+
 module.exports = {
   listUsers,
   upsertUser,
+  saveUserPreferences,
+  applyUserPreferences,
 };

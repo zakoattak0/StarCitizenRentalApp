@@ -8,8 +8,9 @@ const {
   publicUser,
   sessionCookie,
 } = require("./_shared");
-const { upsertUser } = require("../_users");
+const { upsertUser, saveUserPreferences, applyUserPreferences } = require("../_users");
 const { checkRateLimit } = require("../_supabase");
+const { validTimeZone } = require("../../public/crew-availability");
 
 function sendJson(response, statusCode, payload) {
   response.setHeader("content-type", "application/json");
@@ -76,7 +77,7 @@ async function handleLogout(request, response) {
 async function handleSession(request, response) {
   const session = decodeSession(parseCookies(request)[sessionCookie]);
   if (session?.user) {
-    await upsertUser(session.user);
+    applyUserPreferences(session.user, await upsertUser(session.user));
   }
 
   response.setHeader("Cache-Control", "no-store");
@@ -96,6 +97,17 @@ async function handleProfile(request, response) {
   const action = body.action;
 
   await checkRateLimit(`profile:${session.user.id}`, 15, 600);
+  if (action === "save-preferences") {
+    const region = String(body.region || "").trim().toUpperCase();
+    const timeZone = String(body.timeZone || "").trim();
+    if (region && !["USA", "EU", "AUS", "ASIA"].includes(region)) return sendJson(response, 400, { error: "Choose USA, EU, AUS or ASIA." });
+    if (timeZone && !validTimeZone(timeZone)) return sendJson(response, 400, { error: "Choose a valid timezone." });
+    const savedUser = await saveUserPreferences(session.user, { region, timeZone });
+    applyUserPreferences(session.user, savedUser);
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Set-Cookie", cookieHeader(sessionCookie, encodeSession(session)));
+    return sendJson(response, 200, { user: publicUser(session) });
+  }
   if (action === "verify-rsi") {
     // Tighter limit: this hits an external RSI profile page per call.
     await checkRateLimit(`rsi-verify:${session.user.id}`, 5, 600);
@@ -154,7 +166,7 @@ async function handleProfile(request, response) {
   }
 
   session.user.profile = profile;
-  await upsertUser(session.user);
+  applyUserPreferences(session.user, await upsertUser(session.user));
 
   response.setHeader("Set-Cookie", cookieHeader(sessionCookie, encodeSession(session)));
   return sendJson(response, 200, { user: publicUser(session) });

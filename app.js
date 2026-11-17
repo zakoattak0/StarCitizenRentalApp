@@ -171,6 +171,8 @@ let hangarMarketError = "";
 let editingShipIndex = null;
 let editingCrewId = null;
 let pendingCrewRequest = null;
+let accountPreferencesDirty = false;
+let accountPreferencesUserId = "";
 let editingMaterialId = null;
 let pendingRemoveShipIndex = null;
 let availabilityShipIndex = null;
@@ -351,6 +353,10 @@ const accountRsiHandle = document.querySelector("#account-rsi-handle");
 const accountDiscordStatus = document.querySelector("#account-discord-status");
 const accountRsiStatus = document.querySelector("#account-rsi-status");
 const accountPublicName = document.querySelector("#account-public-name");
+const accountPreferencesForm = document.querySelector("#account-preferences-form");
+const accountRegionSelect = document.querySelector("#account-region");
+const accountTimeZoneSelect = document.querySelector("#account-timezone");
+const accountPreferencesStatus = document.querySelector("#account-preferences-status");
 const rsiLinkForm = document.querySelector("#rsi-link-form");
 const rsiCodeField = document.querySelector("#rsi-code-field");
 const rsiCodeInput = document.querySelector("#account-rsi-code");
@@ -847,6 +853,13 @@ document.addEventListener("keydown", (event) => {
 });
 
 authPromptCancel.addEventListener("click", closeAuthPrompt);
+
+accountPreferencesForm.addEventListener("change", () => {
+  accountPreferencesDirty = true;
+  accountPreferencesStatus.textContent = "Unsaved changes";
+  accountPreferencesStatus.classList.remove("form-error");
+});
+accountPreferencesForm.addEventListener("submit", saveAccountPreferences);
 
 rsiLinkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1589,6 +1602,7 @@ async function loadSession() {
     const response = await fetch("/api/auth/account", { cache: "no-store" });
     const session = await response.json();
     authState.user = session.authenticated ? session.user : null;
+    applyPreferredTimeZoneToSearch();
   } catch (error) {
     authState.user = null;
   } finally {
@@ -1620,6 +1634,8 @@ function renderAccountPanel() {
   accountDashboard.classList.toggle("is-hidden", !user);
 
   if (!user) {
+    accountPreferencesUserId = "";
+    accountPreferencesDirty = false;
     return;
   }
 
@@ -1630,6 +1646,12 @@ function renderAccountPanel() {
   accountRsiHandle.value = user.profile?.rsiHandle || "";
   accountRsiStatus.textContent = rsiStatusLabel(user.profile);
   accountPublicName.textContent = preferredDisplayName(user);
+  if (!accountPreferencesDirty || accountPreferencesUserId !== user.id) {
+    accountRegionSelect.value = user.profile?.region || "";
+    setTimeZoneSelection(accountTimeZoneSelect, user.profile?.timeZone || "");
+    accountPreferencesUserId = user.id;
+    accountPreferencesDirty = false;
+  }
   const myRatingStats = ratingStats[user.id] || {};
   accountRating.textContent = Number(myRatingStats.averageRating || user.stats?.rating || 0).toFixed(1);
   accountContracts.textContent = Number(myRatingStats.ratedDeals || user.stats?.completedContracts || 0).toLocaleString();
@@ -1640,6 +1662,39 @@ function renderAccountPanel() {
   renderAccountServices();
   renderAccountListings();
   renderAccountDeals();
+}
+
+async function saveAccountPreferences(event) {
+  event.preventDefault();
+  const button = accountPreferencesForm.querySelector('button[type="submit"]');
+  const previousTimeZone = preferredTimeZone();
+  button.disabled = true;
+  accountRegionSelect.disabled = true;
+  accountTimeZoneSelect.disabled = true;
+  accountPreferencesStatus.classList.remove("form-error");
+  accountPreferencesStatus.textContent = "Saving preferences...";
+  try {
+    const response = await fetch("/api/auth/account", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "save-preferences", region: accountRegionSelect.value, timeZone: accountTimeZoneSelect.value }),
+    });
+    const result = await readJson(response);
+    authState.user = result.user;
+    accountPreferencesDirty = false;
+    updateAuthUI();
+    applyPreferredTimeZoneToSearch(previousTimeZone);
+    renderCrewMarketplace();
+    await loadUsers();
+    renderPlayerSearch();
+    accountPreferencesStatus.textContent = "Preferences saved.";
+  } catch (error) {
+    accountPreferencesStatus.textContent = error instanceof Error ? error.message : "Preferences could not be saved.";
+    accountPreferencesStatus.classList.add("form-error");
+  } finally {
+    button.disabled = false;
+    accountRegionSelect.disabled = false;
+    accountTimeZoneSelect.disabled = false;
+  }
 }
 
 function canCreatePosting(userProfile) {
@@ -2851,8 +2906,15 @@ function buildPlayerDirectory() {
     const player = ensurePlayer(user.id, user.name || user.displayName);
     player.avatarUrl = user.avatarUrl || player.avatarUrl || "";
     player.isRegistered = true;
-    addPlayerSearchValues(player, [user.displayName, user.publicProfileName, user.rsiHandle]);
+    player.region = user.region || "";
+    player.timeZone = user.timeZone || "";
+    addPlayerSearchValues(player, [user.displayName, user.publicProfileName, user.rsiHandle, user.region, user.timeZone]);
   });
+  if (authState.user) {
+    const player = ensurePlayer(authState.user.id, preferredDisplayName(authState.user));
+    player.region = authState.user.profile?.region || "";
+    player.timeZone = authState.user.profile?.timeZone || "";
+  }
 
   ships.forEach((ship) => {
     const player = ensurePlayer(ship.ownerId, ship.owner);
@@ -2964,6 +3026,7 @@ function playerDetailCard(player) {
         <div>
           <p class="eyebrow">Player profile</p>
           <h2>${escapeHtml(player.name)}</h2>
+          ${player.region || player.timeZone ? `<p>${escapeHtml([player.region, player.timeZone].filter(Boolean).join(" · "))}</p>` : ""}
           <p>${ratingSummaryLine(player.id, player.rating, player.completedDealCount)}</p>
         </div>
         <div class="card-tags">${playerBadges(player)}</div>
@@ -3994,12 +4057,34 @@ function closeAvailabilityModal() {
   }
 }
 
+function preferredTimeZone(user = authState.user) {
+  return crewAvailability.validTimeZone(user?.profile?.timeZone) ? user.profile.timeZone : Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+}
+
+function setTimeZoneSelection(select, timeZone) {
+  if (timeZone && !Array.from(select.options).some((option) => option.value === timeZone)) {
+    const option = document.createElement("option");
+    option.value = timeZone;
+    option.textContent = timeZone.replaceAll("_", " ");
+    select.appendChild(option);
+  }
+  select.value = timeZone;
+}
+
+function applyPreferredTimeZoneToSearch(previousTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") {
+  const fields = crewMarketForm.elements;
+  if (!fields.startAt.value && !fields.endAt.value && fields.timeZone.value === previousTimeZone) {
+    setTimeZoneSelection(fields.timeZone, preferredTimeZone());
+  }
+}
+
 function initializeCrewTimeZones() {
   const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const zones = [...new Set(["UTC", detected, ...(Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : ["America/Chicago", "America/New_York", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Australia/Sydney", "Asia/Tokyo"])])].sort();
   document.querySelectorAll("[data-timezone-select]").forEach((select) => {
-    select.innerHTML = zones.map((zone) => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replaceAll("_", " "))}</option>`).join("");
-    select.value = detected;
+    const optional = select.hasAttribute("data-timezone-optional");
+    select.innerHTML = (optional ? `<option value="">Use device timezone</option>` : "") + zones.map((zone) => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replaceAll("_", " "))}</option>`).join("");
+    select.value = optional ? "" : detected;
   });
 }
 
@@ -4136,7 +4221,7 @@ function openCrewPostingModal(listing = null) {
     populateCrewPostingForm(listing);
   } else {
     crewPostingForm.reset();
-    crewPostingForm.elements.timeZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    setTimeZoneSelection(crewPostingForm.elements.timeZone, preferredTimeZone());
     editingCrewId = null;
     crewPostingName.value = preferredDisplayName(authState.user);
     crewPostingTitle.textContent = "Create Crew Posting";

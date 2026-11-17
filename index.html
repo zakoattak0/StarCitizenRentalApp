@@ -496,6 +496,24 @@
                   <dd id="account-public-name">Discord username</dd>
                 </div>
               </dl>
+              <form class="account-preferences-form" id="account-preferences-form">
+                <h3>Region &amp; timezone</h3>
+                <div class="account-preferences-grid">
+                  <label>Region
+                    <select name="region" id="account-region">
+                      <option value="">Not set</option>
+                      <option value="USA">USA</option>
+                      <option value="EU">EU</option>
+                      <option value="AUS">AUS</option>
+                      <option value="ASIA">ASIA</option>
+                    </select>
+                  </label>
+                  <label>Timezone<select name="timeZone" id="account-timezone" data-timezone-select data-timezone-optional></select></label>
+                </div>
+                <p class="api-status">Shown on your player profile. Your timezone is the default for new crew postings.</p>
+                <div class="modal-actions"><button class="primary-button" type="submit">Save preferences</button></div>
+                <p class="api-status" id="account-preferences-status" role="status" aria-live="polite"></p>
+              </form>
               <form class="rsi-link-form" id="rsi-link-form">
                 <label>
                   RSI handle

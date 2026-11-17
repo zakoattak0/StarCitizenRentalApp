@@ -19,9 +19,14 @@ create table if not exists public.users (
   avatar_url text,
   rsi_handle text,
   public_profile_name text,
+  region text check (region is null or region in ('USA', 'EU', 'AUS', 'ASIA')),
+  time_zone text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.users add column if not exists region text check (region is null or region in ('USA', 'EU', 'AUS', 'ASIA'));
+alter table public.users add column if not exists time_zone text;
 
 create table if not exists public.ship_listings (
   id uuid primary key default gen_random_uuid(),

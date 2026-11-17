@@ -83,6 +83,8 @@ function publicUser(session) {
   }
 
   const profile = {
+    region: "",
+    timeZone: "",
     rsiHandle: "",
     rsiStatus: "not_linked",
     rsiVerificationCode: "",

@@ -1039,6 +1039,20 @@ main {
   padding-top: 12px;
 }
 
+.account-preferences-form {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 16px;
+}
+
+.account-preferences-form h3 { margin: 0; }
+.account-preferences-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.account-preferences-grid label, .account-preferences-grid select { min-width: 0; }
+#account-preferences-status:empty { display: none; }
+@media (max-width: 600px) { .account-preferences-grid { grid-template-columns: minmax(0, 1fr); } }
+
 .rsi-verification-code {
   border: 1px solid rgba(57, 217, 138, 0.35);
   background: rgba(57, 217, 138, 0.08);

@@ -28,6 +28,8 @@ The Gatac Hyūn has a combined mining and salvage configuration. Owners can reco
 
 ## Supabase setup
 
+Account region/timezone preferences require `supabase/migrations/20261116_account_preferences.sql` on existing databases. Regions are USA, EU, AUS and ASIA; either preference can also be left unset. Preferences are saved on the user row, restored into the session after login, and shown on the public player profile. Ordinary identity sync intentionally omits preference columns so stale cookies or a fresh Discord login cannot overwrite saved choices. The saved timezone defaults new crew postings and empty crew searches; existing dated postings retain their own timezone.
+
 Material line items store integer `qualityMin` / `qualityMax` bounds from 0–1000 and a readable `quality` label in the existing materials JSON. Both slider handles and numeric inputs share this range. Older exact values, ranges and `735+` entries are supported when editing; a full 0–1000 range accepts any quality. Player-price comparisons only use a single quality band, so broad ranges do not get a misleading comparison based only on their lower bound. No database migration is required for this control.
 
 Existing installations need `supabase/migrations/20261116_crew_availability.sql` before deploying crew scheduling. This additive migration preserves existing postings (defaulting them to Anytime with no notice) and adds the booking dates/timezone to deals. New databases can use the complete schema below.
