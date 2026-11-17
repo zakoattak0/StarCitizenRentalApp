@@ -230,12 +230,14 @@
           <details class="filter-drawer" open>
             <summary>Crew filters</summary>
             <form class="market-filter-grid" id="crew-market-form">
-              <fieldset class="ship-date-filters">
+              <fieldset class="ship-date-filter">
                 <legend>Crew dates</legend>
-                <label>Start date and time<input type="datetime-local" name="startAt" /></label>
-                <label>End date and time<input type="datetime-local" name="endAt" /></label>
-                <label>Timezone<select name="timeZone" data-timezone-select></select></label>
-                <button class="secondary-button" id="crew-clear-dates" type="button">Clear dates</button>
+                <div class="ship-date-fields">
+                  <label>Start date and time<input type="datetime-local" name="startAt" /></label>
+                  <label>End date and time<input type="datetime-local" name="endAt" /></label>
+                  <label>Timezone<select name="timeZone" data-timezone-select></select></label>
+                  <button class="secondary-button" id="crew-clear-dates" type="button">Clear dates</button>
+                </div>
                 <p class="api-status" id="crew-date-summary" role="status">Dates respect each provider's availability and minimum notice.</p>
               </fieldset>
               <label>
