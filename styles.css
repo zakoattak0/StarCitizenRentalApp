@@ -1918,6 +1918,7 @@ h1 {
   appearance: none;
   background: transparent;
   pointer-events: none;
+  box-shadow: none;
 }
 
 .quality-range-track .quality-max-slider { z-index: 3; }
