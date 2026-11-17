@@ -28,6 +28,8 @@ The Gatac Hyūn has a combined mining and salvage configuration. Owners can reco
 
 ## Supabase setup
 
+Material line items store integer `qualityMin` / `qualityMax` bounds from 0–1000 and a readable `quality` label in the existing materials JSON. Both slider handles and numeric inputs share this range. Older exact values, ranges and `735+` entries are supported when editing; a full 0–1000 range accepts any quality. Player-price comparisons only use a single quality band, so broad ranges do not get a misleading comparison based only on their lower bound. No database migration is required for this control.
+
 Existing installations need `supabase/migrations/20261116_crew_availability.sql` before deploying crew scheduling. This additive migration preserves existing postings (defaulting them to Anytime with no notice) and adds the booking dates/timezone to deals. New databases can use the complete schema below.
 
 Crew postings support Anytime or a bounded date/time range, an IANA timezone, and rolling 0/24/48/72-hour notice. Notice is checked against the server's current time for every request, independently of when the posting was created or edited. Dates are stored as UTC instants; the chosen timezone is kept for display and editing. Search, posting previews and requests share `public/crew-availability.js`. The server validates crew requests against the current saved posting before creating a deal. During a repeated daylight-saving hour, the earlier occurrence is used and shown with its UTC offset; nonexistent local times are rejected.

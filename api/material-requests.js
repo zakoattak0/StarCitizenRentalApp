@@ -1,4 +1,5 @@
 const { checkRateLimit, requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
+const materialQuality = require("../public/material-quality");
 
 function toClient(row) {
   const materials = row.materials || [];
@@ -31,6 +32,7 @@ function toRow(request) {
   const listingType = request.listingType === "wts" ? "wts" : "wtb";
   const materials = (request.materials || []).map((material) => ({
     ...material,
+    ...materialQuality.fields(materialQuality.read(material)),
     listingType: material.listingType === "wts" ? "wts" : listingType,
   }));
 
@@ -65,7 +67,9 @@ module.exports = async function handler(request, response) {
         await requireOwnedRow("material_requests", materialRequest.id, "requester_id", user.id);
       }
 
-      const row = toRow(materialRequest);
+      let row;
+      try { row = toRow(materialRequest); }
+      catch (error) { return sendJson(response, 400, { error: error.message }); }
       row.requester_id = user.id;
       const path = materialRequest.id
         ? `material_requests?id=eq.${encodeURIComponent(materialRequest.id)}`

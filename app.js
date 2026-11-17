@@ -1,5 +1,6 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
 const crewAvailability = window.CrewAvailability;
+const materialQuality = window.MaterialQuality;
 const VEHICLE_CATALOG_URL = "/vehicles.json";
 const SHIP_IMAGES_URL = "/ship-images.json";
 const shipImagesById = new Map();
@@ -1218,13 +1219,45 @@ materialLineItemsContainer.addEventListener("change", (event) => {
 });
 
 materialLineItemsContainer.addEventListener("input", (event) => {
-  if (event.target.matches("[name='material'], [name='quality']")) {
+  if (event.target.matches("[name='qualityMin'], [name='qualityMax'], .material-quality-slider")) {
+    syncMaterialQualityControls(event.target.closest(".material-line-item"), event.target);
+  } else if (event.target.matches("[name='material']")) {
     updateMaterialPriceHint(event.target.closest(".material-line-item"));
   }
 
   if (event.target.matches("[name='linePrice']")) {
     formatCreditInput(event.target);
   }
+});
+
+materialLineItemsContainer.addEventListener("pointerdown", (event) => {
+  const track = event.target.closest(".quality-range-track");
+  if (!track || event.target.matches(".material-quality-slider")) return;
+  const row = track.closest(".material-line-item");
+  const rect = track.getBoundingClientRect();
+  const position = (x) => Math.max(0, Math.min(1000, Math.round((x - rect.left - 9) / Math.max(1, rect.width - 18) * 1000)));
+  const min = row.querySelector("[name='qualityMinSlider']");
+  const max = row.querySelector("[name='qualityMaxSlider']");
+  const value = position(event.clientX);
+  const minDistance = Math.abs(value - Number(min.value));
+  const maxDistance = Math.abs(value - Number(max.value));
+  const slider = minDistance < maxDistance || (minDistance === maxDistance && value < Number(min.value)) ? min : max;
+  const move = (pointer) => {
+    slider.value = String(position(pointer.clientX));
+    syncMaterialQualityControls(row, slider);
+  };
+  event.preventDefault();
+  slider.focus();
+  track.setPointerCapture(event.pointerId);
+  move(event);
+  track.addEventListener("pointermove", move);
+  const stop = () => {
+    track.removeEventListener("pointermove", move);
+    track.removeEventListener("pointerup", stop);
+    track.removeEventListener("pointercancel", stop);
+  };
+  track.addEventListener("pointerup", stop);
+  track.addEventListener("pointercancel", stop);
 });
 
 materialRequestForm.addEventListener("submit", async (event) => {
@@ -1244,7 +1277,7 @@ materialRequestForm.addEventListener("submit", async (event) => {
       material: row.querySelector("[name='material']").value,
       quantity,
       anyQuantity,
-      quality: row.querySelector("[name='quality']").value,
+      ...materialQuality.fields(materialQuality.bounds(row.querySelector("[name='qualityMin']").value, row.querySelector("[name='qualityMax']").value)),
       listingType,
     };
 
@@ -3374,7 +3407,7 @@ function materialItemMatchesFilters(request, item, filters) {
     return false;
   }
 
-  if (filters.minQuality && materialQualityValue(item.quality) < filters.minQuality) {
+  if (filters.minQuality && materialQuality.read(item).max < filters.minQuality) {
     return false;
   }
 
@@ -4221,7 +4254,7 @@ function populateMaterialRequestForm(request) {
     row.querySelector("[name='material']").value = item.material || "";
     row.querySelector(".material-any-quantity").checked = anyQuantity;
     row.querySelector("[name='quantity']").value = anyQuantity ? "" : parseFloat(item.quantity) || "";
-    row.querySelector("[name='quality']").value = item.quality || "";
+    setMaterialQualityControls(row, item);
     if (item.pricePerScu) {
       row.querySelector("[name='linePrice']").value = formatCreditInputValue(item.pricePerScu);
     }
@@ -4332,28 +4365,34 @@ function addMaterialLineItem() {
   const row = document.createElement("div");
   row.className = "material-line-item";
   row.innerHTML = `
-    <label>
+    <label class="material-name-field">
       Ore / Material
       <input name="material" list="material-name-options" required placeholder="Type or choose material" />
-      <small class="material-price-hint">Select a material to see average sell price.</small>
     </label>
-    <label>
-      Qty (SCU)
-      <input name="quantity" type="number" min="1" step="0.1" required placeholder="10" />
-    </label>
-    <label class="check material-any-quantity-label">
-      <input class="material-any-quantity" type="checkbox" name="anyQuantity" />
-      Any quantity
-    </label>
-    <label>
-      Quality
-      <input name="quality" type="text" placeholder="e.g. 735+" />
-    </label>
+    <div class="material-quantity-field">
+      <label>Qty (SCU)<input name="quantity" type="number" min="1" step="0.1" required placeholder="10" /></label>
+      <label class="check material-any-quantity-label"><input class="material-any-quantity" type="checkbox" name="anyQuantity" />Any quantity</label>
+    </div>
     <label class="material-line-price-field is-hidden">
       <span class="material-line-price-label">Price / SCU</span>
       <input name="linePrice" type="text" inputmode="numeric" placeholder="7,500" />
     </label>
     <button class="icon-button remove-line" type="button" aria-label="Remove material line">&times;</button>
+    <fieldset class="material-quality-control">
+      <legend>Quality <span class="quality-domain">0–1000</span></legend>
+      <div class="quality-range-inputs">
+        <label>Minimum quality<input name="qualityMin" type="number" min="0" max="1000" step="1" value="0" required /></label>
+        <label>Maximum quality<input name="qualityMax" type="number" min="0" max="1000" step="1" value="1000" required /></label>
+      </div>
+      <div class="quality-range-track">
+        <div class="quality-range-rail"><div class="quality-range-selection"></div></div>
+        <input name="qualityMinSlider" class="material-quality-slider quality-min-slider" type="range" min="0" max="1000" step="1" value="0" aria-label="Minimum quality slider" />
+        <input name="qualityMaxSlider" class="material-quality-slider quality-max-slider" type="range" min="0" max="1000" step="1" value="1000" aria-label="Maximum quality slider" />
+      </div>
+      <input name="quality" type="hidden" value="0–1000" />
+      <p class="quality-range-error form-error is-hidden" role="alert"></p>
+    </fieldset>
+    <p class="material-price-hint">Select a material to see average sell price.</p>
   `;
 
   row.querySelector(".remove-line").addEventListener("click", () => {
@@ -4364,9 +4403,61 @@ function addMaterialLineItem() {
   });
 
   materialLineItemsContainer.appendChild(row);
+  setMaterialQualityControls(row, { qualityMin: 0, qualityMax: 1000 });
   updateMaterialQuantityMode(row);
   updateMaterialPriceHint(row);
   updateMaterialPricingMode();
+}
+
+function setMaterialQualityControls(row, item) {
+  const range = materialQuality.read(item);
+  row.querySelector("[name='qualityMin']").value = String(range.min);
+  row.querySelector("[name='qualityMax']").value = String(range.max);
+  syncMaterialQualityControls(row);
+}
+
+function syncMaterialQualityControls(row, source = null) {
+  const minInput = row.querySelector("[name='qualityMin']");
+  const maxInput = row.querySelector("[name='qualityMax']");
+  const minSlider = row.querySelector("[name='qualityMinSlider']");
+  const maxSlider = row.querySelector("[name='qualityMaxSlider']");
+  const isSlider = source === minSlider || source === maxSlider;
+  if (isSlider) {
+    if (Number(minSlider.value) > Number(maxSlider.value)) {
+      if (source === minSlider) minSlider.value = maxSlider.value;
+      else maxSlider.value = minSlider.value;
+    }
+    minInput.value = minSlider.value;
+    maxInput.value = maxSlider.value;
+  } else {
+    // Preserve partial typing. A temporary blank/crossed range is validated
+    // without replacing the user's numbers on each keystroke.
+    [[minInput, minSlider], [maxInput, maxSlider]].forEach(([input, slider]) => {
+      const value = Number(input.value);
+      if (input.value !== "" && Number.isInteger(value) && value >= 0 && value <= 1000) slider.value = input.value;
+    });
+  }
+
+  let error = "";
+  let range = null;
+  try { range = materialQuality.bounds(minInput.value, maxInput.value); }
+  catch (issue) { error = issue.message; }
+  minInput.setCustomValidity(error);
+  maxInput.setCustomValidity(error);
+  row.querySelector("[name='quality']").value = range ? materialQuality.label(range) : "";
+  const errorMessage = row.querySelector(".quality-range-error");
+  errorMessage.textContent = error;
+  errorMessage.classList.toggle("is-hidden", !error);
+
+  const min = Number(minSlider.value);
+  const max = Number(maxSlider.value);
+  const selection = row.querySelector(".quality-range-selection");
+  selection.style.left = `${min / 10}%`;
+  selection.style.width = `${Math.max(0, max - min) / 10}%`;
+  minSlider.style.zIndex = min === 1000 ? "4" : "2";
+  minSlider.setAttribute("aria-valuemax", String(Math.max(min, max)));
+  maxSlider.setAttribute("aria-valuemin", String(Math.min(min, max)));
+  updateMaterialPriceHint(row);
 }
 
 function updateMaterialPricingMode() {
@@ -4380,6 +4471,7 @@ function updateMaterialPricingMode() {
   materialPaymentValue.required = !hasPerMaterialPricing;
 
   lineRows.forEach((row) => {
+    row.classList.toggle("has-line-price", hasPerMaterialPricing);
     const field = row.querySelector(".material-line-price-field");
     const label = row.querySelector(".material-line-price-label");
     const input = row.querySelector("[name='linePrice']");
@@ -4427,7 +4519,7 @@ function updateMaterialPriceHint(row) {
 function playerBenchmarkMissingLabel(material, quality) {
   const bucket = materialQualityBucket(quality);
   return bucket === null
-    ? "Enter quality to see matching player posting average."
+    ? "Choose a narrower quality range for player price averages."
     : `No player posting average yet for ${materialQualityBucketLabel(bucket)} quality.`;
 }
 
@@ -4532,12 +4624,12 @@ function parseMaterialQuantityValue(item) {
 }
 
 function materialQualityBucket(quality) {
-  const value = materialQualityValue(quality);
-  if (!value) {
-    return null;
-  }
-
-  return Math.floor(value / 50) * 50;
+  if (!String(quality ?? "").match(/\d/)) return null;
+  try {
+    const range = materialQuality.read(quality);
+    const bucket = Math.floor(range.min / 50) * 50;
+    return bucket === Math.floor(range.max / 50) * 50 ? bucket : null;
+  } catch { return null; }
 }
 
 function materialQualityValue(quality) {

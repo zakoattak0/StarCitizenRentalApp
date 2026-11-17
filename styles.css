@@ -1835,6 +1835,7 @@ h1 {
 
 .material-items-container {
   display: grid;
+  min-width: 0;
   gap: 10px;
   border: 1px solid var(--line-soft);
   background: rgba(15, 15, 15, 0.5);
@@ -1848,13 +1849,23 @@ h1 {
 
 .material-line-item {
   display: grid;
-  grid-template-columns: minmax(170px, 1.4fr) minmax(96px, 0.7fr) minmax(118px, 0.9fr) minmax(110px, 0.8fr) minmax(130px, 0.9fr) 38px;
-  gap: 8px;
-  align-items: end;
-  border-bottom: 1px solid var(--line-soft);
-  padding-bottom: 12px;
-  margin-bottom: 12px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr) 38px;
+  gap: 14px;
+  align-items: start;
+  border: 1px solid var(--line-soft);
+  background: #101010;
+  padding: 14px;
+  margin-bottom: 14px;
 }
+
+.material-line-item.has-line-price {
+  grid-template-columns: minmax(0, 1.4fr) minmax(200px, 1fr) minmax(120px, 0.7fr) 38px;
+}
+
+.material-name-field { grid-column: 1; grid-row: 1; }
+.material-quantity-field { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: minmax(70px, 1fr) auto; gap: 12px; align-items: end; }
+.material-line-price-field { grid-column: 3; grid-row: 1; }
+.material-line-item .remove-line { grid-column: -2 / -1; grid-row: 1; align-self: end; }
 
 .material-line-item > label,
 .material-line-item input {
@@ -1862,21 +1873,61 @@ h1 {
 }
 
 .material-any-quantity-label {
-  min-height: 38px;
+  min-height: 42px;
   align-content: center;
+  white-space: nowrap;
 }
 
 .material-price-hint {
-  color: var(--cyan);
-  font-size: 0.72rem;
-  font-weight: 800;
-  line-height: 1.3;
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .material-line-item:last-child {
-  border-bottom: 0;
   margin-bottom: 0;
 }
+
+.material-quality-control {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+}
+
+.quality-domain { font-weight: 400; margin-left: 6px; }
+.quality-range-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.quality-range-track { position: relative; height: 36px; margin-top: 8px; touch-action: none; cursor: pointer; }
+.quality-range-rail { position: absolute; left: 9px; right: 9px; top: 16px; height: 4px; border-radius: 4px; background: #444; }
+.quality-range-selection { position: absolute; height: 100%; border-radius: inherit; background: var(--cyan); }
+
+.quality-range-track input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 36px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.quality-range-track .quality-max-slider { z-index: 3; }
+.quality-range-track input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.quality-range-track input[type="range"]::-moz-range-track { height: 4px; background: transparent; }
+.quality-range-track input[type="range"]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; margin-top: -7px; border: 2px solid var(--cyan); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: grab; }
+.quality-range-track input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid var(--cyan); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: grab; }
+.quality-range-track input[type="range"]:focus-visible { z-index: 5 !important; }
+.quality-range-track input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--text); outline-offset: 2px; }
+.quality-range-track input[type="range"]:focus-visible::-moz-range-thumb { outline: 2px solid var(--text); outline-offset: 2px; }
 
 .material-line-item .icon-button {
   width: 38px;
@@ -2394,10 +2445,13 @@ legend {
     grid-column: 1 / -1;
   }
 
-  .material-line-item {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  .material-line-item,
+  .material-line-item.has-line-price {
+    grid-template-columns: minmax(0, 1fr) 38px;
   }
 
+  .material-quantity-field,
+  .material-line-price-field { grid-column: 1 / -1; grid-row: auto; }
   .material-line-item .remove-line {
     justify-self: end;
   }
@@ -2744,7 +2798,5 @@ legend {
     grid-template-columns: 1fr;
   }
 
-  .material-line-item {
-    grid-template-columns: 1fr;
-  }
+  .material-quality-control { padding: 10px; }
 }
