@@ -62,6 +62,7 @@ create table if not exists public.crew_listings (
   rating numeric(2, 1) not null default 0,
   completed_jobs integer not null default 0,
   availability_status text not null default 'Available now',
+  availability jsonb not null default '{"mode":"anytime","noticeHours":0,"timeZone":"UTC","startAt":null,"endAt":null}'::jsonb,
   summary text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -125,9 +126,18 @@ create table if not exists public.deals (
   requester_confirmed_at timestamptz,
   provider_confirmed_at timestamptz,
   completed_at timestamptz,
+  scheduled_start timestamptz,
+  scheduled_end timestamptz,
+  schedule_timezone text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Keep existing databases current when this schema is rerun.
+alter table public.crew_listings add column if not exists availability jsonb not null default '{"mode":"anytime","noticeHours":0,"timeZone":"UTC","startAt":null,"endAt":null}'::jsonb;
+alter table public.deals add column if not exists scheduled_start timestamptz;
+alter table public.deals add column if not exists scheduled_end timestamptz;
+alter table public.deals add column if not exists schedule_timezone text;
 
 create table if not exists public.deal_ratings (
   id uuid primary key default gen_random_uuid(),

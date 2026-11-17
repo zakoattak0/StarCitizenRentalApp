@@ -28,6 +28,10 @@ The Gatac Hyūn has a combined mining and salvage configuration. Owners can reco
 
 ## Supabase setup
 
+Existing installations need `supabase/migrations/20261116_crew_availability.sql` before deploying crew scheduling. This additive migration preserves existing postings (defaulting them to Anytime with no notice) and adds the booking dates/timezone to deals. New databases can use the complete schema below.
+
+Crew postings support Anytime or a bounded date/time range, an IANA timezone, and rolling 0/24/48/72-hour notice. Notice is checked against the server's current time for every request, independently of when the posting was created or edited. Dates are stored as UTC instants; the chosen timezone is kept for display and editing. Search, posting previews and requests share `public/crew-availability.js`. The server validates crew requests against the current saved posting before creating a deal. During a repeated daylight-saving hour, the earlier occurrence is used and shown with its UTC offset; nonexistent local times are rejected.
+
 Run the SQL in `supabase/schema.sql` in your Supabase SQL editor, then add these environment variables in Vercel:
 
 ```text

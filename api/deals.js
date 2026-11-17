@@ -1,5 +1,6 @@
 const { checkRateLimit, requestBody, sendJson, supabaseRequest } = require("./_supabase");
 const { decodeSession, parseCookies, publicUser, sessionCookie } = require("./auth/_shared");
+const crewAvailability = require("../public/crew-availability");
 
 const dealTypes = new Set(["ship_rental", "crew_service", "material_order", "contract", "general"]);
 
@@ -37,6 +38,9 @@ function toClient(row, myRating = null) {
     completedAt: row.completed_at,
     requestedAt: row.created_at,
     updatedAt: row.updated_at,
+    scheduledStart: row.scheduled_start || null,
+    scheduledEnd: row.scheduled_end || null,
+    scheduleTimeZone: row.schedule_timezone || "UTC",
     myRating,
   };
 }
@@ -95,6 +99,21 @@ async function createDeal(user, deal) {
 
   if (!dealTypes.has(row.deal_type)) {
     row.deal_type = "general";
+  }
+
+  if (row.deal_type === "crew_service" || row.listing_type === "crew") {
+    if (!row.listing_id || row.deal_type !== "crew_service" || row.listing_type !== "crew") throw new Error("Choose a valid crew listing.");
+    const listings = await supabaseRequest(`crew_listings?id=eq.${encodeURIComponent(row.listing_id)}&select=*`, { method: "GET" });
+    const listing = listings[0];
+    if (!listing || listing.owner_id !== row.provider_user_id) throw new Error("This crew listing is no longer available.");
+    if (!deal.scheduledEnd) throw new Error("Choose a booking end time.");
+    const schedule = crewAvailability.validateRequest(listing.availability || {}, deal.scheduledStart, deal.scheduledEnd);
+    if (!crewAvailability.validTimeZone(deal.scheduleTimeZone)) throw new Error("Choose a valid booking timezone.");
+    row.provider_name = listing.provider_name;
+    row.listing_name = listing.role;
+    row.scheduled_start = schedule.startAt;
+    row.scheduled_end = schedule.endAt;
+    row.schedule_timezone = deal.scheduleTimeZone;
   }
 
   const rows = await supabaseRequest("deals", {

@@ -1,4 +1,5 @@
 const { checkRateLimit, requestBody, requireOwnedRow, requirePostingAccount, sendError, sendJson, supabaseRequest } = require("./_supabase");
+const availability = require("../public/crew-availability");
 
 function toClient(row) {
   return {
@@ -10,7 +11,8 @@ function toClient(row) {
     payType: row.pay_type || "flat",
     rating: row.rating || 0,
     completedJobs: row.completed_jobs || 0,
-    availabilityStatus: row.availability_status || "Available now",
+    availability: availability.normalize(row.availability || {}),
+    availabilityStatus: availability.status(row.availability || {}),
     summary: row.summary || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -24,7 +26,8 @@ function toRow(listing) {
     role: listing.role || "",
     price: Number(listing.price || 0),
     pay_type: listing.payType || "flat",
-    availability_status: listing.availabilityStatus || "Available now",
+    availability: availability.normalize(listing.availability || {}),
+    availability_status: availability.status(listing.availability || {}),
     summary: listing.summary || "",
   };
 }
@@ -50,7 +53,14 @@ module.exports = async function handler(request, response) {
         await requireOwnedRow("crew_listings", listing.id, "owner_id", user.id);
       }
 
-      const row = toRow(listing);
+      let row;
+      try {
+        row = toRow(listing);
+        if (row.availability.endAt && Date.parse(row.availability.endAt) <= Date.now()) throw new Error("Choose availability that ends in the future.");
+        if (row.availability.endAt && Date.parse(row.availability.endAt) <= availability.earliestStart(row.availability)) throw new Error("This date range ends before the required notice. Choose later dates or a shorter notice period.");
+      } catch (error) {
+        return sendJson(response, 400, { error: error.message });
+      }
       row.owner_id = user.id;
       const path = listing.id
         ? `crew_listings?id=eq.${encodeURIComponent(listing.id)}`

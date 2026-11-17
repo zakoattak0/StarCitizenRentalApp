@@ -230,6 +230,14 @@
           <details class="filter-drawer" open>
             <summary>Crew filters</summary>
             <form class="market-filter-grid" id="crew-market-form">
+              <fieldset class="ship-date-filters">
+                <legend>Crew dates</legend>
+                <label>Start date and time<input type="datetime-local" name="startAt" /></label>
+                <label>End date and time<input type="datetime-local" name="endAt" /></label>
+                <label>Timezone<select name="timeZone" data-timezone-select></select></label>
+                <button class="secondary-button" id="crew-clear-dates" type="button">Clear dates</button>
+                <p class="api-status" id="crew-date-summary" role="status">Dates respect each provider's availability and minimum notice.</p>
+              </fieldset>
               <label>
                 Search by name
                 <input name="query" type="text" placeholder="RSI or Discord handle..." />
@@ -270,7 +278,10 @@
                   <option value="">Any status</option>
                   <option value="Available now">Available now</option>
                   <option value="Available today">Available today</option>
+                  <option value="Anytime">Anytime</option>
+                  <option value="Needs notice">Needs notice</option>
                   <option value="Scheduled">Scheduled</option>
+                  <option value="Unavailable">Unavailable</option>
                 </select>
               </label>
               <label>
@@ -307,6 +318,24 @@
           <div id="crew-service-panel" role="tabpanel" aria-labelledby="crew-service-tab" tabindex="0"></div>
           <div class="is-hidden" id="crew-provider-panel" role="tabpanel" aria-labelledby="crew-provider-tab" tabindex="0"></div>
           <div class="ship-details-actions" id="crew-details-actions"></div>
+        </dialog>
+
+        <dialog class="ship-details-dialog" id="crew-request-dialog" aria-labelledby="crew-request-title">
+          <div class="modal-heading">
+            <h2 id="crew-request-title">Request crew</h2>
+            <button class="icon-button" type="button" id="crew-request-close" aria-label="Close crew request">&times;</button>
+          </div>
+          <form class="data-form" id="crew-request-form">
+            <p class="market-summary" id="crew-request-availability"></p>
+            <label>Booking timezone<select name="timeZone" data-timezone-select required></select></label>
+            <div class="form-grid crew-date-grid">
+              <label>Booking start<input name="startAt" type="datetime-local" required /></label>
+              <label>Booking end<input name="endAt" type="datetime-local" required /></label>
+            </div>
+            <p class="api-status" id="crew-request-preview" role="status"></p>
+            <p class="form-error is-hidden" id="crew-request-error" role="alert"></p>
+            <button class="primary-button" type="submit">Send crew request</button>
+          </form>
         </dialog>
 
         <section class="panel" id="materials-panel" data-panel="materials">
@@ -1021,7 +1050,7 @@
       </div>
 
       <div class="modal-backdrop is-hidden" id="crew-posting-modal" role="dialog" aria-modal="true" aria-labelledby="crew-posting-title">
-        <div class="confirm-modal">
+        <div class="confirm-modal crew-posting-content">
           <div class="modal-heading">
             <h2 id="crew-posting-title">Create Crew Posting</h2>
             <button class="icon-button" id="crew-posting-close" type="button" aria-label="Close crew posting modal">&times;</button>
@@ -1056,6 +1085,21 @@
                 <input name="payValue" id="crew-posting-pay-value" type="text" inputmode="numeric" required placeholder="5,000" />
               </label>
             </div>
+            <fieldset>
+              <legend>Availability</legend>
+              <div class="form-grid crew-date-grid">
+                <label>Available<select name="availabilityMode" id="crew-availability-mode"><option value="anytime">Anytime</option><option value="dates">Specific dates</option></select></label>
+                <label>Needs notice<select name="noticeHours"><option value="0">No advance notice</option><option value="24">24 hours</option><option value="48">48 hours</option><option value="72">72 hours</option></select></label>
+              </div>
+              <label>Availability timezone<select name="timeZone" data-timezone-select required></select></label>
+              <div class="form-grid crew-date-grid is-hidden" id="crew-posting-dates">
+                <label>Available from<input name="availableFrom" type="datetime-local" /></label>
+                <label>Available until<input name="availableUntil" type="datetime-local" /></label>
+              </div>
+              <p class="api-status" id="crew-posting-availability-preview" role="status"></p>
+              <p class="api-status">Notice is rolling: with 24 hours' notice, every new booking must start at least 24 hours from now. Dates and times use the selected timezone.</p>
+            </fieldset>
+            <p class="form-error is-hidden" id="crew-posting-error" role="alert"></p>
             <label>
               Summary
               <textarea name="summary" rows="3" required placeholder="Briefly describe your services..."></textarea>
@@ -1148,6 +1192,7 @@
       </div>
     </div>
 
+    <script src="/crew-availability.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

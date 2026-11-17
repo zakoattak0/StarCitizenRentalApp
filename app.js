@@ -1,4 +1,5 @@
 const UEX_VEHICLES_URL = "https://api.uexcorp.uk/2.0/vehicles";
+const crewAvailability = window.CrewAvailability;
 const VEHICLE_CATALOG_URL = "/vehicles.json";
 const SHIP_IMAGES_URL = "/ship-images.json";
 const shipImagesById = new Map();
@@ -168,6 +169,7 @@ let hangarMarketRows = [];
 let hangarMarketError = "";
 let editingShipIndex = null;
 let editingCrewId = null;
+let pendingCrewRequest = null;
 let editingMaterialId = null;
 let pendingRemoveShipIndex = null;
 let availabilityShipIndex = null;
@@ -386,6 +388,10 @@ const crewPostingPayType = document.querySelector("#crew-posting-pay-type");
 const crewPostingPayValue = document.querySelector("#crew-posting-pay-value");
 const crewPostingPayValueLabel = document.querySelector("#crew-posting-pay-value-label");
 const crewPostingName = document.querySelector("#crew-posting-name");
+const crewPostingError = document.querySelector("#crew-posting-error");
+const crewRequestDialog = document.querySelector("#crew-request-dialog");
+const crewRequestForm = document.querySelector("#crew-request-form");
+const crewRequestError = document.querySelector("#crew-request-error");
 
 const postMaterialRequestMenuButton = document.querySelector("#post-material-request-menu-button");
 const postMaterialRequestButton = document.querySelector("#post-material-request-button");
@@ -1095,6 +1101,21 @@ createCrewPostingButton.addEventListener("click", openPostCrewListingFlow);
 accountCreateServiceButton.addEventListener("click", () => openCrewPostingModal());
 crewPostingClose.addEventListener("click", closeCrewPostingModal);
 crewPostingCancel.addEventListener("click", closeCrewPostingModal);
+crewPostingForm.addEventListener("input", updateCrewPostingAvailabilityUI);
+crewPostingForm.addEventListener("change", updateCrewPostingAvailabilityUI);
+document.querySelector("#crew-clear-dates").addEventListener("click", () => {
+  crewMarketForm.elements.startAt.value = "";
+  crewMarketForm.elements.endAt.value = "";
+  renderCrewMarketplace();
+});
+document.querySelector("#crew-request-close").addEventListener("click", () => crewRequestDialog.close());
+crewRequestForm.addEventListener("input", updateCrewRequestPreview);
+crewRequestForm.addEventListener("change", updateCrewRequestPreview);
+crewRequestForm.addEventListener("submit", submitCrewRequest);
+crewRequestDialog.addEventListener("close", () => {
+  pendingCrewRequest = null;
+  if (!document.querySelector('.modal-backdrop:not(.is-hidden), dialog[open]')) document.body.classList.remove("modal-open");
+});
 
 crewPostingPayType.addEventListener("change", updateCrewPostingPayUI);
 crewPostingPayValue.addEventListener("input", () => {
@@ -1110,6 +1131,16 @@ crewPostingForm.addEventListener("submit", async (event) => {
   const rawValue = data.get("payValue");
 
   const existingListing = editingCrewId ? crewListings.find((item) => item.id === editingCrewId) : null;
+  let availability;
+  try {
+    availability = collectCrewPostingAvailability();
+    if (availability.endAt && Date.parse(availability.endAt) <= Date.now()) throw new Error("Choose availability that ends in the future.");
+    if (availability.endAt && Date.parse(availability.endAt) <= crewAvailability.earliestStart(availability)) throw new Error("This date range ends before the required notice. Choose later dates or a shorter notice period.");
+  } catch (error) {
+    crewPostingError.textContent = error.message;
+    crewPostingError.classList.remove("is-hidden");
+    return;
+  }
   const listing = {
     id: existingListing?.id || "",
     ownerId: authState.user?.id || existingListing?.ownerId || "",
@@ -1119,7 +1150,8 @@ crewPostingForm.addEventListener("submit", async (event) => {
     payType,
     rating: existingListing?.rating ?? 0,
     completedJobs: existingListing?.completedJobs ?? 0,
-    availabilityStatus: existingListing?.availabilityStatus || "Available now",
+    availability,
+    availabilityStatus: crewAvailability.status(availability),
     summary: data.get("summary"),
   };
 
@@ -1139,6 +1171,8 @@ crewPostingForm.addEventListener("submit", async (event) => {
     renderPlayerSearch();
   } catch (error) {
     dataStatus.crewListings.error = error instanceof Error ? error.message : "Crew listing could not be saved";
+    crewPostingError.textContent = dataStatus.crewListings.error;
+    crewPostingError.classList.remove("is-hidden");
     renderCrewMarketplace();
   } finally {
     setListingSaving("crewListings", false);
@@ -1790,6 +1824,7 @@ function accountDealCard(deal) {
         <p class="eyebrow">${escapeHtml(dealTypeLabel(deal.dealType))}</p>
         <h3>${escapeHtml(deal.listingName || "General service")}</h3>
         <p>${escapeHtml(roleLabel)}: ${escapeHtml(otherParty || "Unknown")} / Requested ${escapeHtml(formatDateTime(deal.requestedAt))}</p>
+        ${deal.scheduledStart ? `<p>${escapeHtml(crewAvailability.format(deal.scheduledStart, deal.scheduleTimeZone))} – ${escapeHtml(crewAvailability.format(deal.scheduledEnd, deal.scheduleTimeZone))} · ${escapeHtml(deal.scheduleTimeZone)}</p>` : ""}
         ${waitingText ? `<p class="deal-note">${escapeHtml(waitingText)}</p>` : ""}
       </div>
       <div class="account-listing-meta">
@@ -1914,6 +1949,14 @@ async function handleDealRequest(button) {
     dealType: button.dataset.dealType || "general",
   };
 
+  if (deal.dealType === "crew_service") {
+    const crew = crewListings.find((listing) => listing.id === deal.listingId);
+    if (!crew) { window.alert("This crew listing is no longer available."); return; }
+    if (crew.ownerId === authState.user.id) { window.alert("You cannot request your own crew listing."); return; }
+    openCrewRequest(crew, deal);
+    return;
+  }
+
   button.disabled = true;
   const originalText = button.textContent;
   button.textContent = "Sending...";
@@ -1985,9 +2028,10 @@ function accountServiceCard(listing) {
         <p class="eyebrow">Service listing</p>
         <h3>${escapeHtml(listing.role || "Service")}</h3>
         <p>${escapeHtml(listing.summary || "No service summary provided.")}</p>
+        <p>${escapeHtml(crewAvailability.summary(listing.availability || {}))}</p>
       </div>
       <div class="account-listing-meta">
-        ${listingStatusBadge(listing.availabilityStatus || "Active")}
+        ${listingStatusBadge(crewAvailabilityLabel(listing))}
         <strong>${crewPayLabel(listing)}</strong>
       </div>
       <div class="card-actions">
@@ -2025,9 +2069,10 @@ function accountCrewListingCard(listing) {
         <p class="eyebrow">Crew/service listing</p>
         <h3>${escapeHtml(listing.role || "Service")}</h3>
         <p>${escapeHtml(listing.summary || "No service summary provided.")}</p>
+        <p>${escapeHtml(crewAvailability.summary(listing.availability || {}))}</p>
       </div>
       <div class="account-listing-meta">
-        ${listingStatusBadge(listing.availabilityStatus || "Active")}
+        ${listingStatusBadge(crewAvailabilityLabel(listing))}
         <strong>${crewPayLabel(listing)}</strong>
       </div>
       <div class="card-actions">
@@ -2623,6 +2668,25 @@ function renderCrewMarketplace() {
   const myPostings = form.has("myPostings");
   const sort = String(form.get("sort") || "newest");
   const userIdentities = identitySearchValues(authState.user);
+  const now = Date.now();
+  let startAt = "";
+  let endAt = "";
+  const dateSummary = document.querySelector("#crew-date-summary");
+  try {
+    if (form.get("startAt")) startAt = crewAvailability.fromLocal(form.get("startAt"), form.get("timeZone"));
+    if (form.get("endAt")) {
+      if (!startAt) throw new Error("Choose a start date and time as well.");
+      endAt = crewAvailability.fromLocal(form.get("endAt"), form.get("timeZone"));
+      if (endAt <= startAt) throw new Error("End must be after start.");
+    }
+    dateSummary.textContent = startAt ? `Showing crew available from ${crewAvailability.format(startAt, form.get("timeZone"))}${endAt ? ` through ${crewAvailability.format(endAt, form.get("timeZone"))}` : ""}.` : "Dates respect each provider's availability and minimum notice.";
+    dateSummary.classList.remove("form-error");
+  } catch (error) {
+    dateSummary.textContent = error.message;
+    dateSummary.classList.add("form-error");
+    crewMarketResults.innerHTML = `<div class="empty-state">Choose valid crew dates to search.</div>`;
+    return;
+  }
 
   if (dataStatus.crewListings.loading && !crewListings.length) {
     crewMarketResults.innerHTML = `<div class="empty-state">Loading shared crew providers...</div>`;
@@ -2640,7 +2704,8 @@ function renderCrewMarketplace() {
       (!role || crew.role === role) &&
       (!Number.isFinite(maxPrice) || crew.price <= maxPrice) &&
       crew.rating >= minRating &&
-      (!availability || crew.availabilityStatus === availability) &&
+      matchesCrewAvailabilityFilter(crew, availability, form.get("timeZone"), now) &&
+      (!startAt || crewAvailability.matches(crew.availability || {}, startAt, endAt, now)) &&
       (!myPostings || listingSearchValues(crew, ["name"]).some((value) => userIdentities.includes(value)))
     ))
     .sort((a, b) => {
@@ -2898,7 +2963,7 @@ function playerBadges(player) {
 function playerListingRows(player) {
   const rows = [
     ...player.shipListings.map((ship) => playerListingRow("Ship", ship.ship, `${formatCredits(getShipRate(ship, "hour") || ship.rates?.hour || 0)} UEC / hour`, ship.availabilityStatus || (ship.dates?.length ? "Dates listed" : "Schedule pending"))),
-    ...player.crewListings.map((crew) => playerListingRow("Crew", crew.role, crewPayLabel(crew), crew.availabilityStatus || "Available")),
+    ...player.crewListings.map((crew) => playerListingRow("Crew", crew.role, crewPayLabel(crew), crewAvailabilityLabel(crew))),
     ...player.materialListings.map((request) => {
       const materials = request.materials || [{ material: request.material, quantity: request.quantity, quality: request.quality }];
       const title = materials.length > 1 ? `Multi-Material ${materialListingLabel(materialListingType(request))}` : materials[0].material;
@@ -3115,7 +3180,7 @@ function crewMarketplaceCard(crew) {
       <div class="card-top">
         <h2>${escapeHtml(crew.name)}</h2>
         <div class="card-tags">
-          <span class="tag">${escapeHtml(crew.availabilityStatus)}</span>
+          <span class="tag">${escapeHtml(crewAvailabilityLabel(crew))}</span>
         </div>
       </div>
       <div class="price-line">
@@ -3123,6 +3188,7 @@ function crewMarketplaceCard(crew) {
       </div>
       <ul class="meta-list">
         <li>Role: ${escapeHtml(crew.role)}</li>
+        ${crewAvailabilityMarkup(crew)}
         <li>${ratingLine}</li>
       </ul>
       <p class="market-summary">${escapeHtml(crew.summary)}</p>
@@ -3135,6 +3201,7 @@ function crewMarketplaceCard(crew) {
 }
 
 function crewRequestButton(crew) {
+  if (crewAvailability.status(crew.availability || {}) === "Unavailable") return `<button class="primary-button" type="button" disabled>Unavailable</button>`;
   return `<button class="primary-button" type="button" data-auth-action="request crew services" data-deal-request data-deal-type="crew_service" data-listing-type="crew" data-listing-id="${escapeHtml(crew.id || "")}" data-listing-name="${escapeHtml(crew.role || crew.name || "Crew service")}" data-provider-id="${escapeHtml(crew.ownerId || "")}" data-provider-name="${escapeHtml(crew.name || "Provider")}">Request Crew</button>`;
 }
 
@@ -3149,7 +3216,7 @@ function openCrewDetails(listingId) {
       <ul class="meta-list">
         <li>Provider: ${escapeHtml(crew.name || "Independent provider")}</li>
         <li>Role: ${escapeHtml(crew.role || "General")}</li>
-        <li>Availability: ${escapeHtml(crew.availabilityStatus || "Not listed")}</li>
+        ${crewAvailabilityMarkup(crew)}
         <li>${ratingSummaryLine(crew.ownerId, crew.rating, crew.completedJobs)}</li>
         ${crew.createdAt ? `<li>Posted: ${escapeHtml(formatDateTime(crew.createdAt))}</li>` : ""}
         ${crew.updatedAt ? `<li>Updated: ${escapeHtml(formatDateTime(crew.updatedAt))}</li>` : ""}
@@ -3894,6 +3961,138 @@ function closeAvailabilityModal() {
   }
 }
 
+function initializeCrewTimeZones() {
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const zones = [...new Set(["UTC", detected, ...(Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : ["America/Chicago", "America/New_York", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Australia/Sydney", "Asia/Tokyo"])])].sort();
+  document.querySelectorAll("[data-timezone-select]").forEach((select) => {
+    select.innerHTML = zones.map((zone) => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replaceAll("_", " "))}</option>`).join("");
+    select.value = detected;
+  });
+}
+
+function crewAvailabilityLabel(crew) {
+  const a = crewAvailability.normalize(crew.availability || {});
+  const status = crewAvailability.status(a);
+  return status === "Needs notice" ? `Needs ${a.noticeHours}h notice` : status;
+}
+
+function crewAvailabilityMarkup(crew) {
+  const a = crewAvailability.normalize(crew.availability || {});
+  const next = crewAvailability.status(a) === "Unavailable" ? "No remaining availability" : crewAvailability.format(crewAvailability.earliestStart(a), a.timeZone);
+  return `<li>${escapeHtml(crewAvailability.summary(a))}</li><li>Earliest booking: ${escapeHtml(next)}</li>`;
+}
+
+function matchesCrewAvailabilityFilter(crew, filter, timeZone, now) {
+  const a = crewAvailability.normalize(crew.availability || {});
+  const status = crewAvailability.status(a, now);
+  if (!filter) return true;
+  if (filter === "Anytime") return a.mode === "anytime";
+  if (filter === "Needs notice") return a.noticeHours > 0 && status !== "Unavailable";
+  if (filter === "Available today") return status !== "Unavailable" && crewAvailability.localInput(crewAvailability.earliestStart(a, now), timeZone).slice(0, 10) === crewAvailability.localInput(now, timeZone).slice(0, 10);
+  return status === filter;
+}
+
+function collectCrewPostingAvailability() {
+  const fields = crewPostingForm.elements;
+  const timeZone = fields.timeZone.value;
+  return crewAvailability.normalize({
+    mode: fields.availabilityMode.value,
+    noticeHours: Number(fields.noticeHours.value),
+    timeZone,
+    startAt: fields.availabilityMode.value === "dates" ? crewAvailability.fromLocal(fields.availableFrom.value, timeZone) : null,
+    endAt: fields.availabilityMode.value === "dates" ? crewAvailability.fromLocal(fields.availableUntil.value, timeZone) : null,
+  });
+}
+
+function updateCrewPostingAvailabilityUI() {
+  const dates = crewPostingForm.elements.availabilityMode.value === "dates";
+  document.querySelector("#crew-posting-dates").classList.toggle("is-hidden", !dates);
+  for (const name of ["availableFrom", "availableUntil"]) {
+    crewPostingForm.elements[name].disabled = !dates;
+    crewPostingForm.elements[name].required = dates;
+  }
+  const preview = document.querySelector("#crew-posting-availability-preview");
+  crewPostingError.classList.add("is-hidden");
+  try {
+    const a = collectCrewPostingAvailability();
+    preview.textContent = crewAvailability.status(a) === "Unavailable" ? "There is no available time left in this range after minimum notice." : `Earliest booking right now: ${crewAvailability.format(crewAvailability.earliestStart(a), a.timeZone)} · ${a.timeZone}`;
+    preview.classList.remove("form-error");
+  } catch (error) {
+    preview.textContent = error.message;
+    preview.classList.add("form-error");
+  }
+}
+
+function openCrewRequest(crew, deal) {
+  const a = crewAvailability.normalize(crew.availability || {});
+  if (crewAvailability.status(a) === "Unavailable") { window.alert("This provider has no remaining availability."); return; }
+  if (crewDetailsModal.open) crewDetailsModal.close();
+  pendingCrewRequest = { crew, deal };
+  crewRequestForm.reset();
+  crewRequestForm.elements.timeZone.value = a.timeZone;
+  let start = Math.ceil((crewAvailability.earliestStart(a) + 60000) / 300000) * 300000;
+  let end = start + crewAvailability.HOUR;
+  try {
+    if (crewMarketForm.elements.startAt.value) {
+      const selectedStart = crewAvailability.fromLocal(crewMarketForm.elements.startAt.value, crewMarketForm.elements.timeZone.value);
+      const selectedEnd = crewMarketForm.elements.endAt.value ? crewAvailability.fromLocal(crewMarketForm.elements.endAt.value, crewMarketForm.elements.timeZone.value) : null;
+      if (crewAvailability.matches(a, selectedStart, selectedEnd)) { start = Date.parse(selectedStart); end = selectedEnd ? Date.parse(selectedEnd) : start + crewAvailability.HOUR; }
+    }
+  } catch { /* An invalid search never overrides valid request defaults. */ }
+  if (a.endAt) end = Math.min(end, Date.parse(a.endAt));
+  crewRequestForm.elements.startAt.value = crewAvailability.localInput(start, a.timeZone);
+  crewRequestForm.elements.endAt.value = crewAvailability.localInput(end, a.timeZone);
+  document.querySelector("#crew-request-title").textContent = `Request ${crew.role} · ${crew.name}`;
+  document.querySelector("#crew-request-availability").textContent = crewAvailability.summary(a);
+  updateCrewRequestPreview();
+  crewRequestDialog.showModal();
+  document.body.classList.add("modal-open");
+}
+
+function collectCrewRequestSchedule() {
+  if (!pendingCrewRequest) throw new Error("Choose a crew provider first.");
+  const fields = crewRequestForm.elements;
+  const scheduleTimeZone = fields.timeZone.value;
+  const scheduledStart = crewAvailability.fromLocal(fields.startAt.value, scheduleTimeZone);
+  const scheduledEnd = crewAvailability.fromLocal(fields.endAt.value, scheduleTimeZone);
+  crewAvailability.validateRequest(pendingCrewRequest.crew.availability || {}, scheduledStart, scheduledEnd);
+  return { scheduledStart, scheduledEnd, scheduleTimeZone };
+}
+
+function updateCrewRequestPreview() {
+  const preview = document.querySelector("#crew-request-preview");
+  crewRequestError.classList.add("is-hidden");
+  try {
+    const schedule = collectCrewRequestSchedule();
+    preview.textContent = `${crewAvailability.format(schedule.scheduledStart, schedule.scheduleTimeZone)} – ${crewAvailability.format(schedule.scheduledEnd, schedule.scheduleTimeZone)} · ${schedule.scheduleTimeZone}`;
+    preview.classList.remove("form-error");
+  } catch (error) {
+    preview.textContent = error.message;
+    preview.classList.add("form-error");
+  }
+}
+
+async function submitCrewRequest(event) {
+  event.preventDefault();
+  const button = crewRequestForm.querySelector('button[type="submit"]');
+  try {
+    const schedule = collectCrewRequestSchedule();
+    button.disabled = true;
+    button.textContent = "Sending...";
+    await createDeal({ ...pendingCrewRequest.deal, ...schedule });
+    crewRequestDialog.close();
+    activeDealFilter = "open";
+    await loadDeals();
+    window.alert("Crew request sent with your selected dates. Track it under Account > My Deals.");
+  } catch (error) {
+    crewRequestError.textContent = error.message;
+    crewRequestError.classList.remove("is-hidden");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Send crew request";
+  }
+}
+
 function openCrewPostingModal(listing = null) {
   if (!canCreatePosting(authState.user)) {
     showAuthPrompt();
@@ -3904,12 +4103,14 @@ function openCrewPostingModal(listing = null) {
     populateCrewPostingForm(listing);
   } else {
     crewPostingForm.reset();
+    crewPostingForm.elements.timeZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     editingCrewId = null;
     crewPostingName.value = preferredDisplayName(authState.user);
     crewPostingTitle.textContent = "Create Crew Posting";
     crewPostingSubmitButton.textContent = "Post Services";
     updateCrewPostingPayUI();
   }
+  updateCrewPostingAvailabilityUI();
   crewPostingModal.classList.remove("is-hidden");
   document.body.classList.add("modal-open");
 }
@@ -3921,6 +4122,12 @@ function populateCrewPostingForm(listing) {
   crewPostingPayType.value = listing.payType || "flat";
   crewPostingPayValue.value = formatCreditInputValue(listing.price || 0);
   crewPostingForm.elements.summary.value = listing.summary || "";
+  const availability = crewAvailability.normalize(listing.availability || {});
+  crewPostingForm.elements.availabilityMode.value = availability.mode;
+  crewPostingForm.elements.noticeHours.value = String(availability.noticeHours);
+  crewPostingForm.elements.timeZone.value = availability.timeZone;
+  crewPostingForm.elements.availableFrom.value = availability.startAt ? crewAvailability.localInput(availability.startAt, availability.timeZone) : "";
+  crewPostingForm.elements.availableUntil.value = availability.endAt ? crewAvailability.localInput(availability.endAt, availability.timeZone) : "";
   updateCrewPostingPayUI();
   crewPostingTitle.textContent = "Update Crew Posting";
   crewPostingSubmitButton.textContent = "Update Services";
@@ -5787,6 +5994,7 @@ function clearLegacyDevelopmentStorage() {
   }
 }
 
+initializeCrewTimeZones();
 clearLegacyDevelopmentStorage();
 renderCalendar();
 renderFleet();
@@ -5809,3 +6017,12 @@ loadRatingStats();
 loadShipListings();
 loadCrewListings();
 loadMaterialRequests();
+
+// Keep rolling notice and expired date windows accurate on long-open pages.
+window.setInterval(() => {
+  renderCrewMarketplace();
+  renderAccountServices();
+  renderAccountListings();
+  if (!crewPostingModal.classList.contains("is-hidden")) updateCrewPostingAvailabilityUI();
+  if (crewRequestDialog.open) updateCrewRequestPreview();
+}, 60000);

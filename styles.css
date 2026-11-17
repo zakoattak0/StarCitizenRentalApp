@@ -1254,6 +1254,21 @@ h1 {
   padding: 18px;
 }
 
+.crew-posting-content {
+  width: min(640px, 100%);
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+}
+
+.crew-date-grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .crew-date-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 .availability-modal {
   width: min(920px, 100%);
   max-height: calc(100vh - 36px);
